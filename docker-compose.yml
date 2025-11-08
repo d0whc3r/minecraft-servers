@@ -1,0 +1,29 @@
+services:
+  minecraft-server:
+    image: itzg/minecraft-server:latest
+    container_name: mc-${SERVER_NAME}
+    environment:
+      EULA: "TRUE"
+    env_file:
+      - config/modpacks/${SERVER_NAME}.env
+    ports:
+      - "${SERVER_PORT}:25565"
+    volumes:
+      - ./servers/${SERVER_NAME}/data:/data
+      - ./servers/${SERVER_NAME}/mods:/mods
+      - ./backups/${SERVER_NAME}:/backups
+    networks:
+      - minecraft-network
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test: mc-health
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5m
+
+networks:
+  minecraft-network:
+    driver: bridge

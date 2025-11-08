@@ -1,0 +1,25 @@
+# Environment Configuration
+.env
+
+# Server Data (worlds, player data, logs)
+servers/*/data/
+
+# Backups (large tar.gz archives)
+backups/*/*.tar.gz
+backups/*/*.tar.gz.sha256
+
+# Logs
+*.log
+logs/
+
+# macOS
+.DS_Store
+
+# Editor directories
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.swp
+*~

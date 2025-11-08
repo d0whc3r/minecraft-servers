@@ -23,11 +23,11 @@
 
 **Purpose**: Create base project structure and configuration templates
 
-- [ ] T001 Create root project directory structure: `scripts/`, `config/modpacks/`, `config/templates/`, `servers/`, `backups/`, `docs/`, `tests/`
-- [ ] T002 [P] Create `.env.template` in repository root with global variables: EULA, NETWORK_NAME, BASE_PORT, COMPOSE_PROJECT_NAME
-- [ ] T003 [P] Create `.gitignore` in repository root to exclude `.env`, `servers/*/data/`, `backups/*/*.tar.gz`, `*.log`
-- [ ] T004 [P] Create `README.md` in repository root with project overview, prerequisites, and quick start instructions
-- [ ] T005 [P] Create modpack template file `config/templates/modpack-template.env` with placeholder variables for TYPE, VERSION, MEMORY, CF_PAGE_URL, SERVER_NAME, MAX_PLAYERS
+- [x] T001 Create root project directory structure: `scripts/`, `config/modpacks/`, `config/templates/`, `servers/`, `backups/`, `docs/`, `tests/`
+- [x] T002 [P] Create `.env.template` in repository root with global variables: EULA, NETWORK_NAME, BASE_PORT, COMPOSE_PROJECT_NAME
+- [x] T003 [P] Create `.gitignore` in repository root to exclude `.env`, `servers/*/data/`, `backups/*/*.tar.gz`, `*.log`
+- [x] T004 [P] Create `README.md` in repository root with project overview, prerequisites, and quick start instructions
+- [x] T005 [P] Create modpack template file `config/templates/modpack-template.env` with placeholder variables for TYPE, VERSION, MEMORY, CF_PAGE_URL, SERVER_NAME, MAX_PLAYERS
 
 **Checkpoint**: Directory structure and configuration templates ready
 
@@ -39,9 +39,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Create `docker-compose.yml` in repository root with single template service using `mc-${SERVER_NAME}` container name, environment variable-based env_file path `config/modpacks/${SERVER_NAME}.env`, dynamic port binding `${SERVER_PORT}:25565`, volume mounts for `./servers/${SERVER_NAME}/data:/data`, `./servers/${SERVER_NAME}/mods:/mods`, `./backups/${SERVER_NAME}:/backups`, custom bridge network `minecraft-network`, restart policy `unless-stopped`, healthcheck using `mc-health` with 30s interval
-- [ ] T007 Create global `.env` file in repository root from template with EULA=TRUE, NETWORK_NAME=minecraft-network, BASE_PORT=25565
-- [ ] T008 Validate docker-compose.yml syntax with `docker-compose config` command
+- [x] T006 Create `docker-compose.yml` in repository root with single template service using `mc-${SERVER_NAME}` container name, environment variable-based env_file path `config/modpacks/${SERVER_NAME}.env`, dynamic port binding `${SERVER_PORT}:25565`, volume mounts for `./servers/${SERVER_NAME}/data:/data`, `./servers/${SERVER_NAME}/mods:/mods`, `./backups/${SERVER_NAME}:/backups`, custom bridge network `minecraft-network`, restart policy `unless-stopped`, healthcheck using `mc-health` with 30s interval
+- [x] T007 Create global `.env` file in repository root from template with EULA=TRUE, NETWORK_NAME=minecraft-network, BASE_PORT=25565
+- [x] T008 Validate docker-compose.yml syntax with `docker-compose config` command
 
 **Checkpoint**: Foundation ready - Docker orchestration configured, user story implementation can now begin
 
@@ -55,13 +55,13 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [P] [US1] Create pre-configured vanilla modpack environment file `config/modpacks/vanilla.env` with TYPE=PAPER, VERSION=1.20.4, MEMORY=2G, SERVER_NAME="Vanilla Server", SERVER_PORT=25569, MAX_PLAYERS=20
-- [ ] T010 [P] [US1] Create server directory structure `servers/vanilla/data/` and `servers/vanilla/mods/`
-- [ ] T011 [P] [US1] Create backup directory `backups/vanilla/`
-- [ ] T012 [US1] Create start script `scripts/start-server.sh` that accepts server-name argument, validates `config/modpacks/{server-name}.env` exists, extracts SERVER_PORT from config file, sets environment variables SERVER_NAME and SERVER_PORT, executes `docker-compose up -d`, outputs container creation status
+- [x] T009 [P] [US1] Create pre-configured vanilla modpack environment file `config/modpacks/vanilla.env` with TYPE=PAPER, VERSION=1.20.4, MEMORY=2G, SERVER_NAME="Vanilla Server", SERVER_PORT=25569, MAX_PLAYERS=20
+- [x] T010 [P] [US1] Create server directory structure `servers/vanilla/data/` and `servers/vanilla/mods/`
+- [x] T011 [P] [US1] Create backup directory `backups/vanilla/`
+- [x] T012 [US1] Create start script `scripts/start-server.sh` that accepts server-name argument, validates `config/modpacks/{server-name}.env` exists, extracts SERVER_PORT from config file, sets environment variables SERVER_NAME and SERVER_PORT, executes `docker-compose up -d`, outputs container creation status
 - [ ] T013 [US1] Test vanilla server deployment by running `./scripts/start-server.sh vanilla`, verify container `mc-vanilla` is created and running, check logs show "Done! For help, type 'help'" message, connect via Minecraft client on port 25569
 - [ ] T014 [US1] Test world persistence by building in-game, running `docker restart mc-vanilla`, reconnecting and verifying build still exists
-- [ ] T015 [US1] Create `docs/QUICKSTART.md` with Prerequisites section (Docker/Compose installation), Quick Start section (clone repo, configure .env, start vanilla server, connect), verification steps, based on existing quickstart.md
+- [x] T015 [US1] Create `docs/QUICKSTART.md` with Prerequisites section (Docker/Compose installation), Quick Start section (clone repo, configure .env, start vanilla server, connect), verification steps, based on existing quickstart.md
 
 **Success Criteria Validated**:
 
