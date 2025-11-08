@@ -1,50 +1,60 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report:
+- Version change: N/A → 1.0.0 (initial creation)
+- List of modified principles: All new (6 principles added)
+- Added sections: Core Principles (6), Additional Constraints, Development Workflow, Governance
+- Removed sections: None
+- Templates requiring updates: plan-template.md (constitution check updated), spec-template.md (no changes needed), tasks-template.md (no changes needed)
+- Follow-up TODOs: None
+-->
+
+# Minecraft Servers Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Modular Docker Architecture
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+All server deployments must utilize modular Docker containers designed for independent scaling and maintenance. Each container encapsulates a single responsibility with clear interfaces. Images must be optimized for size and security, following Docker best practices.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. Modpack Configuration Separation
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+Each modpack must maintain completely isolated configurations. No shared state, dependencies, or cross-contamination between modpacks. Configurations reside in dedicated directories with self-contained setups.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. Resource and Volume Management
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+Implement efficient resource allocation with Docker volumes for persistent data. Establish backup and recovery procedures. Monitor resource usage and implement limits to ensure system stability.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. Configuration Documentation
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+Every server configuration requires comprehensive documentation including setup instructions, dependencies, performance expectations, and troubleshooting. Documentation must be updated with any configuration changes.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. Modpack Modifiability
+
+Support easy addition and modification of modpacks through standardized templates and scripts. New modpacks integrate with minimal configuration, and changes do not require code modifications.
+
+### VI. Environment Variable Configuration
+
+All configurable parameters use environment variables exclusively. No hard-coded values. Variables are documented, validated at startup, and easily changeable.
+
+## Additional Constraints
+
+Technology stack: Docker, Docker Compose, compatible Minecraft server software.  
+Security: Non-privileged containers, network isolation.  
+Performance: Documented minimum requirements per modpack.  
+Compliance: Regular security audits.
+
+## Development Workflow
+
+Code reviews mandatory for all changes.  
+Automated testing for container builds.  
+Documentation updates required with changes.  
+Continuous integration for deployments.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes all other practices.  
+Amendments require consensus approval and documentation.  
+Versioning follows semantic versioning (MAJOR.MINOR.PATCH).  
+Compliance reviews conducted quarterly.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2025-11-08 | **Last Amended**: 2025-11-08
