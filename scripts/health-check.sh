@@ -247,13 +247,17 @@ check_server_health() {
             details+=("logs:unknown")
         fi
 
-        # Check disk space (only for deployed servers)
-        if check_disk_space "$server_name"; then
-            details+=("disk:healthy")
+        # Check disk space (only for deployed servers and only warn if container is running)
+        if check_container_running "$server_name"; then
+            if check_disk_space "$server_name"; then
+                details+=("disk:healthy")
+            else
+                health_status="warning"
+                issues+=("low_disk_space")
+                details+=("disk:low_space")
+            fi
         else
-            health_status="warning"
-            issues+=("low_disk_space")
-            details+=("disk:low_space")
+            details+=("disk:not_checked")
         fi
     fi
 
