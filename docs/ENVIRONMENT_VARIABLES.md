@@ -21,13 +21,38 @@ Environment variables are defined in `config/modpacks/<server-name>.env` files. 
 
 These must be defined in every server configuration:
 
-| Variable      | Description                    | Example                                                  |
-| ------------- | ------------------------------ | -------------------------------------------------------- |
-| `TYPE`        | Server type                    | `VANILLA`, `PAPER`, `FORGE`, `FABRIC`, `AUTO_CURSEFORGE` |
-| `VERSION`     | Minecraft version              | `1.20.4`, `1.19.2`, `LATEST`                             |
-| `MEMORY`      | Java heap memory               | `2G`, `4G`, `8G`                                         |
-| `SERVER_PORT` | External port (must be unique) | `25565`, `25566`, etc.                                   |
-| `SERVER_NAME` | Display name                   | `My Server`                                              |
+| Variable      | Description                                                                  | Example                                           |
+| ------------- | ---------------------------------------------------------------------------- | ------------------------------------------------- |
+| `TYPE`        | Server type                                                                  | `VANILLA`, `PAPER`, `FORGE`, `FABRIC`, `MODRINTH` |
+| `VERSION`     | Minecraft version **CRITICAL for MODRINTH: Must match modpack's MC version** | `1.20.4`, `1.19.2`, `1.21.1`, `LATEST`            |
+| `MEMORY`      | Java heap memory                                                             | `2G`, `4G`, `8G`                                  |
+| `SERVER_PORT` | External port (must be unique)                                               | `25565`, `25566`, etc.                            |
+| `SERVER_NAME` | Display name                                                                 | `My Server`                                       |
+
+### CRITICAL: VERSION for Modrinth Modpacks
+
+**For Modrinth modpacks, you MUST set `VERSION` to the exact Minecraft version that the modpack uses.**
+
+If you don't set the correct version, the server will install the wrong Minecraft version and fail to load the modpack correctly.
+
+To find the correct version:
+
+```bash
+# Check modpack's Minecraft version via API
+curl -s "https://api.modrinth.com/v2/project/MODPACK_SLUG" | grep game_versions
+
+# Example for cobbleverse
+curl -s "https://api.modrinth.com/v2/project/cobbleverse" | grep game_versions
+# Output: "game_versions": ["1.21.1"]
+```
+
+Then set in your `.env` file:
+
+```bash
+TYPE=MODRINTH
+MODRINTH_MODPACK=cobbleverse
+VERSION=1.21.1  # MUST match modpack's Minecraft version
+```
 
 ## Common Gameplay Variables
 
@@ -159,16 +184,28 @@ CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/all-the-mods-8
 
 ### Modrinth
 
-| Variable           | Description        |
-| ------------------ | ------------------ |
-| `MODRINTH_PROJECT` | Project slug or ID |
-| `MODRINTH_VERSION` | Specific version   |
+**CRITICAL: Always set `VERSION` to match the modpack's Minecraft version. See Required Variables section above.**
 
-Example:
+| Variable           | Description                                                  | Required |
+| ------------------ | ------------------------------------------------------------ | -------- |
+| `MODRINTH_MODPACK` | Modpack project slug, ID, or URL                             | Yes      |
+| `VERSION`          | **Minecraft version (MUST match modpack)**                   | **Yes**  |
+| `MODRINTH_VERSION` | Specific modpack version/release (leave unset for latest)    | No       |
+| `MODRINTH_LOADER`  | Mod loader (fabric, forge, quilt) - auto-detected if not set | No       |
+
+Example for modpack:
 
 ```bash
 TYPE=MODRINTH
-MODRINTH_PROJECT=cobblemon
+MODRINTH_MODPACK=cobbleverse
+VERSION=1.21.1  # CRITICAL: Must match modpack's Minecraft version
+MEMORY=6G
+```
+
+To find the correct Minecraft version for a modpack:
+
+```bash
+curl -s "https://api.modrinth.com/v2/project/cobbleverse" | grep game_versions
 ```
 
 ## Resource Packs
