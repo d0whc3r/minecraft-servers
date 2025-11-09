@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+#
+# start-all.sh - Start all configured Minecraft servers
+#
+# Usage: ./scripts/start-all.sh
+#
+# Exit Codes:
+#   0 - All servers started successfully
+#   1 - One or more servers failed to start
+#   4 - No configuration files found
+
+set -euo pipefail
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+error() {
+    echo -e "${RED}ERROR: $1${NC}" >&2
+}
+
+success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+info() {
+    echo -e "$1"
+}
+
+# Check if config directory exists
+if [ ! -d "config/modpacks" ]; then
+    error "Configuration directory not found: config/modpacks/"
+    exit 4
+fi
+
+# Find all .env files
+CONFIG_FILES=(config/modpacks/*.env)
+
+# Check if any configs exist
+if [ ! -e "${CONFIG_FILES[0]}" ]; then
+    error "No server configurations found in config/modpacks/"
+    echo "Create a server configuration first or run: ./scripts/add-modpack.sh <name>" >&2
+    exit 4
+fi
+
+info ""
+info "${BLUE}Starting all Minecraft servers...${NC}"
+info ""
+
+STARTED=0
+FAILED=0
+declare -a STARTED_SERVERS
+declare -a FAILED_SERVERS
+
+# Iterate through each config file
+for config in "${CONFIG_FILES[@]}"; do
+    SERVER_NAME=$(basename "$config" .env)
+    
+    info "Starting: ${YELLOW}${SERVER_NAME}${NC}"
+    
+    if ./scripts/start-server.sh "$SERVER_NAME" 2>&1 | grep -q "started successfully"; then
+        # Extract port from config
+        PORT=$(grep "^SERVER_PORT=" "$config" | cut -d= -f2 | tr -d ' ')
+        STARTED_SERVERS+=("${SERVER_NAME} (port ${PORT})")
+        ((STARTED++))
+    else
+        FAILED_SERVERS+=("${SERVER_NAME}")
+        ((FAILED++))
+    fi
+    
+    info ""
+done
+
+# Summary
+info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+info ""
+
+if [ ${STARTED} -gt 0 ]; then
+    success "Started servers (${STARTED}):"
+    for server in "${STARTED_SERVERS[@]}"; do
+        echo "  • $server"
+    done
+    info ""
+fi
+
+if [ ${FAILED} -gt 0 ]; then
+    error "Failed servers (${FAILED}):"
+    for server in "${FAILED_SERVERS[@]}"; do
+        echo "  • $server"
+    done
+    info ""
+fi
+
+info "Total: ${GREEN}${STARTED} started${NC}, ${RED}${FAILED} failed${NC}"
+info ""
+info "View status with: ${YELLOW}./scripts/list-servers.sh${NC}"
+info ""
+
+[ ${FAILED} -eq 0 ] && exit 0 || exit 1
