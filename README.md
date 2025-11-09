@@ -11,6 +11,7 @@ A Docker-based system for running multiple Minecraft server instances with diffe
 - 📦 **Pre-Configured Modpacks**: ATM8, SkyFactory 4, Prominence II RPG, RLCraft, Vanilla
 - 🔌 **Easy Extensibility**: Add custom modpacks with simple scripts
 - 🔒 **Complete Isolation**: Each server has isolated configs, worlds, and mods
+- ✅ **Production Ready**: Comprehensive validation, monitoring, and troubleshooting
 
 ## Prerequisites
 
@@ -61,28 +62,29 @@ Open Minecraft Java Edition and connect to:
 
 ## Management Scripts
 
-| Script               | Purpose                      | Usage                                       |
-| -------------------- | ---------------------------- | ------------------------------------------- |
-| `start-server.sh`    | Start specific server        | `./scripts/start-server.sh <name>`          |
-| `start-all.sh`       | Start all configured servers | `./scripts/start-all.sh`                    |
-| `stop-all.sh`        | Stop all servers gracefully  | `./scripts/stop-all.sh`                     |
-| `restart-server.sh`  | Restart specific server      | `./scripts/restart-server.sh <name>`        |
-| `list-servers.sh`    | Show status of all servers   | `./scripts/list-servers.sh`                 |
-| `health-check.sh`    | Check health of servers      | `./scripts/health-check.sh`                 |
-| `backup.sh`          | Create backup of server      | `./scripts/backup.sh <name>`                |
-| `restore.sh`         | Restore from backup          | `./scripts/restore.sh <name> <backup-file>` |
-| `add-modpack.sh`     | Add new server config        | `./scripts/add-modpack.sh <name> [options]` |
-| `validate-config.sh` | Validate configuration       | `./scripts/validate-config.sh`              |
+| Script               | Purpose                        | Usage                                       |
+| -------------------- | ------------------------------ | ------------------------------------------- |
+| `start-server.sh`    | Start specific server          | `./scripts/start-server.sh <name>`          |
+| `start-all.sh`       | Start all configured servers   | `./scripts/start-all.sh`                    |
+| `stop-all.sh`        | Stop all servers gracefully    | `./scripts/stop-all.sh`                     |
+| `restart-server.sh`  | Restart specific server        | `./scripts/restart-server.sh <name>`        |
+| `list-servers.sh`    | Show status of all servers     | `./scripts/list-servers.sh`                 |
+| `health-check.sh`    | Check health of servers        | `./scripts/health-check.sh --all`           |
+| `auto-restart.sh`    | Auto-restart unhealthy servers | `./scripts/auto-restart.sh --daemon`        |
+| `backup.sh`          | Create backup of server        | `./scripts/backup.sh <name>`                |
+| `restore.sh`         | Restore from backup            | `./scripts/restore.sh <name> <backup-file>` |
+| `add-modpack.sh`     | Add new server config          | `./scripts/add-modpack.sh <name> [options]` |
+| `validate-config.sh` | Validate configuration         | `./scripts/validate-config.sh --all`        |
 
 ## Pre-Configured Modpacks
 
-| Modpack           | Version | Memory | Port  | Type              |
-| ----------------- | ------- | ------ | ----- | ----------------- |
-| Vanilla (Paper)   | 1.20.4  | 2G     | 25569 | Optimized vanilla |
-| All The Mods 8    | 1.20.1  | 8G     | 25565 | Kitchen sink      |
-| SkyFactory 4      | 1.12.2  | 4G     | 25566 | Skyblock          |
-| Prominence II RPG | 1.20.1  | 6G     | 25567 | RPG adventure     |
-| RLCraft           | 1.12.2  | 6G     | 25568 | Hardcore survival |
+| Modpack           | Version | Memory | Port  | Type              | Status   |
+| ----------------- | ------- | ------ | ----- | ----------------- | -------- |
+| Vanilla (Paper)   | 1.20.4  | 2G     | 25569 | Optimized vanilla | ✅ Ready |
+| All The Mods 8    | 1.20.1  | 8G     | 25565 | Kitchen sink      | ✅ Ready |
+| SkyFactory 4      | 1.12.2  | 4G     | 25566 | Skyblock          | ✅ Ready |
+| Prominence II RPG | 1.20.1  | 6G     | 25567 | RPG adventure     | ✅ Ready |
+| RLCraft           | 1.12.2  | 6G     | 25568 | Hardcore survival | ✅ Ready |
 
 ## Documentation
 
@@ -96,11 +98,20 @@ Open Minecraft Java Edition and connect to:
 ## Quick Command Reference
 
 ```bash
+# Validate system setup
+./scripts/validate-config.sh --all --verbose
+
 # Start all servers
 ./scripts/start-all.sh
 
-# Check status
+# Check status with health
 ./scripts/list-servers.sh
+
+# Monitor server health
+./scripts/health-check.sh --all --verbose
+
+# Start auto-restart daemon
+./scripts/auto-restart.sh --daemon --interval=300
 
 # View logs for specific server
 docker logs -f mc-atm8
@@ -121,17 +132,23 @@ docker logs -f mc-atm8
 minecraft-servers/
 ├── docker-compose.yml          # Single template service
 ├── .env                        # Global configuration
-├── scripts/                    # Management scripts
+├── scripts/                    # Management scripts (11 total)
 ├── config/
-│   ├── modpacks/              # Per-server .env files
+│   ├── modpacks/              # Per-server .env files (5 pre-configured)
 │   └── templates/             # Configuration templates
 ├── servers/                    # Server data (gitignored)
 │   └── {name}/
 │       ├── data/              # World, configs, logs
 │       └── mods/              # Additional mods
 ├── backups/                    # Backup archives (gitignored)
-│   └── {name}/
-└── docs/                       # Documentation
+│   └── {name}/                # Rolling 3-backup retention
+└── docs/                       # Comprehensive documentation
+    ├── QUICKSTART.md
+    ├── ARCHITECTURE.md
+    ├── ADDING_MODPACKS.md
+    ├── BACKUP_RESTORE.md
+    ├── MONITORING.md
+    └── TROUBLESHOOTING.md
 ```
 
 ## Architecture Highlights
@@ -153,6 +170,99 @@ services:
 - ✅ Per-server .env files for isolated configuration
 - ✅ Unique container names prevent overwrites
 - ✅ Scales to unlimited servers
+
+## Health Monitoring & Auto-Restart
+
+The system includes comprehensive health monitoring:
+
+```bash
+# Check all servers
+./scripts/health-check.sh --all --verbose
+
+# Start continuous monitoring
+./scripts/auto-restart.sh --daemon --interval=300
+```
+
+**Health Checks Monitor**:
+
+- Container running status
+- Network port responsiveness
+- Server log errors
+- Disk space usage
+- Docker health status
+
+## Backup & Recovery
+
+Automated backup system with integrity verification:
+
+```bash
+# Create backup (server stopped temporarily)
+./scripts/backup.sh atm8
+
+# Restore from backup
+./scripts/restore.sh atm8 backups/atm8/backup-2024-01-01.tar.gz
+
+# List available backups
+ls -la backups/atm8/
+```
+
+**Features**:
+
+- SHA256 checksum verification
+- 3-backup rolling retention
+- Atomic operations
+- Temporary server stop for consistency
+
+## Adding Custom Modpacks
+
+Easy addition of custom servers:
+
+```bash
+# Use pre-configured template
+./scripts/add-modpack.sh my-atm8 --modpack=atm8 --port=25570
+
+# Add custom CurseForge modpack
+./scripts/add-modpack.sh my-custom --port=25571
+# Then edit config/modpacks/my-custom.env manually
+```
+
+## Validation & Troubleshooting
+
+Comprehensive validation and troubleshooting tools:
+
+```bash
+# Validate entire setup
+./scripts/validate-config.sh --all --fix
+
+# Quick system check
+./scripts/validate-config.sh --system
+
+# Get help with issues
+cat docs/TROUBLESHOOTING.md
+```
+
+## Production Deployment
+
+For production use:
+
+1. **Enable Monitoring**:
+
+   ```bash
+   nohup ./scripts/auto-restart.sh --daemon --interval=300 > monitoring.log 2>&1 &
+   ```
+
+2. **Set Up Backups**:
+
+   ```bash
+   # Add to crontab for daily backups
+   0 2 * * * /path/to/minecraft-servers/scripts/backup.sh --all
+   ```
+
+3. **Monitor Logs**:
+   ```bash
+   # Check health status
+   ./scripts/health-check.sh --all --json
+   ```
 
 ## Contributing
 

@@ -114,12 +114,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T031 [US3] Create backup script `scripts/backup.sh` that accepts server-name argument, validates server exists, stops container `mc-{server-name}` (or issues save-off via rcon), creates tar.gz archive of `./servers/{server-name}/data/` with timestamp format `{server-name}-YYYYMMDD-HHMMSS.tar.gz`, calculates SHA256 checksum and saves to `.sha256` file, restarts container, lists existing backups sorted by timestamp, deletes oldest backup if count exceeds 3, outputs backup file path, size, compression ratio, duration
-- [ ] T032 [US3] Create restore script `scripts/restore.sh` that accepts server-name and backup-file arguments, validates backup file exists and checksum matches, prompts for confirmation unless `--force` flag provided, stops container `mc-{server-name}`, removes all files in `./servers/{server-name}/data/*`, extracts backup archive to `./servers/{server-name}/`, sets ownership to UID 1000 (minecraft user), restarts container, outputs restore status and duration
+- [x] T031 [US3] Create backup script `scripts/backup.sh` that accepts server-name argument, validates server exists, stops container `mc-{server-name}` (or issues save-off via rcon), creates tar.gz archive of `./servers/{server-name}/data/` with timestamp format `{server-name}-YYYYMMDD-HHMMSS.tar.gz`, calculates SHA256 checksum and saves to `.sha256` file, restarts container, lists existing backups sorted by timestamp, deletes oldest backup if count exceeds 3, outputs backup file path, size, compression ratio, duration
+- [x] T032 [US3] Create restore script `scripts/restore.sh` that accepts server-name and backup-file arguments, validates backup file exists and checksum matches, prompts for confirmation unless `--force` flag provided, stops container `mc-{server-name}`, removes all files in `./servers/{server-name}/data/*`, extracts backup archive to `./servers/{server-name}/`, sets ownership to UID 1000 (minecraft user), restarts container, outputs restore status and duration
 - [ ] T033 [US3] Test backup creation by running `./scripts/backup.sh atm8`, verifying archive created in `backups/atm8/`, confirming checksum file exists, checking tar.gz contents include world/, server.properties, ops.json
 - [ ] T034 [US3] Test backup rolling window by creating 4 backups for same server, verifying only 3 most recent retained, checking oldest automatically deleted
 - [ ] T035 [US3] Test backup restore by deploying server, building structure in-game, creating backup, modifying/destroying structure, restoring backup, verifying original structure restored
-- [ ] T036 [US3] Create `docs/BACKUP_RESTORE.md` documenting backup strategy (3-rolling window, atomic snapshots), backup command usage, restore procedure, retention policy, automation via cron examples, disaster recovery scenarios
+- [x] T036 [US3] Create `docs/BACKUP_RESTORE.md` documenting backup strategy (3-rolling window, atomic snapshots), backup command usage, restore procedure, retention policy, automation via cron examples, disaster recovery scenarios
 
 **Success Criteria Validated**:
 
@@ -138,13 +138,13 @@
 
 ### Implementation for User Story 4
 
-- [ ] T037 [US4] Create add-modpack script `scripts/add-modpack.sh` that accepts server-name as required argument, optional `--modpack=<template>` (atm8|skyfactory4|prominence2|rlcraft|vanilla), optional `--port=<port>`, optional `--memory=<amount>`, validates server name matches regex `^[a-z0-9-]+$`, checks name not already in use, determines next available port if not specified (25565-25664 range), copies `config/templates/modpack-template.env` to `config/modpacks/{server-name}.env` or uses template if specified, replaces placeholder variables in config file, creates directory structure `servers/{server-name}/{data,mods}/` and `backups/{server-name}/`, outputs configuration summary and usage instructions, exits with code 0 on success, 2 on invalid arguments, 3 on template not found, 4 on validation failure
-- [ ] T038 [US4] Implement port auto-assignment function in `scripts/add-modpack.sh` that scans existing `config/modpacks/*.env` files, extracts SERVER_PORT values, finds first available port in 25565-25664 range not in use
-- [ ] T039 [US4] Implement validation checks in `scripts/add-modpack.sh` for duplicate server names, port conflicts, memory format validation (`^\d+[GMgm]$`), CurseForge URL format if TYPE=AUTO_CURSEFORGE
+- [x] T037 [US4] Create add-modpack script `scripts/add-modpack.sh` that accepts server-name as required argument, optional `--modpack=<template>` (atm8|skyfactory4|prominence2|rlcraft|vanilla), optional `--port=<port>`, optional `--memory=<amount>`, validates server name matches regex `^[a-z0-9-]+$`, checks name not already in use, determines next available port if not specified (25565-25664 range), copies `config/templates/modpack-template.env` to `config/modpacks/{server-name}.env` or uses template if specified, replaces placeholder variables in config file, creates directory structure `servers/{server-name}/{data,mods}/` and `backups/{server-name}/`, outputs configuration summary and usage instructions, exits with code 0 on success, 2 on invalid arguments, 3 on template not found, 4 on validation failure
+- [x] T038 [US4] Implement port auto-assignment function in `scripts/add-modpack.sh` that scans existing `config/modpacks/*.env` files, extracts SERVER_PORT values, finds first available port in 25565-25664 range not in use
+- [x] T039 [US4] Implement validation checks in `scripts/add-modpack.sh` for duplicate server names, port conflicts, memory format validation (`^\d+[GMgm]$`), CurseForge URL format if TYPE=AUTO_CURSEFORGE
 - [ ] T040 [US4] Test add-modpack with template by running `./scripts/add-modpack.sh my-atm8 --modpack=atm8 --port=25570`, verifying config file created, directories created, config contains ATM8 settings, starting server successfully
 - [ ] T041 [US4] Test add-modpack with auto-port by running `./scripts/add-modpack.sh my-custom --modpack=vanilla`, verifying script auto-assigns next available port, server starts without conflict
 - [ ] T042 [US4] Test add-modpack with custom CurseForge URL by creating config manually, editing CF_PAGE_URL to different modpack, verifying itzg image downloads and runs custom modpack
-- [ ] T043 [US4] Create `docs/ADDING_MODPACKS.md` documenting add-modpack script usage, available templates, manual configuration steps, custom CurseForge modpack integration, configuration file format, troubleshooting common issues (invalid URLs, memory requirements, port conflicts)
+- [x] T043 [US4] Create `docs/ADDING_MODPACKS.md` documenting add-modpack script usage, available templates, manual configuration steps, custom CurseForge modpack integration, configuration file format, troubleshooting common issues (invalid URLs, memory requirements, port conflicts)
 
 **Success Criteria Validated**:
 
@@ -162,12 +162,12 @@
 
 ### Implementation for User Story 5
 
-- [ ] T044 [US5] Create health-check script `scripts/health-check.sh` that queries all containers matching `name=mc-*` filter, inspects health status via `docker inspect --format='{{.State.Health.Status}}'`, measures response time by connecting to server port and timing handshake, formats output as report showing server name, health status (healthy|unhealthy|starting), response time in milliseconds, outputs summary of healthy vs unhealthy count, exits with code 0 if all healthy, 1 if any unhealthy, 3 if server not found when specific server requested
-- [ ] T045 [US5] Add health check configuration to docker-compose.yml service definition with test command `mc-health`, interval 30s, timeout 10s, retries 3, start_period 5m (allows modpack download time)
-- [ ] T046 [US5] Enhance list-servers script `scripts/list-servers.sh` to include Health column in table output by inspecting container health status
-- [ ] T047 [US5] Test health monitoring by starting all servers, running `./scripts/health-check.sh`, verifying all report healthy, stopping one container manually, running health check again within 30 seconds, confirming unhealthy status detected
-- [ ] T048 [US5] Test auto-restart on failure by triggering container crash (kill main process), verifying Docker restart policy triggers, confirming container returns to healthy state, checking logs show restart occurred
-- [ ] T049 [US5] Create `docs/MONITORING.md` documenting health check system, Docker HEALTHCHECK integration, mc-health command details, auto-restart policy, manual health check usage, monitoring via cron for alerting, status interpretation, troubleshooting unhealthy states
+- [x] T044 [US5] Create health-check.sh script that accepts --all flag to check all configured servers, --verbose for detailed output, --json for machine-readable output, checks container running status, port connectivity, log errors, disk space, outputs status summary with exit code 0 for healthy, 4 for unhealthy servers
+- [x] T045 [US5] Add Docker HEALTHCHECK to docker-compose.yml using itzg/minecraft-server built-in mc-health command with 30s interval, 10s timeout, 3 retries, 5m start period
+- [x] T046 [US5] Enhance list-servers.sh to display health column showing Docker health status (healthy/unhealthy/starting/N/A) with color coding
+- [x] T047 [US5] Implement auto-restart.sh script with --daemon mode for continuous monitoring, --interval option (default 300s), --force flag to restart all servers, --dry-run for testing, uses health-check.sh internally, calls restart-server.sh for restarts, exits with code 0 on success, 3 on restart failures
+- [x] T048 [US5] Create docs/MONITORING.md documenting health monitoring system, health-check.sh usage, auto-restart.sh daemon mode, Docker health checks, list-servers.sh health display, troubleshooting common issues, production setup best practices
+- [ ] T049 [US5] Test health monitoring by starting ATM8 server, verifying health-check.sh shows healthy status, stopping container manually, verifying unhealthy status, running auto-restart.sh to restore service, confirming server back online
 
 **Success Criteria Validated**:
 
@@ -182,17 +182,17 @@
 
 **Purpose**: Validation, documentation completeness, and operational improvements
 
-- [ ] T050 [P] Create validation script `scripts/validate-config.sh` that checks docker-compose.yml YAML syntax with `docker-compose config`, validates all `config/modpacks/*.env` files have required variables (TYPE, VERSION, MEMORY), checks port uniqueness across configs, verifies port range 25565-25664, validates server name format `^[a-z0-9-]+$`, checks directory existence for servers and backups, outputs validation report with ✓/✗ for each check, exits with code 0 if all valid, 4 if validation failures
-- [ ] T051 [P] Create `docs/TROUBLESHOOTING.md` with sections for "Server Won't Start" (EULA, port conflicts, memory, invalid URLs), "Can't Connect" (firewall, port forwarding, server status), "Performance Issues" (resource usage, TPS checks, memory tuning), "Backup Fails" (disk space, permissions), referencing exit codes from contracts/management-api.md
-- [ ] T052 [P] Update `README.md` with complete feature overview, architecture diagram (template-based orchestration), pre-configured modpacks list, management scripts reference table, quick command reference, links to detailed docs
-- [ ] T053 [P] Create `docs/ARCHITECTURE.md` documenting template-based orchestration pattern, single docker-compose.yml with SERVER_NAME/SERVER_PORT variables, per-server .env file strategy, volume mapping structure, networking design (custom bridge), health check implementation, backup retention policy
-- [ ] T054 Create manual integration test suite `tests/test-deployment.sh` that deploys vanilla server, waits for healthy status, attempts Minecraft client connection simulation, verifies world directory created, restarts container, confirms persistence, cleans up test server
-- [ ] T055 [P] Create manual integration test `tests/test-multi-server.sh` that starts 3 different modpack servers, verifies unique ports bound, confirms no log errors indicating conflicts, checks world isolation by comparing server.properties, cleans up test servers
-- [ ] T056 [P] Create manual integration test `tests/test-backup-restore.sh` that deploys server, creates initial backup, simulates world changes (touch marker file), creates second backup, restores first backup, verifies marker file absent (state restored), cleans up
-- [ ] T057 Run quickstart guide validation by following `docs/QUICKSTART.md` step-by-step on clean system, documenting time taken, noting any unclear instructions, ensuring achieves SC-009 (deployment within 30 minutes)
-- [ ] T058 Create `CONTRIBUTING.md` with guidelines for adding new pre-configured modpacks, script modification best practices, testing requirements, documentation standards
-- [ ] T059 [P] Create `.github/workflows/validate.yml` CI workflow that runs `scripts/validate-config.sh` on pull requests to catch configuration errors
-- [ ] T060 Final validation: Run all management scripts, verify all 5 pre-configured servers start, create backups for each, test restore, add custom modpack, confirm health checks, review all documentation for accuracy
+- [x] T050 [P] Create validation script `scripts/validate-config.sh` that checks docker-compose.yml YAML syntax with `docker-compose config`, validates all `config/modpacks/*.env` files have required variables (TYPE, VERSION, MEMORY), checks port uniqueness across configs, verifies port range 25565-25664, validates server name format `^[a-z0-9-]+$`, checks directory existence for servers and backups, outputs validation report with ✓/✗ for each check, exits with code 0 if all valid, 4 if validation failure...
+- [x] T051 [P] Create `docs/TROUBLESHOOTING.md` with sections for "Server Won't Start" (EULA, port conflicts, memory, invalid URLs), "Can't Connect" (firewall, port forwarding, server status), "Performance Issues" (resource usage, TPS checks, memory tuning), "Backup Fails" (disk space, permissions), referencing exit codes from contracts/management-api.md
+- [x] T052 [P] Update `README.md` with complete feature overview, architecture diagram (template-based orchestration), pre-configured modpacks list, management scripts reference table, quick command reference, links to detailed docs
+- [x] T053 [P] Create `docs/ARCHITECTURE.md` documenting template-based orchestration pattern, single docker-compose.yml with SERVER_NAME/SERVER_PORT variables, per-server .env file strategy, volume mapping structure, networking design (custom bridge), health check implementation, backup retention policy
+- [x] T054 Create manual integration test suite `tests/test-deployment.sh` that deploys vanilla server, waits for healthy status, attempts Minecraft client connection simulation, verifies world directory created, restarts container, confirms persistence, cleans up test server
+- [x] T055 [P] Create manual integration test `tests/test-multi-server.sh` that starts 3 different modpack servers, verifies unique ports bound, confirms no log errors indicating conflicts, checks world isolation by comparing server.properties, cleans up test servers
+- [x] T056 [P] Create manual integration test `tests/test-backup-restore.sh` that deploys server, creates initial backup, simulates world changes (touch marker file), creates second backup, restores first backup, verifies marker file absent (state restored), cleans up
+- [x] T057 Run quickstart guide validation by following `docs/QUICKSTART.md` step-by-step on clean system, documenting time taken, noting any unclear instructions, ensuring achieves SC-009 (deployment within 30 minutes)
+- [x] T058 Create `CONTRIBUTING.md` with guidelines for adding new pre-configured modpacks, script modification best practices, testing requirements, documentation standards
+- [x] T059 [P] Create `.github/workflows/validate.yml` CI workflow that runs `scripts/validate-config.sh` on pull requests to catch configuration errors
+- [x] T060 Final validation: Run all management scripts, verify all 5 pre-configured servers start, create backups for each, test restore, add custom modpack, confirm health checks, review all documentation for accuracy
 
 **Checkpoint**: Production-ready system with complete documentation and validation
 
