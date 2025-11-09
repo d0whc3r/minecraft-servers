@@ -2,25 +2,9 @@ name: BATS Test Suite
 
 on:
   push:
-    branches: [ master, main ]
-    paths:
-      - 'tests/bats/**'
-      - 'scripts/**'
-      - 'config/**'
-      - 'docker-compose.yml'
-      - '.env'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
+    branches: [ master ]
   pull_request:
-    branches: [ master, main ]
-    paths:
-      - 'tests/bats/**'
-      - 'scripts/**'
-      - 'config/**'
-      - 'docker-compose.yml'
-      - '.env'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
+    branches: [ master ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
