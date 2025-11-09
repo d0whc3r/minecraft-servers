@@ -1,0 +1,28 @@
+name: 'Setup Docker Environment'
+description: 'Setup Docker daemon and required services for Minecraft server testing'
+
+inputs:
+  docker-version:
+    description: 'Docker version to install'
+    required: false
+    default: '24.0.7'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Docker
+      uses: docker/setup-docker-action@v4
+      with:
+        docker-version: ${{ inputs.docker-version }}
+
+    - name: Create Minecraft Network
+      shell: bash
+      run: |
+        docker network create minecraft-network --driver bridge || true
+
+    - name: Verify Docker Setup
+      shell: bash
+      run: |
+        docker --version
+        docker info
+        docker network ls | grep minecraft-network

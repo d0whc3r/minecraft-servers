@@ -1,0 +1,65 @@
+name: 'Run BATS Tests'
+description: 'Execute BATS test suite with proper isolation and cleanup'
+
+inputs:
+  test-pattern:
+    description: 'Pattern to match test files'
+    required: false
+    default: 'tests/bats/*.bats'
+
+  timeout:
+    description: 'Test execution timeout in minutes'
+    required: false
+    default: '30'
+
+  parallel-jobs:
+    description: 'Number of parallel BATS jobs'
+    required: false
+    default: '1'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install test dependencies
+      shell: bash
+      run: |
+        # Ensure bats is available
+        which bats || (echo "BATS not found, installing..." && exit 1)
+
+    - name: Run BATS tests
+      shell: bash
+      run: |
+        set -e
+
+        # Export environment variables for tests
+        export CI=true
+        export DEBUG=false
+
+        # Run tests with timing and verbose output
+        echo "Starting BATS test execution..."
+        echo "Pattern: ${{ inputs.test-pattern }}"
+        echo "Parallel jobs: ${{ inputs.parallel-jobs }}"
+        echo "Timeout: ${{ inputs.timeout }} minutes"
+        echo "---"
+
+        # Execute tests with timeout
+        timeout ${{ fromJSON(inputs.timeout) }}m bats --jobs ${{ inputs.parallel-jobs }} --timing --verbose ${{ inputs.test-pattern }}
+
+    - name: Generate test report
+      shell: bash
+      if: always()
+      run: |
+        echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "- **Runner:** ${{ runner.name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Test Pattern:** ${{ inputs.test-pattern }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Exit Code:** $?" >> $GITHUB_STEP_SUMMARY
+        echo "- **Duration:** Check job timing above" >> $GITHUB_STEP_SUMMARY
+
+    - name: Cleanup test containers
+      shell: bash
+      if: always()
+      run: |
+        echo "Cleaning up test containers..."
+        docker ps -a --filter "name=mc-" --format "{{.Names}}" | xargs -r docker rm -f || true
+        docker network prune -f || true
+        docker volume prune -f || true

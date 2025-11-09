@@ -1,0 +1,46 @@
+name: 'Setup Dependencies'
+description: 'Install project dependencies including pnpm, bats, and Node.js'
+
+inputs:
+  node-version:
+    description: 'Node.js version to install'
+    required: false
+    default: '20'
+
+  pnpm-version:
+    description: 'pnpm version to install'
+    required: false
+    default: '10'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ inputs.pnpm-version }}
+
+    - name: Install Bats
+      shell: bash
+      run: |
+        # Install bats-core from source for latest version
+        git clone https://github.com/bats-core/bats-core.git /tmp/bats-core
+        cd /tmp/bats-core
+        sudo ./install.sh /usr/local
+        bats --version
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Verify installations
+      shell: bash
+      run: |
+        node --version
+        pnpm --version
+        bats --version

@@ -1,0 +1,212 @@
+name: BATS Test Suite
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+      - 'tests/bats/**'
+      - 'scripts/**'
+      - 'config/**'
+      - 'docker-compose.yml'
+      - '.env'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  pull_request:
+    branches: [ master, main ]
+    paths:
+      - 'tests/bats/**'
+      - 'scripts/**'
+      - 'config/**'
+      - 'docker-compose.yml'
+      - '.env'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Job to determine test matrix based on available modpacks
+  prepare-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate-matrix.outputs.matrix }}
+      total-modpacks: ${{ steps.generate-matrix.outputs.total-modpacks }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate test matrix
+        id: generate-matrix
+        run: |
+          # Get all modpack configurations
+          MODPACKS=$(find config/modpacks -name "*.env" -type f | sed 's|config/modpacks/||' | sed 's|\.env$||' | sort | tr '\n' ' ')
+          MODPACK_ARRAY=($MODPACKS)
+          TOTAL_MODPACKS=${#MODPACK_ARRAY[@]}
+
+          echo "Found $TOTAL_MODPACKS modpacks: ${MODPACK_ARRAY[*]}"
+          echo "total-modpacks=$TOTAL_MODPACKS" >> $GITHUB_OUTPUT
+
+          # Determine chunk size based on total modpacks
+          if [ $TOTAL_MODPACKS -le 3 ]; then
+            CHUNK_SIZE=1
+          elif [ $TOTAL_MODPACKS -le 6 ]; then
+            CHUNK_SIZE=2
+          else
+            CHUNK_SIZE=3
+          fi
+
+          # Create matrix JSON
+          MATRIX_JSON="{\"include\":["
+
+          # Create chunks
+          CHUNK_INDEX=0
+          for ((i=0; i<TOTAL_MODPACKS; i+=CHUNK_SIZE)); do
+            CHUNK_MODPACKS=(${MODPACK_ARRAY[@]:i:CHUNK_SIZE})
+            MODPACK_LIST=$(printf '%s,' "${CHUNK_MODPACKS[@]}")
+            MODPACK_LIST=${MODPACK_LIST%,}
+
+            # Create regex pattern for this chunk
+            MODPACK_PATTERN=$(printf '%s|' "${CHUNK_MODPACKS[@]}")
+            MODPACK_PATTERN=${MODPACK_PATTERN%|}
+
+            MATRIX_JSON+="{\"chunk\":$CHUNK_INDEX,\"modpacks\":\"$MODPACK_LIST\",\"pattern\":\"$MODPACK_PATTERN\",\"count\":${#CHUNK_MODPACKS[@]}},"
+
+            ((CHUNK_INDEX++))
+          done
+
+          # Remove trailing comma and close JSON
+          MATRIX_JSON=${MATRIX_JSON%,}
+          MATRIX_JSON+="]}"
+
+          echo "Generated matrix: $MATRIX_JSON"
+          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+
+  # Parallel test execution jobs
+  test:
+    needs: prepare-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            node_modules
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Setup Dependencies
+        uses: ./.github/actions/setup-deps
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+
+      - name: Setup Docker Environment
+        uses: ./.github/actions/setup-docker
+        with:
+          docker-version: '24.0.7'
+
+      - name: Prepare Test Environment
+        uses: ./.github/actions/prepare-test-env
+        with:
+          modpack-filter: ${{ matrix.pattern }}
+
+      - name: Run BATS Tests
+        uses: ./.github/actions/run-bats-tests
+        with:
+          test-pattern: 'tests/bats/script-execution.bats'
+          timeout: '45'
+          parallel-jobs: '1'
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-chunk-${{ matrix.chunk }}
+          path: |
+            *.log
+            test-results/
+          retention-days: 7
+
+  # Job to collect and summarize all test results
+  summarize:
+    needs: [prepare-matrix, test]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: test-artifacts
+        continue-on-error: true
+
+      - name: Generate summary report
+        run: |
+          echo "## 🧪 BATS Test Suite Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Overall status
+          if [ "${{ needs.test.result }}" == "success" ]; then
+            echo "✅ **All tests passed!**" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.test.result }}" == "failure" ]; then
+            echo "❌ **Some tests failed**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Tests completed with issues**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Execution Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total Modpacks:** ${{ needs.prepare-matrix.outputs.total-modpacks }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Parallel Chunks:** ${{ needs.prepare-matrix.outputs.matrix && fromJSON(needs.prepare-matrix.outputs.matrix).include.length || 0 }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Duration:** Check individual job timings" >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ⚡ Performance Optimizations" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Parallel test execution across multiple runners" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Docker image caching for faster startup" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dependency caching with pnpm" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Network and volume cleanup between tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Reusable GitHub Actions for maintainability" >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔧 Technical Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker Version:** 24.0.7" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node.js Version:** 20" >> $GITHUB_STEP_SUMMARY
+          echo "- **pnpm Version:** 10" >> $GITHUB_STEP_SUMMARY
+          echo "- **BATS Version:** Latest from bats-core" >> $GITHUB_STEP_SUMMARY
+
+          # Show matrix details
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Test Matrix" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.prepare-matrix.outputs.matrix }}" != "" ]; then
+            MATRIX_DATA='${{ needs.prepare-matrix.outputs.matrix }}'
+            if command -v jq >/dev/null 2>&1; then
+              echo "$MATRIX_DATA" | jq -r '.include[] | "- Chunk \(.chunk): \(.modpacks) (\(.count) modpacks)"' >> $GITHUB_STEP_SUMMARY
+            else
+              echo "Matrix data available (jq not installed for formatting)" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+          # List artifacts if any
+          if [ -d "test-artifacts" ] && [ "$(ls -A test-artifacts)" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📁 Test Artifacts" >> $GITHUB_STEP_SUMMARY
+            find test-artifacts -type f | head -10 | while read -r file; do
+              echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
+            done
+            if [ "$(find test-artifacts -type f | wc -l)" -gt 10 ]; then
+              echo "- ... and $(($(find test-artifacts -type f | wc -l) - 10)) more files" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi

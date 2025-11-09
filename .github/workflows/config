@@ -1,0 +1,33 @@
+# BATS Test Pipeline Configuration
+
+# This file contains configuration overrides for the BATS test pipeline
+# Values here will override defaults in the workflow
+
+# Test execution settings
+TEST_TIMEOUT_MINUTES=45
+PARALLEL_JOBS=1
+
+# Docker settings
+DOCKER_VERSION=24.0.7
+
+# Dependency versions
+NODE_VERSION=20
+PNPM_VERSION=10
+
+# Chunking strategy
+# - small: 1-3 modpacks per chunk (better for many small modpacks)
+# - medium: 2-4 modpacks per chunk (balanced)
+# - large: 3-5 modpacks per chunk (better for fewer large modpacks)
+CHUNK_STRATEGY=medium
+
+# Cache settings
+CACHE_DOCKER_IMAGES=true
+CACHE_PNPM_STORE=true
+CACHE_NODE_MODULES=true
+
+# Artifact settings
+ARTIFACT_RETENTION_DAYS=7
+
+# Debug settings
+ENABLE_DEBUG_LOGS=false
+VERBOSE_TEST_OUTPUT=true

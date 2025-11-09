@@ -1,0 +1,56 @@
+name: 'Prepare Test Environment'
+description: 'Prepare the test environment with cached Docker images and test data'
+
+inputs:
+  modpack-filter:
+    description: 'Filter for modpacks to test (regex pattern)'
+    required: false
+    default: '.*'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Cache Docker images
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.docker
+        key: docker-images-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}
+        restore-keys: |
+          docker-images-${{ runner.os }}-
+
+    - name: Pull Minecraft server image
+      shell: bash
+      run: |
+        docker pull itzg/minecraft-server:latest
+
+    - name: Create test directories
+      shell: bash
+      run: |
+        mkdir -p servers/test/data
+        mkdir -p servers/test/mods
+        mkdir -p backups/test
+
+    - name: Filter modpacks for this runner
+      shell: bash
+      id: filter-modpacks
+      run: |
+        # Get all modpack configs and filter based on input pattern
+        if [ -n "${{ inputs.modpack-filter }}" ] && [ "${{ inputs.modpack-filter }}" != ".*" ]; then
+          # Filter modpacks using the provided pattern
+          MODPACKS=$(find config/modpacks -name "*.env" -type f | grep -E "${{ inputs.modpack-filter }}" | sed 's|config/modpacks/||' | sed 's|\.env$||' | tr '\n' ' ')
+        else
+          # Use all modpacks if no filter
+          MODPACKS=$(find config/modpacks -name "*.env" -type f | sed 's|config/modpacks/||' | sed 's|\.env$||' | tr '\n' ' ')
+        fi
+
+        echo "modpacks=$MODPACKS" >> $GITHUB_OUTPUT
+        echo "count=$(echo $MODPACKS | wc -w)" >> $GITHUB_OUTPUT
+
+    - name: Display test configuration
+      shell: bash
+      run: |
+        echo "Runner: ${{ runner.name }}"
+        echo "Modpack filter: ${{ inputs.modpack-filter }}"
+        echo "Selected modpacks: ${{ steps.filter-modpacks.outputs.modpacks }}"
+        echo "Modpack count: ${{ steps.filter-modpacks.outputs.count }}"
