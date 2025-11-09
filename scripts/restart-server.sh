@@ -52,8 +52,20 @@ info ""
 info "Restarting server: ${YELLOW}${SERVER_NAME}${NC}"
 info ""
 
-# Restart with timeout
-if timeout 60s docker restart "$CONTAINER_NAME" > /dev/null 2>&1; then
+# Load config file to set environment variables
+CONFIG_FILE="config/modpacks/${SERVER_NAME}.env"
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
+fi
+
+# Set dynamic environment variables
+export CONTAINER_NAME="mc-${SERVER_NAME}"
+export SERVER_DATA_DIR="$(pwd)/servers/${SERVER_NAME}/data"
+export SERVER_MODS_DIR="$(pwd)/servers/${SERVER_NAME}/mods"
+export SERVER_BACKUP_DIR="$(pwd)/backups/${SERVER_NAME}"
+
+# Restart with docker-compose
+if docker-compose -p "mc-${SERVER_NAME}" --env-file "$CONFIG_FILE" restart 2>&1; then
     success "Server restarted successfully"
     info ""
     info "View logs with: ${YELLOW}docker logs -f $CONTAINER_NAME${NC}"
@@ -61,12 +73,6 @@ if timeout 60s docker restart "$CONTAINER_NAME" > /dev/null 2>&1; then
     info ""
     exit 0
 else
-    EXIT_CODE=$?
-    if [ $EXIT_CODE -eq 124 ]; then
-        error "Restart timeout after 60 seconds"
-        exit 5
-    else
-        error "Failed to restart server"
-        exit 1
-    fi
+    error "Failed to restart server"
+    exit 1
 fi

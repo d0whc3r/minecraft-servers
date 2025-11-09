@@ -48,20 +48,20 @@ FAILED=0
 declare -a STOPPED_SERVERS
 declare -a FAILED_SERVERS
 
-# Stop each container
+# Stop each container using docker-compose
 for container in $CONTAINERS; do
     SERVER_NAME=${container#mc-}
     
     info "Stopping: ${YELLOW}${SERVER_NAME}${NC}"
     
-    if docker stop "$container" --time 30 > /dev/null 2>&1; then
+    if docker-compose -p "mc-${SERVER_NAME}" down 2>&1 > /dev/null; then
         STOPPED_SERVERS+=("${SERVER_NAME}")
         ((STOPPED++))
-        success "Stopped: ${container}"
+        success "Stopped: ${SERVER_NAME}"
     else
         FAILED_SERVERS+=("${SERVER_NAME}")
         ((FAILED++))
-        error "Failed to stop: ${container}"
+        error "Failed to stop: ${SERVER_NAME}"
     fi
 done
 

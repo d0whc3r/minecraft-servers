@@ -229,11 +229,11 @@ VIEW_DISTANCE=10
 
 ```env
 # Server Settings
-MOTD=Welcome to My Server
+MOTD="Welcome to My Server"
 DIFFICULTY=hard
 GAMEMODE=survival
 PVP=true
-ONLINE_MODE=true
+ONLINE_MODE=false
 
 # Performance
 VIEW_DISTANCE=12

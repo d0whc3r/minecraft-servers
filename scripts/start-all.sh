@@ -61,9 +61,10 @@ for config in "${CONFIG_FILES[@]}"; do
     
     info "Starting: ${YELLOW}${SERVER_NAME}${NC}"
     
-    if ./scripts/start-server.sh "$SERVER_NAME" 2>&1 | grep -q "started successfully"; then
-        # Extract port from config
-        PORT=$(grep "^SERVER_PORT=" "$config" | cut -d= -f2 | tr -d ' ')
+    # Use start-server.sh script for each server (already uses docker-compose)
+    if ./scripts/start-server.sh "$SERVER_NAME" > /dev/null 2>&1; then
+        # Get port from config file
+        PORT=$(grep "^SERVER_PORT=" "$config" | cut -d= -f2 || echo "unknown")
         STARTED_SERVERS+=("${SERVER_NAME} (port ${PORT})")
         ((STARTED++))
     else

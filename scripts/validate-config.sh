@@ -183,9 +183,9 @@ validate_system_requirements() {
             validation_success "Docker daemon is running"
         fi
 
-        # Check Docker Compose
+        # Check Docker Compose (optional - only needed for docker-compose.yml usage)
         if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-            validation_error "Docker Compose is not available"
+            validation_warning "Docker Compose is not available (optional for dynamic server management)"
         else
             validation_success "Docker Compose is available"
         fi

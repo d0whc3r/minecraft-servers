@@ -65,6 +65,7 @@ Open Minecraft Java Edition and connect to:
 | Script               | Purpose                        | Usage                                       |
 | -------------------- | ------------------------------ | ------------------------------------------- |
 | `start-server.sh`    | Start specific server          | `./scripts/start-server.sh <name>`          |
+| `stop-server.sh`     | Stop server (with purge opts)  | `./scripts/stop-server.sh <name> [--purge]` |
 | `start-all.sh`       | Start all configured servers   | `./scripts/start-all.sh`                    |
 | `stop-all.sh`        | Stop all servers gracefully    | `./scripts/stop-all.sh`                     |
 | `restart-server.sh`  | Restart specific server        | `./scripts/restart-server.sh <name>`        |
@@ -94,6 +95,7 @@ Open Minecraft Java Edition and connect to:
 - 💾 [**Backup & Restore**](docs/BACKUP_RESTORE.md) - Backup strategy and recovery
 - 🏥 [**Monitoring**](docs/MONITORING.md) - Health checks and auto-restart
 - 🔧 [**Troubleshooting**](docs/TROUBLESHOOTING.md) - Common issues and solutions
+- 🔐 [**Environment Variables**](docs/ENVIRONMENT_VARIABLES.md) - Complete configuration reference
 
 ## Quick Command Reference
 

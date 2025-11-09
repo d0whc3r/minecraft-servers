@@ -81,7 +81,7 @@ Edit `servers/vanilla/data/server.properties`:
 
 ```properties
 # Server Info
-motd=Vanilla Survival Server
+motd="Vanilla Survival Server"
 server-port=25569
 max-players=20
 

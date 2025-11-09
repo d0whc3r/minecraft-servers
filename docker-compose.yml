@@ -1,17 +1,24 @@
+# Dynamic Minecraft Multi-Server Configuration
+# This template instantiates a new server for each modpack dynamically
+# Usage: docker-compose -p mc-<server> --env-file config/modpacks/<server>.env up -d
+#
+# All itzg/minecraft-server environment variables are supported via the env_file.
+# See: https://docker-minecraft-server.readthedocs.io/en/latest/variables/
+
 services:
   minecraft-server:
     image: itzg/minecraft-server:latest
-    container_name: mc-${SERVER_NAME}
-    environment:
-      EULA: "TRUE"
+    container_name: ${CONTAINER_NAME:-mc-server}
+    # Load base config + server-specific config
+    # Server config file must define at minimum: EULA, TYPE, VERSION, SERVER_PORT
     env_file:
-      - config/modpacks/${SERVER_NAME}.env
+      - .env
     ports:
-      - "${SERVER_PORT}:25565"
+      - "${SERVER_PORT:-25565}:25565"
     volumes:
-      - ./servers/${SERVER_NAME}/data:/data
-      - ./servers/${SERVER_NAME}/mods:/mods
-      - ./backups/${SERVER_NAME}:/backups
+      - ${SERVER_DATA_DIR:-./data}:/data
+      - ${SERVER_MODS_DIR:-./mods}:/mods
+      - ${SERVER_BACKUP_DIR:-./backups}:/backups
     networks:
       - minecraft-network
     restart: unless-stopped
@@ -26,4 +33,5 @@ services:
 
 networks:
   minecraft-network:
+    name: minecraft-network
     driver: bridge
