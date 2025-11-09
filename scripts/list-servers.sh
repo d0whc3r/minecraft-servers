@@ -8,19 +8,11 @@
 #   0 - Status retrieved successfully
 #   1 - Docker daemon not running
 
-set -euo pipefail
-
-# Color codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m'
+# Load common functions
+source "$(dirname "$0")/common.sh"
 
 # Check Docker daemon
-if ! docker info > /dev/null 2>&1; then
-    echo "ERROR: Docker daemon is not running" >&2
+if ! check_docker_running; then
     exit 1
 fi
 
@@ -103,30 +95,10 @@ for container in $CONTAINERS; do
         PORT=$(docker port "$container" 25565 2>/dev/null | cut -d: -f2 || echo "N/A")
         
         # Get memory from config
-        CONFIG_FILE="config/modpacks/${SERVER_NAME}.env"
-        if [ -f "$CONFIG_FILE" ]; then
-            MEMORY=$(grep "^MEMORY=" "$CONFIG_FILE" | cut -d= -f2 | tr -d ' ' || echo "N/A")
-        else
-            MEMORY="N/A"
-        fi
+        MEMORY=$(grep "^MEMORY=" "config/modpacks/${SERVER_NAME}.env" 2>/dev/null | cut -d= -f2 | tr -d ' "' || echo "N/A")
         
         # Calculate uptime
-        START_TIME=$(docker inspect --format='{{.State.StartedAt}}' "$container" 2>/dev/null || echo "")
-        if [ -n "$START_TIME" ]; then
-            START_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${START_TIME%.*}" "+%s" 2>/dev/null || echo "0")
-            NOW_EPOCH=$(date "+%s")
-            UPTIME_SECONDS=$((NOW_EPOCH - START_EPOCH))
-            
-            if [ $UPTIME_SECONDS -ge 86400 ]; then
-                UPTIME="$((UPTIME_SECONDS / 86400))d $((UPTIME_SECONDS % 86400 / 3600))h"
-            elif [ $UPTIME_SECONDS -ge 3600 ]; then
-                UPTIME="$((UPTIME_SECONDS / 3600))h $((UPTIME_SECONDS % 3600 / 60))m"
-            else
-                UPTIME="$((UPTIME_SECONDS / 60))m"
-            fi
-        else
-            UPTIME="N/A"
-        fi
+        UPTIME=$(get_container_uptime "$container")
         
         # Get health status
         HEALTH=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}N/A{{end}}' "$container" 2>/dev/null || echo "N/A")
@@ -145,7 +117,8 @@ for container in $CONTAINERS; do
         HEALTH="-"
     fi
     
-    printf "%-24s %-20s %-8s %-8s %-12s %-18s\n" "$SERVER_NAME" "$STATUS_COLOR" "$PORT" "$MEMORY" "$UPTIME" "$HEALTH"
+    # Print with echo -e to interpret color codes
+    echo -e "$(printf "%-24s" "$SERVER_NAME")$(printf "%-20s" "$STATUS_COLOR")$(printf "%-8s" "$PORT")$(printf "%-8s" "$MEMORY")$(printf "%-12s" "$UPTIME")$(printf "%-18s" "$HEALTH")"
 done
 
 echo "================================================================================"

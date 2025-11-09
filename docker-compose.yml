@@ -35,3 +35,4 @@ networks:
   minecraft-network:
     name: minecraft-network
     driver: bridge
+    external: true

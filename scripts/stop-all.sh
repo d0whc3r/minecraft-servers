@@ -9,35 +9,17 @@
 #   1 - One or more servers had issues stopping
 #   5 - Timeout waiting for graceful shutdown
 
-set -euo pipefail
-
-# Color codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-error() {
-    echo -e "${RED}ERROR: $1${NC}" >&2
-}
-
-success() {
-    echo -e "${GREEN}✓ $1${NC}"
-}
-
-info() {
-    echo -e "$1"
-}
+# Load common functions
+source "$(dirname "$0")/common.sh"
 
 info ""
 info "${BLUE}Stopping all Minecraft servers gracefully...${NC}"
 info ""
 
 # Find all minecraft containers
-CONTAINERS=$(docker ps --filter "name=mc-*" --format "{{.Names}}" 2>/dev/null || true)
+RUNNING_SERVERS=$(list_running_servers)
 
-if [ -z "$CONTAINERS" ]; then
+if [ -z "$RUNNING_SERVERS" ]; then
     info "No running Minecraft servers found."
     info ""
     exit 0
@@ -48,13 +30,11 @@ FAILED=0
 declare -a STOPPED_SERVERS
 declare -a FAILED_SERVERS
 
-# Stop each container using docker-compose
-for container in $CONTAINERS; do
-    SERVER_NAME=${container#mc-}
-    
+# Stop each server
+for SERVER_NAME in $RUNNING_SERVERS; do
     info "Stopping: ${YELLOW}${SERVER_NAME}${NC}"
     
-    if docker-compose -p "mc-${SERVER_NAME}" down 2>&1 > /dev/null; then
+    if docker_compose_down "$SERVER_NAME" > /dev/null 2>&1; then
         STOPPED_SERVERS+=("${SERVER_NAME}")
         ((STOPPED++))
         success "Stopped: ${SERVER_NAME}"

@@ -9,26 +9,8 @@
 #   1 - One or more servers failed to start
 #   4 - No configuration files found
 
-set -euo pipefail
-
-# Color codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-error() {
-    echo -e "${RED}ERROR: $1${NC}" >&2
-}
-
-success() {
-    echo -e "${GREEN}✓ $1${NC}"
-}
-
-info() {
-    echo -e "$1"
-}
+# Load common functions
+source "$(dirname "$0")/common.sh"
 
 # Check if config directory exists
 if [ ! -d "config/modpacks" ]; then
@@ -61,10 +43,9 @@ for config in "${CONFIG_FILES[@]}"; do
     
     info "Starting: ${YELLOW}${SERVER_NAME}${NC}"
     
-    # Use start-server.sh script for each server (already uses docker-compose)
+    # Use start-server.sh script for each server
     if ./scripts/start-server.sh "$SERVER_NAME" > /dev/null 2>&1; then
-        # Get port from config file
-        PORT=$(grep "^SERVER_PORT=" "$config" | cut -d= -f2 || echo "unknown")
+        PORT=$(get_server_port "$SERVER_NAME")
         STARTED_SERVERS+=("${SERVER_NAME} (port ${PORT})")
         ((STARTED++))
     else

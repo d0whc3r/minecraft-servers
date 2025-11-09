@@ -5,8 +5,8 @@
 # Usage: source "$(dirname "$0")/common.sh"
 #
 
-# Ensure script exits on error
-set -euo pipefail
+# Ensure script exits on error (but allow arithmetic that evaluates to 0)
+set -uo pipefail
 
 # ============================================================================
 # COLOR CODES
@@ -310,6 +310,29 @@ get_server_port() {
         grep "^SERVER_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "' || echo "unknown"
     else
         echo "unknown"
+    fi
+}
+
+# Get container uptime in human-readable format
+# Args: $1 - container name
+# Returns: uptime string (stdout)
+get_container_uptime() {
+    local container_name="$1"
+    
+    # Get status output which includes uptime
+    local status_line
+    status_line=$(docker ps --filter "name=${container_name}" --format "{{.Status}}" 2>/dev/null)
+    
+    if [ -z "$status_line" ]; then
+        echo "N/A"
+        return
+    fi
+    
+    # Extract uptime from "Up X minutes/hours/days"
+    if [[ "$status_line" =~ Up[[:space:]](.+)$ ]]; then
+        echo "${BASH_REMATCH[1]}" | sed 's/ (.*)//' | head -c 12
+    else
+        echo "N/A"
     fi
 }
 
