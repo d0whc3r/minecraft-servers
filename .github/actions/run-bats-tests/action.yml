@@ -35,7 +35,7 @@ runs:
         export CI=true
         export DEBUG=false
 
-        # Run tests with timing and verbose output
+        # Run tests with timing information
         echo "Starting BATS test execution..."
         echo "Pattern: ${{ inputs.test-pattern }}"
         echo "Parallel jobs: ${{ inputs.parallel-jobs }}"
@@ -43,7 +43,7 @@ runs:
         echo "---"
 
         # Execute tests with timeout
-        timeout ${{ fromJSON(inputs.timeout) }}m bats --jobs ${{ inputs.parallel-jobs }} --timing --verbose ${{ inputs.test-pattern }}
+        timeout ${{ fromJSON(inputs.timeout) }}m bats --jobs ${{ inputs.parallel-jobs }} --timing ${{ inputs.test-pattern }}
 
     - name: Generate test report
       shell: bash
