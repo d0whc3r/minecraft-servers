@@ -4,11 +4,11 @@ A Docker-based system for running multiple Minecraft server instances with diffe
 
 ## Features
 
-- 🚀 **Multi-Server Support**: Run 5+ Minecraft servers concurrently with different modpacks
+- 🚀 **Multi-Server Support**: Run 14+ Minecraft servers concurrently with different modpacks
 - 🔧 **Template-Based Configuration**: Single docker-compose.yml for all servers
 - 💾 **Automated Backups**: 3-backup rolling window with integrity verification
 - 🏥 **Health Monitoring**: Built-in health checks with auto-restart on failure
-- 📦 **Pre-Configured Modpacks**: ATM8, SkyFactory 4, Prominence II RPG, RLCraft, Vanilla
+- 📦 **Pre-Configured Modpacks**: Vanilla, ATM8, SkyFactory 4, Prominence II RPG, RLCraft, Solo Leveling series, Dragon Block C, My Hero Academia, Cobbleverse, Slimes Adventure, and more
 - 🔌 **Easy Extensibility**: Add custom modpacks with simple scripts
 - 🔒 **Complete Isolation**: Each server has isolated configs, worlds, and mods
 - ✅ **Production Ready**: Comprehensive validation, monitoring, and troubleshooting
@@ -20,7 +20,7 @@ A Docker-based system for running multiple Minecraft server instances with diffe
 - **Linux Server**: Ubuntu 20.04+, Debian 11+, or compatible
 - **Bash** 4.0+ (standard on most Linux distributions)
 - **Minimum Hardware**:
-  - 4GB RAM per modpack (vanilla: 2GB, heavy modpacks: 8GB+)
+  - 2-8GB RAM per modpack (lightweight: 2GB, heavy modpacks: 8GB+)
   - 50GB+ disk space for worlds and backups
   - Multi-core CPU recommended
 
@@ -79,13 +79,22 @@ Open Minecraft Java Edition and connect to:
 
 ## Pre-Configured Modpacks
 
-| Modpack           | Version | Memory | Port  | Type              | Status   |
-| ----------------- | ------- | ------ | ----- | ----------------- | -------- |
-| Vanilla (Paper)   | 1.20.4  | 2G     | 25569 | Optimized vanilla | ✅ Ready |
-| All The Mods 8    | 1.20.1  | 8G     | 25565 | Kitchen sink      | ✅ Ready |
-| SkyFactory 4      | 1.12.2  | 4G     | 25566 | Skyblock          | ✅ Ready |
-| Prominence II RPG | 1.20.1  | 6G     | 25567 | RPG adventure     | ✅ Ready |
-| RLCraft           | 1.12.2  | 6G     | 25568 | Hardcore survival | ✅ Ready |
+| Modpack                       | Version | Memory | Port  | Type              | Platform   | Status   |
+| ----------------------------- | ------- | ------ | ----- | ----------------- | ---------- | -------- |
+| **All The Mods 8**            | 1.20.1  | 8G     | 25565 | Kitchen sink      | CurseForge | ✅ Ready |
+| **SkyFactory 4**              | 1.12.2  | 4G     | 25566 | Skyblock          | CurseForge | ✅ Ready |
+| **Prominence II RPG**         | 1.20.1  | 6G     | 25567 | RPG adventure     | CurseForge | ✅ Ready |
+| **RLCraft**                   | 1.12.2  | 6G     | 25568 | Hardcore survival | CurseForge | ✅ Ready |
+| **Vanilla (Paper)**           | 1.20.4  | 2G     | 25569 | Optimized vanilla | Paper      | ✅ Ready |
+| **Cobbleverse**               | 1.21.1  | 6G     | 25570 | Pokemon adventure | Modrinth   | ✅ Ready |
+| **Slimes Adventure**          | 1.19.2  | 4G     | 25571 | Exploration       | Modrinth   | ✅ Ready |
+| **SoloCraft**                 | 1.20.1  | 3G     | 25572 | Survival focused  | Modrinth   | ✅ Ready |
+| **Solo Leveling Reawakening** | 1.20.1  | 4G     | 25573 | Hunter RPG        | CurseForge | ✅ Ready |
+| **Unofficial Dragon Block C** | 1.12.2  | 4G     | 25574 | Dragon Ball RPG   | CurseForge | ✅ Ready |
+| **Amazing FPS Booster**       | 1.20.1  | 2G     | 25575 | Performance opt.  | CurseForge | ✅ Ready |
+| **Solo Leveling Shadows**     | 1.20.1  | 6G     | 25576 | Advanced RPG      | CurseForge | ✅ Ready |
+| **Solo Leveling Level Up**    | 1.20.1  | 4G     | 25577 | RPG progression   | CurseForge | ✅ Ready |
+| **My Hero Adventure**         | 1.12.2  | 4G     | 25578 | Hero Academia     | CurseForge | ✅ Ready |
 
 ## Documentation
 
@@ -96,6 +105,7 @@ Open Minecraft Java Edition and connect to:
 - 🏥 [**Monitoring**](docs/MONITORING.md) - Health checks and auto-restart
 - 🔧 [**Troubleshooting**](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - 🔐 [**Environment Variables**](docs/ENVIRONMENT_VARIABLES.md) - Complete configuration reference
+- 📚 [**Modpack Guides**](docs/modpacks/) - Individual setup guides for each modpack
 
 ## Quick Command Reference
 
@@ -121,6 +131,9 @@ docker logs -f mc-atm8
 # Create backup
 ./scripts/backup.sh atm8
 
+# Start a Solo Leveling server
+./scripts/start-server.sh solo-leveling-shadows
+
 # Add custom server
 ./scripts/add-modpack.sh my-custom --modpack=vanilla --port=25570
 
@@ -136,7 +149,7 @@ minecraft-servers/
 ├── .env                        # Global configuration
 ├── scripts/                    # Management scripts (11 total)
 ├── config/
-│   ├── modpacks/              # Per-server .env files (5 pre-configured)
+│   ├── modpacks/              # Per-server .env files (14+ pre-configured)
 │   └── templates/             # Configuration templates
 ├── servers/                    # Server data (gitignored)
 │   └── {name}/
@@ -150,7 +163,8 @@ minecraft-servers/
     ├── ADDING_MODPACKS.md
     ├── BACKUP_RESTORE.md
     ├── MONITORING.md
-    └── TROUBLESHOOTING.md
+    ├── TROUBLESHOOTING.md
+    └── modpacks/              # Individual modpack guides
 ```
 
 ## Architecture Highlights
@@ -288,4 +302,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
 ## Acknowledgments
 
 - [itzg/minecraft-server](https://github.com/itzg/docker-minecraft-server) - Excellent Docker image for Minecraft servers
-- Minecraft community for modpack development
+- Minecraft modding community for incredible modpacks
+- CurseForge and Modrinth platforms for modpack distribution
+- Open source community for development tools and libraries

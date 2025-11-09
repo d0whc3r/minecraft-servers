@@ -29,7 +29,7 @@ services:
       - ${SERVER_BACKUP_DIR:-./backups}:/backups
     networks:
       - minecraft-network
-    restart: unless-stopped
+    # restart: unless-stopped
     stdin_open: true
     tty: true
     healthcheck:
