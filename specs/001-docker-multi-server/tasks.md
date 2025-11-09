@@ -59,8 +59,8 @@
 - [x] T010 [P] [US1] Create server directory structure `servers/vanilla/data/` and `servers/vanilla/mods/`
 - [x] T011 [P] [US1] Create backup directory `backups/vanilla/`
 - [x] T012 [US1] Create start script `scripts/start-server.sh` that accepts server-name argument, validates `config/modpacks/{server-name}.env` exists, extracts SERVER_PORT from config file, sets environment variables SERVER_NAME and SERVER_PORT, executes `docker-compose up -d`, outputs container creation status
-- [ ] T013 [US1] Test vanilla server deployment by running `./scripts/start-server.sh vanilla`, verify container `mc-vanilla` is created and running, check logs show "Done! For help, type 'help'" message, connect via Minecraft client on port 25569
-- [ ] T014 [US1] Test world persistence by building in-game, running `docker restart mc-vanilla`, reconnecting and verifying build still exists
+- [x] T013 [US1] Test vanilla server deployment by running `./scripts/start-server.sh vanilla`, verify container `mc-vanilla` is created and running, check logs show "Done! For help, type 'help'" message, connect via Minecraft client on port 25569
+- [x] T014 [US1] Test world persistence by building in-game, running `docker restart mc-vanilla`, reconnecting and verifying build still exists
 - [x] T015 [US1] Create `docs/QUICKSTART.md` with Prerequisites section (Docker/Compose installation), Quick Start section (clone repo, configure .env, start vanilla server, connect), verification steps, based on existing quickstart.md
 
 **Success Criteria Validated**:
