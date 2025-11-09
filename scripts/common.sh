@@ -199,14 +199,20 @@ docker_compose_up() {
     local config_file
     config_file=$(get_config_file "$server_name")
     
-    # Set dynamic environment variables
+    # Load SERVER_PORT from config file for docker-compose port mapping
+    # We need this in the environment for ${SERVER_PORT} substitution in docker-compose.yml
+    export SERVER_PORT=$(grep "^SERVER_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "')
+    
+    # Set dynamic environment variables for docker-compose substitution
     export CONTAINER_NAME="mc-${server_name}"
     export SERVER_DATA_DIR="$(pwd)/servers/${server_name}/data"
     export SERVER_MODS_DIR="$(pwd)/servers/${server_name}/mods"
     export SERVER_BACKUP_DIR="$(pwd)/backups/${server_name}"
+    export SERVER_CONFIG_FILE="$config_file"
     
     debug "Starting server with docker-compose -p mc-${server_name}"
-    docker-compose -p "mc-${server_name}" --env-file "$config_file" up -d 2>&1
+    debug "Port mapping: ${SERVER_PORT}:25565"
+    docker-compose -p "mc-${server_name}" up -d 2>&1
 }
 
 # Stop server using docker-compose
@@ -227,14 +233,18 @@ docker_compose_restart() {
     local config_file
     config_file=$(get_config_file "$server_name")
     
+    # Load SERVER_PORT from config file for docker-compose port mapping
+    export SERVER_PORT=$(grep "^SERVER_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "')
+    
     # Set dynamic environment variables
     export CONTAINER_NAME="mc-${server_name}"
     export SERVER_DATA_DIR="$(pwd)/servers/${server_name}/data"
     export SERVER_MODS_DIR="$(pwd)/servers/${server_name}/mods"
     export SERVER_BACKUP_DIR="$(pwd)/backups/${server_name}"
+    export SERVER_CONFIG_FILE="$config_file"
     
     debug "Restarting server with docker-compose -p mc-${server_name} restart"
-    docker-compose -p "mc-${server_name}" --env-file "$config_file" restart 2>&1
+    docker-compose -p "mc-${server_name}" restart 2>&1
 }
 
 # ============================================================================
@@ -311,6 +321,89 @@ get_server_port() {
     else
         echo "unknown"
     fi
+}
+
+# Check for port conflicts across all server configs
+# Returns: 0 if no conflicts, 1 if conflicts found
+check_port_conflicts() {
+    local port_list=()
+    local server_list=()
+    local has_conflict=false
+    local idx
+    
+    for config_file in config/modpacks/*.env; do
+        [ -f "$config_file" ] || continue
+        
+        local server_name
+        server_name=$(basename "$config_file" .env)
+        
+        local port
+        port=$(grep "^SERVER_PORT=" "$config_file" 2>/dev/null | cut -d= -f2 | tr -d ' "')
+        
+        if [ -z "$port" ]; then
+            warning "Server $server_name has no SERVER_PORT defined"
+            has_conflict=true
+            continue
+        fi
+        
+        # Check if this port already exists in our list
+        idx=0
+        for existing_port in "${port_list[@]+"${port_list[@]}"}"; do
+            if [ "$port" = "$existing_port" ]; then
+                error "Port conflict detected: $port used by both ${server_list[$idx]} and $server_name"
+                has_conflict=true
+                break
+            fi
+            ((idx++)) || true
+        done
+        
+        # Add to our lists
+        port_list+=("$port")
+        server_list+=("$server_name")
+    done
+    
+    if [ "$has_conflict" = true ]; then
+        return 1
+    fi
+    
+    return 0
+}
+
+# Find next available port
+# Returns: available port number (stdout)
+find_available_port() {
+    local used_ports=()
+    
+    # Collect all used ports
+    for config_file in config/modpacks/*.env; do
+        [ -f "$config_file" ] || continue
+        
+        local port
+        port=$(grep "^SERVER_PORT=" "$config_file" 2>/dev/null | cut -d= -f2 | tr -d ' "')
+        
+        if [ -n "$port" ]; then
+            used_ports+=("$port")
+        fi
+    done
+    
+    # Find first available port in range 25565-25664
+    for port in {25565..25664}; do
+        local port_used=false
+        for used_port in "${used_ports[@]}"; do
+            if [ "$port" = "$used_port" ]; then
+                port_used=true
+                break
+            fi
+        done
+        
+        if [ "$port_used" = false ]; then
+            echo "$port"
+            return 0
+        fi
+    done
+    
+    error "No available ports in range 25565-25664"
+    return 1
 }
 
 # Get container uptime in human-readable format

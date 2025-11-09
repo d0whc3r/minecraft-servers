@@ -3,7 +3,8 @@
 # Part of minecraft-servers multi-configuration system
 # Contract: contracts/management-api.md
 
-set -euo pipefail
+# Load common functions
+source "$(dirname "$0")/common.sh"
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,14 +13,7 @@ CONFIG_DIR="$PROJECT_ROOT/config/modpacks"
 SERVERS_DIR="$PROJECT_ROOT/servers"
 BACKUPS_DIR="$PROJECT_ROOT/backups"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Logging functions
+# Logging functions (augment common.sh functions)
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1" >&2
 }
@@ -380,30 +374,15 @@ validate_server_directories() {
 # Validate port conflicts
 validate_port_conflicts() {
     local current_server="$1"
-    local current_port
-
-    current_port=$(grep "^SERVER_PORT=" "$CONFIG_DIR/${current_server}.env" | cut -d'=' -f2- | sed 's/^"//' | sed 's/"$//')
-
-    if [[ -z "$current_port" ]]; then
-        return 0
+    
+    # Use common.sh function for comprehensive port conflict checking
+    if ! check_port_conflicts; then
+        validation_error "Port conflicts detected across server configurations"
+        return 1
     fi
-
-    # Check against other configured servers
-    for config_file in "$CONFIG_DIR"/*.env; do
-        if [[ -f "$config_file" ]]; then
-            local other_server
-            other_server=$(basename "$config_file" .env)
-
-            if [[ "$other_server" != "$current_server" ]]; then
-                local other_port
-                other_port=$(grep "^SERVER_PORT=" "$config_file" | cut -d'=' -f2- | sed 's/^"//' | sed 's/"$//')
-
-                if [[ "$other_port" == "$current_port" ]]; then
-                    validation_error "Port conflict: $current_server and $other_server both use port $current_port"
-                fi
-            fi
-        fi
-    done
+    
+    validation_success "No port conflicts detected"
+    return 0
 }
 
 # Validate individual server

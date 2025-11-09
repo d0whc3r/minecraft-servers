@@ -9,12 +9,20 @@ services:
   minecraft-server:
     image: itzg/minecraft-server:latest
     container_name: ${CONTAINER_NAME:-mc-server}
-    # Load base config + server-specific config
-    # Server config file must define at minimum: EULA, TYPE, VERSION, SERVER_PORT
+    # Load environment variables from TWO sources:
+    # 1. .env - Shared/private variables (EULA, RCON_PASSWORD, etc.)
+    # 2. SERVER_CONFIG_FILE - Server-specific config (overrides .env)
     env_file:
       - .env
+      - ${SERVER_CONFIG_FILE}
     ports:
+      # Map external port (SERVER_PORT) to internal port 25565
+      # Minecraft server ALWAYS listens on 25565 inside the container
       - "${SERVER_PORT:-25565}:25565"
+    environment:
+      # Override SERVER_PORT to always be 25565 internally
+      # The external port mapping handles the actual port exposure
+      SERVER_PORT: 25565
     volumes:
       - ${SERVER_DATA_DIR:-./data}:/data
       - ${SERVER_MODS_DIR:-./mods}:/mods
