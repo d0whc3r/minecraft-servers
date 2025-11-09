@@ -302,5 +302,4 @@ For issues specific to:
 
 ---
 
-_Created by Sh4d0wJ0J0 - Bringing the Dragon Ball universe to Minecraft._</content>
-<parameter name="filePath">/Users/josep/projects/github/minecraft-servers/docs/modpacks/unofficial-dragon-block-c.md
+_Created by Sh4d0wJ0J0 - Bringing the Dragon Ball universe to Minecraft._

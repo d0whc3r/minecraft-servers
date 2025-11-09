@@ -336,5 +336,4 @@ For issues specific to:
 
 ---
 
-_Created by ProFake - The ultimate Solo Leveling experience with unparalleled depth and progression._</content>
-<parameter name="filePath">/Users/josep/projects/github/minecraft-servers/docs/modpacks/solo-leveling-shadows.md
+_Created by ProFake - The ultimate Solo Leveling experience with unparalleled depth and progression._

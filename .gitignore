@@ -1,6 +1,10 @@
 # Environment Configuration
 .env
 
+node_modules/
+dist/
+build/
+
 # Server Data (worlds, player data, logs)
 servers/*/data/
 

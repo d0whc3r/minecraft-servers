@@ -305,5 +305,4 @@ For issues specific to:
 
 ---
 
-_Created by Sh4d0wJ0J0 - Performance optimization for the masses._</content>
-<parameter name="filePath">/Users/josep/projects/github/minecraft-servers/docs/modpacks/amazing-fps-booster.md
+_Created by Sh4d0wJ0J0 - Performance optimization for the masses._

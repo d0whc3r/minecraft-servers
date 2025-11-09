@@ -80,7 +80,7 @@ check_config_exists() {
         error "Configuration not found: $config_file"
         echo "" >&2
         echo "Available servers:" >&2
-        list_available_servers >&2
+        list_available_servers | sed 's/^/  - /' >&2
         return 1
     fi
     
@@ -140,13 +140,9 @@ list_available_servers() {
         local configs=(config/modpacks/*.env)
         if [ -e "${configs[0]}" ]; then
             for config in "${configs[@]}"; do
-                echo "  - $(basename "$config" .env)"
+                basename "$config" .env
             done
-        else
-            echo "  (none configured)"
         fi
-    else
-        echo "  (config directory not found)"
     fi
 }
 
@@ -203,6 +199,10 @@ docker_compose_up() {
     # We need this in the environment for ${SERVER_PORT} substitution in docker-compose.yml
     export SERVER_PORT=$(grep "^SERVER_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "')
     
+    # Load JAVA_VERSION from config file for docker-compose image selection
+    # We need this in the environment for ${JAVA_VERSION:-latest} substitution in docker-compose.yml
+    export JAVA_VERSION=$(grep "^JAVA_VERSION=" "$config_file" | cut -d= -f2 | tr -d ' "' || echo "")
+    
     # Set dynamic environment variables for docker-compose substitution
     export CONTAINER_NAME="mc-${server_name}"
     export SERVER_DATA_DIR="$(pwd)/servers/${server_name}/data"
@@ -236,6 +236,9 @@ docker_compose_restart() {
     # Load SERVER_PORT from config file for docker-compose port mapping
     export SERVER_PORT=$(grep "^SERVER_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "')
     
+    # Load JAVA_VERSION from config file for docker-compose image selection
+    export JAVA_VERSION=$(grep "^JAVA_VERSION=" "$config_file" | cut -d= -f2 | tr -d ' "' || echo "")
+    
     # Set dynamic environment variables
     export CONTAINER_NAME="mc-${server_name}"
     export SERVER_DATA_DIR="$(pwd)/servers/${server_name}/data"
@@ -248,8 +251,28 @@ docker_compose_restart() {
 }
 
 # ============================================================================
-# FILE OPERATIONS
+# PRUNE OPERATIONS
 # ============================================================================
+
+# Prune server runtime data (data only, preserves config and backups)
+# Args: $1 - server name
+# Returns: 0 on success, 1 on failure
+prune_server_data() {
+    local server_name="$1"
+    local data_dir
+    
+    data_dir=$(get_data_dir "$server_name")
+    
+    debug "Pruning server data for: $server_name"
+    
+    # Remove data directory only (preserve backups)
+    if remove_directory "$data_dir"; then
+        debug "Removed data directory: $data_dir"
+    fi
+    
+    # Always return success - not an error if directory didn't exist
+    return 0
+}
 
 # Ensure directory exists
 # Args: $1 - directory path

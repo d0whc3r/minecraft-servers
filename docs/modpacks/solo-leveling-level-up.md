@@ -314,5 +314,4 @@ For issues specific to:
 
 ---
 
-_Created by ProFake - Experience the hunter's journey in Solo Leveling: Level Up!_"</content>
-<parameter name="filePath">/Users/josep/projects/github/minecraft-servers/docs/modpacks/solo-leveling-level-up.md
+_Created by ProFake - Experience the hunter's journey in Solo Leveling: Level Up!_"

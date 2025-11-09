@@ -7,7 +7,7 @@
 
 services:
   minecraft-server:
-    image: itzg/minecraft-server:latest
+    image: itzg/minecraft-server:${JAVA_VERSION:-latest}
     container_name: ${CONTAINER_NAME:-mc-server}
     # Load environment variables from TWO sources:
     # 1. .env - Shared/private variables (EULA, RCON_PASSWORD, etc.)

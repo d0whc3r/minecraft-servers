@@ -49,6 +49,10 @@ The `common.sh` file provides a reusable foundation for all scripts, including:
 - `remove_directory(path)` - Safely remove directory
 - `remove_file(path)` - Safely remove file
 
+### Prune Operations
+
+- `prune_server_data(server)` - Remove server data directory only (preserves config and backups)
+
 ### Network Helpers
 
 - `ensure_network(name)` - Create Docker network if it doesn't exist
