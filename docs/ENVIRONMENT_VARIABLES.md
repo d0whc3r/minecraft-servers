@@ -302,10 +302,46 @@ WHITELIST=player1,player2,player3
 ONLINE_MODE=false
 ```
 
-## References
+## Docker Configuration
 
-- **Full Variable List**: https://docker-minecraft-server.readthedocs.io/en/latest/variables/
-- **Server Types**: https://docker-minecraft-server.readthedocs.io/en/latest/types-and-platforms/
-- **JVM Options**: https://docker-minecraft-server.readthedocs.io/en/latest/configuration/jvm-options/
-- **CurseForge Setup**: https://docker-minecraft-server.readthedocs.io/en/latest/types-and-platforms/mod-platforms/auto-curseforge/
-- **Modrinth Setup**: https://docker-minecraft-server.readthedocs.io/en/latest/types-and-platforms/mod-platforms/modrinth-modpacks/
+| Variable       | Description                           | Default  | Values                                                          |
+| -------------- | ------------------------------------- | -------- | --------------------------------------------------------------- |
+| `JAVA_VERSION` | Java version tag for the Docker image | `latest` | `latest`, `java8`, `java11`, `java17`, `java21`, `java25`, etc. |
+
+### Java Version Selection
+
+The `JAVA_VERSION` variable controls which Java version the Docker container uses. Different Minecraft versions and modpacks require specific Java versions:
+
+- **Java 8**: Required for Minecraft 1.16.5 and older, Forge versions < 1.18
+- **Java 11**: Compatible with most Minecraft versions
+- **Java 17**: Required for Minecraft 1.18+ and many modern modpacks
+- **Java 21**: Latest version, required for Minecraft 1.20.5+ and some modpacks
+- **Java 25**: Experimental/latest features
+
+If not specified, defaults to `latest` (currently Java 21).
+
+**Examples:**
+
+```bash
+# Use Java 17 for better compatibility with modern modpacks
+JAVA_VERSION=java17
+
+# Use Java 8 for older Forge versions
+JAVA_VERSION=java8
+
+# Use latest Java version (default)
+# JAVA_VERSION not set or JAVA_VERSION=latest
+```
+
+**Example server configuration:**
+
+```bash
+# config/modpacks/my-server.env
+TYPE=AUTO_CURSEFORGE
+CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/all-the-mods-8
+VERSION=1.19.2
+MEMORY=8G
+SERVER_PORT=25566
+SERVER_NAME=ATM8 Server
+JAVA_VERSION=java17  # Use Java 17 for this modpack
+```

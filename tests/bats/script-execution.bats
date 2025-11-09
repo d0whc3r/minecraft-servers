@@ -5,27 +5,6 @@
 # Load test environment and helpers
 load '../helpers/test-env'
 
-# Setup and teardown for all tests in this suite
-setup_suite() {
-    # Simple setup without complex functions
-    echo "Setting up test suite"
-}
-
-teardown_suite() {
-    # Simple cleanup
-    echo "Cleaning up test suite"
-}
-
-setup() {
-    # Simple setup
-    echo "Setting up test"
-}
-
-teardown() {
-    # Simple cleanup
-    echo "Cleaning up test"
-}
-
 # Helper function to get all modpack configurations
 get_modpack_configs() {
     local modpack_dir="config/modpacks"
@@ -236,121 +215,194 @@ get_modpack_name() {
 }
 
 # Test Case: US1-TC007 - Server fully starts and becomes ready
-@test "US1-TC007: Server fully starts and becomes ready" {
-    # Use vanilla modpack for this test as it's the simplest and fastest to start
-    local test_modpack="vanilla"
-    local container_name="mc-${test_modpack}"
-    local max_wait_time=180  # 3 minutes should be enough for vanilla
+@test "US1-TC007: All servers fully start and become ready" {
+    local max_wait_time=300  # 5 minutes max per server
     local check_interval=5   # Check logs every 5 seconds
+    local failed_servers=()
+    local successful_servers=()
+    local total_servers=0
 
-    # Skip if vanilla config doesn't exist
-    [ -f "config/modpacks/${test_modpack}.env" ] || skip "Vanilla modpack config not found"
+    # Get all modpack configurations
+    local modpack_configs=()
+    while IFS= read -r -d '' file; do
+        modpack_configs+=("$file")
+    done < <(find config/modpacks -name "*.env" -type f -print0 | sort -z)
 
-    echo "Testing full server startup for: $test_modpack"
-    echo "Monitoring: Check every ${check_interval}s, max ${max_wait_time}s"
+    [ ${#modpack_configs[@]} -gt 0 ] || skip "No modpack configs found"
 
-    # Start the server in background
-    ./scripts/start-server.sh "$test_modpack" &
-    local server_pid=$!
+    echo "Testing full startup for ${#modpack_configs[@]} modpack(s)..."
+    echo "---"
 
-    # Wait for container to be created
-    echo "Waiting for container to be created..."
-    local wait_container=0
-    while [ $wait_container -lt 30 ]; do
-        if docker ps -a --filter "name=${container_name}" --format "{{.Names}}" | grep -q "^${container_name}$"; then
-            echo "✓ Container created"
-            break
+    for config_file in "${modpack_configs[@]}"; do
+        total_servers=$((total_servers + 1))
+        local modpack_name
+        modpack_name=$(basename "$config_file" .env)
+        local container_name="mc-${modpack_name}"
+
+        echo ""
+        echo "[$total_servers/${#modpack_configs[@]}] Testing: $modpack_name"
+        echo "Monitoring: Check every ${check_interval}s, max ${max_wait_time}s"
+
+        # Start the server in background
+        ./scripts/start-server.sh "$modpack_name" &
+        local server_pid=$!
+
+        # Wait for container to be created
+        echo "→ Waiting for container creation..."
+        local wait_container=0
+        while [ $wait_container -lt 30 ]; do
+            if docker ps -a --filter "name=${container_name}" --format "{{.Names}}" | grep -q "^${container_name}$"; then
+                echo "  ✓ Container created"
+                break
+            fi
+            sleep 1
+            wait_container=$((wait_container + 1))
+        done
+
+        if [ $wait_container -ge 30 ]; then
+            echo "  ✗ Container not created after 30s"
+            failed_servers+=("$modpack_name:container_not_created")
+            kill $server_pid >/dev/null 2>&1 || true
+            continue
         fi
-        sleep 1
-        wait_container=$((wait_container + 1))
-    done
 
-    if [ $wait_container -ge 30 ]; then
-        echo "✗ Container was not created after 30s"
-        kill $server_pid >/dev/null 2>&1 || true
-        return 1
-    fi
+        # Monitor logs until server is ready or fails
+        local elapsed=0
+        local server_ready=false
+        local last_log_line=""
 
-    # Monitor logs continuously until server is ready or fails
-    local elapsed=0
-    local server_ready=false
-    local last_log_line=""
+        echo "→ Monitoring startup progress..."
 
-    echo "Monitoring server logs for completion..."
-
-    while [ $elapsed -lt $max_wait_time ]; do
-        # Check if container is still running
-        if ! docker ps --filter "name=${container_name}" --filter "status=running" --format "{{.Names}}" | grep -q "^${container_name}$"; then
-            # Container stopped - check if it exited with error
-            local exit_code
-            exit_code=$(docker inspect "${container_name}" --format='{{.State.ExitCode}}' 2>/dev/null || echo "1")
-            if [ "$exit_code" != "0" ]; then
-                echo "✗ Container exited with code $exit_code"
-                echo "Last 20 log lines:"
-                docker logs "$container_name" 2>&1 | tail -20
+        while [ $elapsed -lt $max_wait_time ]; do
+            # CRITICAL: Check container status FIRST before any operation
+            local container_status
+            container_status=$(docker inspect "${container_name}" --format='{{.State.Status}}' 2>/dev/null || echo "not_found")
+            
+            if [ "$container_status" != "running" ]; then
+                # Container is not running - could be exited, dead, or removed
+                local exit_code
+                exit_code=$(docker inspect "${container_name}" --format='{{.State.ExitCode}}' 2>/dev/null || echo "unknown")
+                
+                echo "  ✗ Container stopped (status: $container_status, exit code: $exit_code)"
+                echo "  Last 20 log lines:"
+                docker logs "$container_name" 2>&1 | tail -20 | sed 's/^/    /'
+                
+                if [ "$exit_code" = "unknown" ]; then
+                    failed_servers+=("$modpack_name:container_disappeared")
+                else
+                    failed_servers+=("$modpack_name:stopped_exit_$exit_code")
+                fi
+                
                 kill $server_pid >/dev/null 2>&1 || true
                 docker rm "$container_name" >/dev/null 2>&1 || true
-                return 1
+                break
+            fi
+
+            # Container is running - safe to get logs
+            # Get last 2 lines of logs to show progress (only every 15s to reduce noise)
+            if [ $((elapsed % 15)) -eq 0 ] || [ $elapsed -eq 0 ]; then
+                local current_log_tail
+                current_log_tail=$(docker logs "$container_name" 2>&1 | tail -2 | tr '\n' ' ' | sed 's/  */ /g')
+                
+                if [ "$current_log_tail" != "$last_log_line" ] && [ -n "$current_log_tail" ]; then
+                    echo "  [${elapsed}s] ${current_log_tail:0:100}..."
+                    last_log_line="$current_log_tail"
+                fi
+            fi
+
+            # Check for server ready message (most reliable indicator)
+            local current_logs
+            current_logs=$(docker logs "$container_name" 2>&1)
+            
+            if echo "$current_logs" | grep -q 'Done ([0-9.]*s)! For help, type "help"'; then
+                server_ready=true
+                echo "  ✓ Server fully ready!"
+                break
+            fi
+
+            # Alternative check for older Minecraft versions
+            if echo "$current_logs" | grep -q 'Done! For help, type "help"'; then
+                server_ready=true
+                echo "  ✓ Server fully ready!"
+                break
+            fi
+
+            # Check for fatal errors
+            if echo "$current_logs" | grep -q -i "java.lang.OutOfMemoryError\|Server crashed\|Failed to start\|Could not reserve enough space\|Exception in thread"; then
+                echo "  ✗ Fatal error detected in logs"
+                echo "  Last 20 log lines:"
+                echo "$current_logs" | tail -20 | sed 's/^/    /'
+                failed_servers+=("$modpack_name:fatal_error")
+                kill $server_pid >/dev/null 2>&1 || true
+                docker rm "$container_name" >/dev/null 2>&1 || true
+                break
+            fi
+
+            sleep "$check_interval"
+            elapsed=$((elapsed + check_interval))
+        done
+
+        # Verify result
+        if [ "$server_ready" = true ]; then
+            echo "  ✅ Completed in ${elapsed}s"
+            successful_servers+=("$modpack_name")
+            
+            # Clean up
+            ./scripts/stop-server.sh "$modpack_name" >/dev/null 2>&1 || true
+            docker rm "$container_name" >/dev/null 2>&1 || true
+        else
+            # Only add timeout if server wasn't already marked as failed
+            if ! echo "${failed_servers[*]}" | grep -q "$modpack_name"; then
+                # Check one last time if container is still running
+                local final_status
+                final_status=$(docker inspect "${container_name}" --format='{{.State.Status}}' 2>/dev/null || echo "not_found")
+                
+                if [ "$final_status" = "running" ]; then
+                    echo "  ⏰ Timeout after ${max_wait_time}s (container still running)"
+                    echo "  Last 20 log lines:"
+                    docker logs "$container_name" 2>&1 | tail -20 | sed 's/^/    /'
+                    failed_servers+=("$modpack_name:timeout")
+                else
+                    local final_exit_code
+                    final_exit_code=$(docker inspect "${container_name}" --format='{{.State.ExitCode}}' 2>/dev/null || echo "unknown")
+                    echo "  ⏰ Timeout - container stopped (status: $final_status, exit: $final_exit_code)"
+                    echo "  Last 20 log lines:"
+                    docker logs "$container_name" 2>&1 | tail -20 | sed 's/^/    /'
+                    failed_servers+=("$modpack_name:timeout_stopped_$final_exit_code")
+                fi
+                
+                # Clean up
+                kill $server_pid >/dev/null 2>&1 || true
+                ./scripts/stop-server.sh "$modpack_name" >/dev/null 2>&1 || true
+                docker rm "$container_name" >/dev/null 2>&1 || true
             fi
         fi
-
-        # Get last 3 lines of logs to show progress
-        local current_log_tail
-        current_log_tail=$(docker logs "$container_name" 2>&1 | tail -3 | tr '\n' ' ' | sed 's/  */ /g')
-        
-        # Only show if logs changed
-        if [ "$current_log_tail" != "$last_log_line" ] && [ -n "$current_log_tail" ]; then
-            echo "[${elapsed}s] Latest: ${current_log_tail:0:120}..."
-            last_log_line="$current_log_tail"
-        fi
-
-        # Check for server ready message (most reliable indicator)
-        if docker logs "$container_name" 2>&1 | grep -q 'Done ([0-9.]*s)! For help, type "help"'; then
-            server_ready=true
-            echo "✓ Server is fully ready!"
-            break
-        fi
-
-        # Alternative check for older Minecraft versions
-        if docker logs "$container_name" 2>&1 | grep -q 'Done! For help, type "help"'; then
-            server_ready=true
-            echo "✓ Server is fully ready!"
-            break
-        fi
-
-        # Check for fatal errors that would prevent startup
-        if docker logs "$container_name" 2>&1 | grep -q -i "java.lang.OutOfMemoryError\|Server crashed\|Failed to start\|Could not reserve enough space"; then
-            echo "✗ Fatal error detected in logs"
-            echo "Last 20 log lines:"
-            docker logs "$container_name" 2>&1 | tail -20
-            kill $server_pid >/dev/null 2>&1 || true
-            docker rm "$container_name" >/dev/null 2>&1 || true
-            return 1
-        fi
-
-        sleep "$check_interval"
-        elapsed=$((elapsed + check_interval))
     done
 
-    # Verify if server is ready
-    if [ "$server_ready" = true ]; then
-        echo "✅ Server startup completed in ${elapsed}s"
-
-        # Clean up
-        ./scripts/stop-server.sh "$test_modpack" >/dev/null 2>&1 || true
-        docker rm "$container_name" >/dev/null 2>&1 || true
-
-        return 0
-    else
-        echo "⏰ Server did not complete startup within ${max_wait_time}s"
-        echo "Last 30 log lines:"
-        docker logs "$container_name" 2>&1 | tail -30
-
-        # Clean up
-        kill $server_pid >/dev/null 2>&1 || true
-        ./scripts/stop-server.sh "$test_modpack" >/dev/null 2>&1 || true
-        docker rm "$container_name" >/dev/null 2>&1 || true
-
-        return 1
+    # Final summary
+    echo ""
+    echo "=== FINAL SUMMARY ==="
+    echo "Total tested: $total_servers"
+    echo "Successful: ${#successful_servers[@]}"
+    echo "Failed: ${#failed_servers[@]}"
+    
+    if [ ${#successful_servers[@]} -gt 0 ]; then
+        echo ""
+        echo "✅ Successful servers:"
+        for server in "${successful_servers[@]}"; do
+            echo "  - $server"
+        done
     fi
+    
+    if [ ${#failed_servers[@]} -gt 0 ]; then
+        echo ""
+        echo "❌ Failed servers:"
+        for server in "${failed_servers[@]}"; do
+            echo "  - $server"
+        done
+    fi
+
+    # Assert all servers succeeded
+    [ ${#failed_servers[@]} -eq 0 ]
 }
+

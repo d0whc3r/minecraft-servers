@@ -203,6 +203,10 @@ docker_compose_up() {
     # We need this in the environment for ${SERVER_PORT} substitution in docker-compose.yml
     export SERVER_PORT=$(grep "^SERVER_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "')
     
+    # Load JAVA_VERSION from config file for docker-compose image selection
+    # We need this in the environment for ${JAVA_VERSION:-latest} substitution in docker-compose.yml
+    export JAVA_VERSION=$(grep "^JAVA_VERSION=" "$config_file" | cut -d= -f2 | tr -d ' "' || echo "")
+    
     # Set dynamic environment variables for docker-compose substitution
     export CONTAINER_NAME="mc-${server_name}"
     export SERVER_DATA_DIR="$(pwd)/servers/${server_name}/data"
@@ -235,6 +239,9 @@ docker_compose_restart() {
     
     # Load SERVER_PORT from config file for docker-compose port mapping
     export SERVER_PORT=$(grep "^SERVER_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "')
+    
+    # Load JAVA_VERSION from config file for docker-compose image selection
+    export JAVA_VERSION=$(grep "^JAVA_VERSION=" "$config_file" | cut -d= -f2 | tr -d ' "' || echo "")
     
     # Set dynamic environment variables
     export CONTAINER_NAME="mc-${server_name}"
