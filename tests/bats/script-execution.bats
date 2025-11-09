@@ -2,8 +2,11 @@
 # Test Suite: Script Execution Validation
 # User Story 1: Validate start-server.sh script execution with real modpack configurations
 
-# Load test environment and helpers
-load '../helpers/test-env'
+# Simple test setup - no complex mocking needed
+setup() {
+    # Ensure we're in the project root
+    cd "$(dirname "$BATS_TEST_DIRNAME")/.."
+}
 
 # Helper function to get all modpack configurations
 get_modpack_configs() {
@@ -31,7 +34,7 @@ get_modpack_name() {
     local failed_modpacks=()
     local total_modpacks=0
 
-    # Get all modpack configurations
+    # Get all real modpack configurations
     while IFS= read -r -d '' file; do
         modpack_configs+=("$file")
     done < <(find config/modpacks -name "*.env" -type f -print0 | sort -z)
@@ -40,7 +43,6 @@ get_modpack_name() {
         total_modpacks=$((total_modpacks + 1))
         local modpack_name
         modpack_name=$(basename "$config_file" .env)
-        local test_container="test-${modpack_name}-$(date +%s)"
 
         echo "Testing modpack: $modpack_name"
 
