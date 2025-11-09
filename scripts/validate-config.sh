@@ -227,7 +227,7 @@ validate_system_requirements() {
     done
 
     # Check contracts
-    if [[ ! -f "$PROJECT_ROOT/contracts/management-api.md" ]]; then
+    if [[ ! -f "$PROJECT_ROOT/specs/001-docker-multi-server/contracts/management-api.md" ]]; then
         validation_warning "Management API contract not found"
     else
         validation_success "Management API contract exists"

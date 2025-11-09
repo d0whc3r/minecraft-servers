@@ -1,0 +1,39 @@
+# Git
+.git/
+.gitignore
+
+# Environment files
+.env*
+!.env.template
+
+# Documentation
+README.md
+docs/
+.github/
+.specify/
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.tmp
+*~
+
+# Server data (mounted as volumes)
+servers/
+backups/
+
+# Test files
+tests/
+
+# Logs
+*.log
+logs/
+
+# macOS
+.DS_Store
+
+# Temporary files
+*.tmp
+*.swp
+*~
