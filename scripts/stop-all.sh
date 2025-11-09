@@ -25,7 +25,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [options]"
             echo ""
             echo "Options:"
-            echo "  --prune             Stop running servers and remove containers, data, and backups for ALL configured servers (preserves configs)"
+            echo "  --prune             Stop running servers and remove containers and data for ALL configured servers (preserves configs and backups)"
             echo "  -h, --help          Show this help message"
             echo ""
             echo "Examples:"
@@ -57,8 +57,7 @@ if [ "$PRUNE" = true ]; then
     info "  • Stop any running servers"
     info "  • Remove all containers and volumes"
     info "  • Remove all server data directories"
-    info "  • Remove all backup directories"
-    success "Configurations will be PRESERVED (source of truth)"
+    success "Configurations and backups will be PRESERVED"
     info ""
     if ! confirm "Are you sure you want to prune runtime data for ALL configured servers?"; then
         info "Prune cancelled."
@@ -177,8 +176,8 @@ fi
 
 if [ "$PRUNE" = true ]; then
     success "All configured servers processed and runtime data pruned."
-    info "Removed: containers, data directories, and backups"
-    success "Configurations preserved for all servers"
+    info "Removed: containers and data directories"
+    success "Configurations and backups preserved for all servers"
     info ""
     info "To recreate servers with same configs:"
     info "  ${YELLOW}./scripts/start-all.sh${NC}"

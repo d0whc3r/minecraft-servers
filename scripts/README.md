@@ -51,7 +51,7 @@ The `common.sh` file provides a reusable foundation for all scripts, including:
 
 ### Prune Operations
 
-- `prune_server_data(server)` - Remove server data and backup directories (preserves config)
+- `prune_server_data(server)` - Remove server data directory only (preserves config and backups)
 
 ### Network Helpers
 

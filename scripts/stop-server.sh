@@ -5,7 +5,7 @@
 # Usage: ./scripts/stop-server.sh <server-name> [options]
 #
 # Options:
-#   --purge              Remove EVERYTHING (container, data, backups, config)
+#   --purge              Remove container and data (preserves config and backups)
 #   --remove-data        Remove server data directory only
 #   --remove-backups     Remove backup directory only
 #   --remove-config      Remove configuration file only
@@ -34,7 +34,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 <server-name> [options]"
             echo ""
             echo "Options:"
-            echo "  --purge              Remove container, data, and backups (preserves config)"
+            echo "  --purge              Remove container and data (preserves config and backups)"
             echo "  --remove-data        Remove server data directory only"
             echo "  --remove-backups     Remove backup directory only"
             echo "  --remove-config      Remove configuration file only"
@@ -92,7 +92,7 @@ if [ -z "$SERVER_NAME" ]; then
     echo "Usage: $0 <server-name> [options]" >&2
     echo "" >&2
     echo "Options:" >&2
-    echo "  --purge              Remove container, data, and backups (preserves config)" >&2
+    echo "  --purge              Remove container and data (preserves config and backups)" >&2
     echo "  --remove-data        Remove server data directory only" >&2
     echo "  --remove-backups     Remove backup directory only" >&2
     echo "  --remove-config      Remove configuration file only" >&2
@@ -114,12 +114,12 @@ CONFIG_FILE=$(get_config_file "$SERVER_NAME")
 DATA_DIR=$(get_data_dir "$SERVER_NAME")
 BACKUP_DIR=$(get_backup_dir "$SERVER_NAME")
 
-# If --purge is set, enable all removal flags EXCEPT config
-# Config is the source of truth and should never be auto-deleted
+# If --purge is set, enable removal flags EXCEPT config and backups
+# Config and backups are preserved
 if [ "$PURGE" = true ]; then
     REMOVE_DATA=true
-    REMOVE_BACKUPS=true
     REMOVE_CONTAINER=true
+    # REMOVE_BACKUPS stays false - backups are preserved
     # REMOVE_CONFIG stays false - config is preserved
 fi
 
@@ -148,8 +148,7 @@ if [ "$PURGE" = true ]; then
     warning "PURGE MODE: Server runtime data will be permanently deleted!"
     info "  • Container and volumes"
     info "  • Server data: $DATA_DIR"
-    info "  • Backups: $BACKUP_DIR"
-    success "Config PRESERVED: $CONFIG_FILE (source of truth)"
+    success "Config and backups PRESERVED"
     echo ""
     if ! confirm "Are you sure you want to purge runtime data for $SERVER_NAME?"; then
         info "Purge cancelled."
@@ -216,8 +215,8 @@ fi
 info ""
 if [ "$PURGE" = true ]; then
     success "Server '$SERVER_NAME' runtime data has been purged"
-    info "Removed: container, data, and backups"
-    success "Configuration preserved: $CONFIG_FILE"
+    info "Removed: container and data"
+    success "Configuration and backups preserved"
     info ""
     info "To recreate the server with same config:"
     info "  ${YELLOW}./scripts/start-server.sh $SERVER_NAME${NC}"

@@ -254,35 +254,23 @@ docker_compose_restart() {
 # PRUNE OPERATIONS
 # ============================================================================
 
-# Prune server runtime data (data and backups, preserves config)
+# Prune server runtime data (data only, preserves config and backups)
 # Args: $1 - server name
 # Returns: 0 on success, 1 on failure
 prune_server_data() {
     local server_name="$1"
     local data_dir
-    local backup_dir
-    local data_removed=false
-    local backup_removed=false
     
     data_dir=$(get_data_dir "$server_name")
-    backup_dir=$(get_backup_dir "$server_name")
     
     debug "Pruning server data for: $server_name"
     
-    # Remove data directory
+    # Remove data directory only (preserve backups)
     if remove_directory "$data_dir"; then
-        data_removed=true
         debug "Removed data directory: $data_dir"
     fi
     
-    # Remove backup directory
-    if remove_directory "$backup_dir"; then
-        backup_removed=true
-        debug "Removed backup directory: $backup_dir"
-    fi
-    
-    # Success if we attempted to remove directories (even if they didn't exist)
-    # This is not an error condition
+    # Always return success - not an error if directory didn't exist
     return 0
 }
 
