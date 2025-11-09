@@ -314,5 +314,4 @@ For issues specific to:
 
 ---
 
-_Created by Sh4d0wJ0J0 - "Plus Ultra!" - Experience the world of My Hero Academia in Minecraft!_"</content>
-<parameter name="filePath">/Users/josep/projects/github/minecraft-servers/docs/modpacks/my-hero-adventure.md
+_Created by Sh4d0wJ0J0 - "Plus Ultra!" - Experience the world of My Hero Academia in Minecraft!_"

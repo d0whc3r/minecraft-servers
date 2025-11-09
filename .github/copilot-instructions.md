@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2025-11-08
 
 ## Active Technologies
+- Bash 4.0+ (BATS framework) + BATS 1.0+, Docker, Docker Compose (001-automated-test-suite)
+- File system (test logs and results), Docker volumes (container persistence) (001-automated-test-suite)
 
 - Bash 4.0+ for management scripts, Docker 20.10+, Docker Compose v2 + itzg/minecraft-server (Docker image), Docker Engine, Docker Compose v2 (001-docker-multi-server)
 
@@ -22,6 +24,7 @@ tests/
 Bash 4.0+ for management scripts, Docker 20.10+, Docker Compose v2: Follow standard conventions
 
 ## Recent Changes
+- 001-automated-test-suite: Added Bash 4.0+ (BATS framework) + BATS 1.0+, Docker, Docker Compose
 
 - 001-docker-multi-server: Added Bash 4.0+ for management scripts, Docker 20.10+, Docker Compose v2 + itzg/minecraft-server (Docker image), Docker Engine, Docker Compose v2
 
