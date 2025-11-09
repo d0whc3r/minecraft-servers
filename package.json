@@ -14,7 +14,7 @@
   "keywords": ["minecraft", "server", "docker", "testing", "bats", "bash"],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.17.1",
+  "packageManager": "pnpm@10.20.0",
   "devDependencies": {
     "bats": "^1.13.0"
   }
