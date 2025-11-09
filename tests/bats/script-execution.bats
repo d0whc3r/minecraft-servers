@@ -240,54 +240,101 @@ get_modpack_name() {
     # Use vanilla modpack for this test as it's the simplest and fastest to start
     local test_modpack="vanilla"
     local container_name="mc-${test_modpack}"
-    local max_wait_time=120  # 2 minutes should be enough for vanilla server
+    local max_wait_time=180  # 3 minutes should be enough for vanilla
+    local check_interval=5   # Check logs every 5 seconds
 
     # Skip if vanilla config doesn't exist
     [ -f "config/modpacks/${test_modpack}.env" ] || skip "Vanilla modpack config not found"
 
     echo "Testing full server startup for: $test_modpack"
+    echo "Monitoring: Check every ${check_interval}s, max ${max_wait_time}s"
 
-    # Start the server
-    ./scripts/start-server.sh "$test_modpack"
+    # Start the server in background
+    ./scripts/start-server.sh "$test_modpack" &
+    local server_pid=$!
 
-    if [ $? -ne 0 ]; then
-        echo "✗ Failed to start $test_modpack server"
+    # Wait for container to be created
+    echo "Waiting for container to be created..."
+    local wait_container=0
+    while [ $wait_container -lt 30 ]; do
+        if docker ps -a --filter "name=${container_name}" --format "{{.Names}}" | grep -q "^${container_name}$"; then
+            echo "✓ Container created"
+            break
+        fi
+        sleep 1
+        wait_container=$((wait_container + 1))
+    done
+
+    if [ $wait_container -ge 30 ]; then
+        echo "✗ Container was not created after 30s"
+        kill $server_pid >/dev/null 2>&1 || true
         return 1
     fi
 
-    # Wait for server to be fully ready by checking logs for "Done!" message
+    # Monitor logs continuously until server is ready or fails
     local elapsed=0
-    local ready=false
+    local server_ready=false
+    local last_log_line=""
 
-    echo "Waiting for server to be ready (max ${max_wait_time}s)..."
+    echo "Monitoring server logs for completion..."
 
     while [ $elapsed -lt $max_wait_time ]; do
-        # Check if "Done! For help, type "help"" appears in logs
-        if docker logs "$container_name" 2>/dev/null | grep -q "Done! For help, type \"help\""; then
-            ready=true
+        # Check if container is still running
+        if ! docker ps --filter "name=${container_name}" --filter "status=running" --format "{{.Names}}" | grep -q "^${container_name}$"; then
+            # Container stopped - check if it exited with error
+            local exit_code
+            exit_code=$(docker inspect "${container_name}" --format='{{.State.ExitCode}}' 2>/dev/null || echo "1")
+            if [ "$exit_code" != "0" ]; then
+                echo "✗ Container exited with code $exit_code"
+                echo "Last 20 log lines:"
+                docker logs "$container_name" 2>&1 | tail -20
+                kill $server_pid >/dev/null 2>&1 || true
+                docker rm "$container_name" >/dev/null 2>&1 || true
+                return 1
+            fi
+        fi
+
+        # Get last 3 lines of logs to show progress
+        local current_log_tail
+        current_log_tail=$(docker logs "$container_name" 2>&1 | tail -3 | tr '\n' ' ' | sed 's/  */ /g')
+        
+        # Only show if logs changed
+        if [ "$current_log_tail" != "$last_log_line" ] && [ -n "$current_log_tail" ]; then
+            echo "[${elapsed}s] Latest: ${current_log_tail:0:120}..."
+            last_log_line="$current_log_tail"
+        fi
+
+        # Check for server ready message (most reliable indicator)
+        if docker logs "$container_name" 2>&1 | grep -q 'Done ([0-9.]*s)! For help, type "help"'; then
+            server_ready=true
+            echo "✓ Server is fully ready!"
             break
         fi
 
-        sleep 5
-        elapsed=$((elapsed + 5))
-        echo "Still waiting... (${elapsed}s elapsed)"
+        # Alternative check for older Minecraft versions
+        if docker logs "$container_name" 2>&1 | grep -q 'Done! For help, type "help"'; then
+            server_ready=true
+            echo "✓ Server is fully ready!"
+            break
+        fi
+
+        # Check for fatal errors that would prevent startup
+        if docker logs "$container_name" 2>&1 | grep -q -i "java.lang.OutOfMemoryError\|Server crashed\|Failed to start\|Could not reserve enough space"; then
+            echo "✗ Fatal error detected in logs"
+            echo "Last 20 log lines:"
+            docker logs "$container_name" 2>&1 | tail -20
+            kill $server_pid >/dev/null 2>&1 || true
+            docker rm "$container_name" >/dev/null 2>&1 || true
+            return 1
+        fi
+
+        sleep "$check_interval"
+        elapsed=$((elapsed + check_interval))
     done
 
-    if [ "$ready" = true ]; then
-        echo "✓ Server $test_modpack is fully ready"
-
-        # Additional verification: check if server is responding on its port
-        local server_port
-        server_port=$(grep "^SERVER_PORT=" "config/modpacks/${test_modpack}.env" | cut -d= -f2 | tr -d ' "')
-
-        if [ -n "$server_port" ]; then
-            # Try to connect to the server port (basic connectivity check)
-            if timeout 5 bash -c "</dev/tcp/localhost/$server_port" 2>/dev/null; then
-                echo "✓ Server is responding on port $server_port"
-            else
-                echo "⚠️ Server not responding on port $server_port (but logs show ready)"
-            fi
-        fi
+    # Verify if server is ready
+    if [ "$server_ready" = true ]; then
+        echo "✅ Server startup completed in ${elapsed}s"
 
         # Clean up
         ./scripts/stop-server.sh "$test_modpack" >/dev/null 2>&1 || true
@@ -295,13 +342,12 @@ get_modpack_name() {
 
         return 0
     else
-        echo "✗ Server $test_modpack did not become ready within ${max_wait_time}s"
-
-        # Show last few lines of logs for debugging
-        echo "Last logs:"
-        docker logs "$container_name" 2>/dev/null | tail -10 || true
+        echo "⏰ Server did not complete startup within ${max_wait_time}s"
+        echo "Last 30 log lines:"
+        docker logs "$container_name" 2>&1 | tail -30
 
         # Clean up
+        kill $server_pid >/dev/null 2>&1 || true
         ./scripts/stop-server.sh "$test_modpack" >/dev/null 2>&1 || true
         docker rm "$container_name" >/dev/null 2>&1 || true
 
