@@ -176,7 +176,7 @@ get_config_file() {
 # Returns: data directory path (stdout)
 get_data_dir() {
     local server_name="$1"
-    echo "servers/${server_name}"
+    echo "servers/${server_name}/data"
 }
 
 # Get backup directory from server name
@@ -406,26 +406,17 @@ find_available_port() {
     return 1
 }
 
-# Get container uptime in human-readable format
-# Args: $1 - container name
-# Returns: uptime string (stdout)
-get_container_uptime() {
-    local container_name="$1"
+# Check if a port is open/listening
+# Args: $1 - port number
+# Returns: 0 if port is open, 1 if closed
+check_port_open() {
+    local port="$1"
     
-    # Get status output which includes uptime
-    local status_line
-    status_line=$(docker ps --filter "name=${container_name}" --format "{{.Status}}" 2>/dev/null)
-    
-    if [ -z "$status_line" ]; then
-        echo "N/A"
-        return
-    fi
-    
-    # Extract uptime from "Up X minutes/hours/days"
-    if [[ "$status_line" =~ Up[[:space:]](.+)$ ]]; then
-        echo "${BASH_REMATCH[1]}" | sed 's/ (.*)//' | head -c 12
+    # Use timeout to avoid hanging
+    if timeout 5 bash -c "</dev/tcp/localhost/$port" 2>/dev/null; then
+        return 0
     else
-        echo "N/A"
+        return 1
     fi
 }
 

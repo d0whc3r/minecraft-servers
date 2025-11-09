@@ -5,35 +5,10 @@
 
 set -euo pipefail
 
-# Configuration
+# Load common functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-CONFIG_DIR="$PROJECT_ROOT/config/modpacks"
-SERVERS_DIR="$PROJECT_ROOT/servers"
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Logging functions
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1" >&2
-}
-
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1" >&2
-}
-
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1" >&2
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1" >&2
-}
+source "$SCRIPT_DIR/common.sh"
 
 # Show usage information
 usage() {
@@ -124,7 +99,7 @@ fi
 get_server_list() {
     if [[ "$ALL_SERVERS" == true ]]; then
         # Get all configured servers
-        for config_file in "$CONFIG_DIR"/*.env; do
+        for config_file in config/modpacks/*.env; do
             if [[ -f "$config_file" ]]; then
                 basename "$config_file" .env
             fi
@@ -137,14 +112,15 @@ get_server_list() {
 # Check if server is configured
 server_exists() {
     local server_name="$1"
-    [[ -f "$CONFIG_DIR/${server_name}.env" ]]
+    check_config_exists "$server_name"
 }
 
 # Get server configuration
 get_server_config() {
     local server_name="$1"
     local key="$2"
-    local config_file="$CONFIG_DIR/${server_name}.env"
+    local config_file
+    config_file=$(get_config_file "$server_name")
 
     if [[ ! -f "$config_file" ]]; then
         return 1
@@ -156,13 +132,9 @@ get_server_config() {
 # Check if Docker container is running
 check_container_running() {
     local server_name="$1"
-    local container_name="mc-${server_name}"
-
-    if docker ps --format "table {{.Names}}" | grep -q "^${container_name}$"; then
-        return 0
-    else
-        return 1
-    fi
+    local container_name
+    container_name=$(get_container_name "$server_name")
+    container_running "$container_name"
 }
 
 # Check if server is responding on configured port
@@ -175,12 +147,7 @@ check_server_port() {
         return 1
     fi
 
-    # Use timeout to avoid hanging
-    if timeout 5 bash -c "</dev/tcp/localhost/$port" 2>/dev/null; then
-        return 0
-    else
-        return 1
-    fi
+    check_port_open "$port"
 }
 
 # Check server process health via Docker logs
@@ -209,7 +176,7 @@ check_server_logs() {
 # Check disk space for server data
 check_disk_space() {
     local server_name="$1"
-    local server_dir="$SERVERS_DIR/$server_name"
+    local server_dir="servers/$server_name"
 
     if [[ ! -d "$server_dir" ]]; then
         return 1
@@ -239,48 +206,55 @@ check_server_health() {
         return 1
     fi
 
-    # Check container running
-    if check_container_running "$server_name"; then
-        details+=("container:running")
+    # Check if server directory exists (is deployed)
+    local server_dir="servers/$server_name"
+    if [[ ! -d "$server_dir" ]]; then
+        health_status="not_deployed"
+        details+=("server:not_deployed")
     else
-        health_status="unhealthy"
-        issues+=("container_not_running")
-        details+=("container:stopped")
-    fi
-
-    # Check port connectivity (only if container is running)
-    if check_container_running "$server_name"; then
-        if check_server_port "$server_name"; then
-            details+=("port:responsive")
+        # Check container running
+        if check_container_running "$server_name"; then
+            details+=("container:running")
         else
-            health_status="unhealthy"
-            issues+=("port_not_responding")
-            details+=("port:unresponsive")
+            health_status="stopped"
+            issues+=("container_not_running")
+            details+=("container:stopped")
         fi
-    else
-        details+=("port:unknown")
-    fi
 
-    # Check logs for errors (only if container is running)
-    if check_container_running "$server_name"; then
-        if check_server_logs "$server_name"; then
-            details+=("logs:healthy")
+        # Check port connectivity (only if container is running)
+        if check_container_running "$server_name"; then
+            if check_server_port "$server_name"; then
+                details+=("port:responsive")
+            else
+                health_status="unhealthy"
+                issues+=("port_not_responding")
+                details+=("port:unresponsive")
+            fi
+        else
+            details+=("port:unknown")
+        fi
+
+        # Check logs for errors (only if container is running)
+        if check_container_running "$server_name"; then
+            if check_server_logs "$server_name"; then
+                details+=("logs:healthy")
+            else
+                health_status="warning"
+                issues+=("logs_show_errors")
+                details+=("logs:errors_detected")
+            fi
+        else
+            details+=("logs:unknown")
+        fi
+
+        # Check disk space (only for deployed servers)
+        if check_disk_space "$server_name"; then
+            details+=("disk:healthy")
         else
             health_status="warning"
-            issues+=("logs_show_errors")
-            details+=("logs:errors_detected")
+            issues+=("low_disk_space")
+            details+=("disk:low_space")
         fi
-    else
-        details+=("logs:unknown")
-    fi
-
-    # Check disk space
-    if check_disk_space "$server_name"; then
-        details+=("disk:healthy")
-    else
-        health_status="warning"
-        issues+=("low_disk_space")
-        details+=("disk:low_space")
     fi
 
     # Format output
@@ -318,6 +292,8 @@ check_server_health() {
     case "$health_status" in
         healthy) return 0 ;;
         warning) return 0 ;;  # Warnings don't fail the check
+        stopped) return 0 ;;  # Stopped servers are not errors
+        not_deployed) return 0 ;;  # Not deployed servers are not errors
         unhealthy) return 1 ;;
     esac
 }

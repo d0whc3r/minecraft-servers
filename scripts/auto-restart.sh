@@ -5,35 +5,10 @@
 
 set -euo pipefail
 
-# Configuration
+# Load common functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-CONFIG_DIR="$PROJECT_ROOT/config/modpacks"
-SERVERS_DIR="$PROJECT_ROOT/servers"
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Logging functions
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1" >&2
-}
-
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1" >&2
-}
-
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1" >&2
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1" >&2
-}
+source "$SCRIPT_DIR/common.sh"
 
 # Show usage information
 usage() {
@@ -83,7 +58,7 @@ while [[ $# -gt 0 ]]; do
         -i|--interval=*)
             INTERVAL="${1#*=}"
             if ! [[ "$INTERVAL" =~ ^[0-9]+$ ]] || [[ "$INTERVAL" -lt 30 ]]; then
-                log_error "Interval must be a number >= 30 seconds"
+                error "Interval must be a number >= 30 seconds"
                 exit 2
             fi
             shift
@@ -91,7 +66,7 @@ while [[ $# -gt 0 ]]; do
         -t|--timeout=*)
             TIMEOUT="${1#*=}"
             if ! [[ "$TIMEOUT" =~ ^[0-9]+$ ]] || [[ "$TIMEOUT" -lt 30 ]]; then
-                log_error "Timeout must be a number >= 30 seconds"
+                error "Timeout must be a number >= 30 seconds"
                 exit 2
             fi
             shift
@@ -113,12 +88,12 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         -*)
-            log_error "Unknown option: $1"
+            error "Unknown option: $1"
             usage
             exit 2
             ;;
         *)
-            log_error "Unexpected argument: $1"
+            error "Unexpected argument: $1"
             usage
             exit 2
             ;;
@@ -127,7 +102,7 @@ done
 
 # Get list of configured servers
 get_configured_servers() {
-    for config_file in "$CONFIG_DIR"/*.env; do
+    for config_file in config/modpacks/*.env; do
         if [[ -f "$config_file" ]]; then
             basename "$config_file" .env
         fi
@@ -137,16 +112,18 @@ get_configured_servers() {
 # Check if server container exists
 server_container_exists() {
     local server_name="$1"
-    local container_name="mc-${server_name}"
-    docker ps -a --format "table {{.Names}}" | grep -q "^${container_name}$"
+    local container_name
+    container_name=$(get_container_name "$server_name")
+    container_exists "$container_name"
 }
 
 # Check server health status
 get_server_health() {
     local server_name="$1"
-    local container_name="mc-${server_name}"
+    local container_name
+    container_name=$(get_container_name "$server_name")
 
-    if ! server_container_exists "$server_name"; then
+    if ! container_exists "$container_name"; then
         echo "not_deployed"
         return
     fi
@@ -173,30 +150,31 @@ restart_server() {
     local reason="$2"
 
     if [[ "$DRY_RUN" == true ]]; then
-        log_info "[DRY RUN] Would restart $server_name (reason: $reason)"
+        info "[DRY RUN] Would restart $server_name (reason: $reason)"
         return 0
     fi
 
-    log_warning "Restarting $server_name (reason: $reason)"
+    warning "Restarting $server_name (reason: $reason)"
 
     # Use existing restart script
-    if [[ -x "$SCRIPT_DIR/restart-server.sh" ]]; then
-        if timeout "$TIMEOUT" "$SCRIPT_DIR/restart-server.sh" "$server_name"; then
-            log_success "Successfully restarted $server_name"
+    if [[ -x "scripts/restart-server.sh" ]]; then
+        if timeout "$TIMEOUT" "scripts/restart-server.sh" "$server_name"; then
+            success "Successfully restarted $server_name"
             return 0
         else
-            log_error "Failed to restart $server_name"
+            error "Failed to restart $server_name"
             return 1
         fi
     else
         # Fallback to direct docker commands
-        local container_name="mc-${server_name}"
+        local container_name
+        container_name=$(get_container_name "$server_name")
 
         if docker restart "$container_name" >/dev/null 2>&1; then
-            log_success "Successfully restarted $server_name"
+            success "Successfully restarted $server_name"
             return 0
         else
-            log_error "Failed to restart $server_name"
+            error "Failed to restart $server_name"
             return 1
         fi
     fi
@@ -214,7 +192,7 @@ check_and_restart() {
         health=$(get_server_health "$server")
 
         if [[ "$VERBOSE" == true ]]; then
-            log_info "Server $server health: $health"
+            info "Server $server health: $health"
         fi
 
         local needs_restart=false
@@ -254,17 +232,17 @@ check_and_restart() {
 
     # Report results
     if [[ "$restart_count" -gt 0 ]]; then
-        log_success "Restarted $restart_count server(s)"
+        success "Restarted $restart_count server(s)"
     fi
 
     if [[ "$failed_count" -gt 0 ]]; then
-        log_error "Failed to restart $failed_count server(s)"
+        error "Failed to restart $failed_count server(s)"
         return 3
     fi
 
     if [[ "$restart_count" -eq 0 && "$failed_count" -eq 0 ]]; then
         if [[ "$VERBOSE" == true ]]; then
-            log_info "No servers needed restarting"
+            info "No servers needed restarting"
         fi
     fi
 
@@ -273,14 +251,14 @@ check_and_restart() {
 
 # Daemon mode - run continuously
 run_daemon() {
-    log_info "Starting auto-restart daemon (interval: ${INTERVAL}s)"
+    info "Starting auto-restart daemon (interval: ${INTERVAL}s)"
 
     while true; do
         local start_time
         start_time=$(date +%s)
 
         if ! check_and_restart; then
-            log_error "Health check cycle failed"
+            error "Health check cycle failed"
         fi
 
         local end_time
@@ -290,11 +268,11 @@ run_daemon() {
 
         if [[ "$sleep_time" -gt 0 ]]; then
             if [[ "$VERBOSE" == true ]]; then
-                log_info "Sleeping for ${sleep_time}s until next check"
+                info "Sleeping for ${sleep_time}s until next check"
             fi
             sleep "$sleep_time"
         else
-            log_warning "Health check took longer than interval (${elapsed}s > ${INTERVAL}s)"
+            warning "Health check took longer than interval (${elapsed}s > ${INTERVAL}s)"
         fi
     done
 }

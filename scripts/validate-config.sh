@@ -6,30 +6,6 @@
 # Load common functions
 source "$(dirname "$0")/common.sh"
 
-# Configuration
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-CONFIG_DIR="$PROJECT_ROOT/config/modpacks"
-SERVERS_DIR="$PROJECT_ROOT/servers"
-BACKUPS_DIR="$PROJECT_ROOT/backups"
-
-# Logging functions (augment common.sh functions)
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1" >&2
-}
-
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1" >&2
-}
-
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1" >&2
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1" >&2
-}
-
 # Global validation state
 ERRORS=0
 WARNINGS=0
@@ -103,13 +79,13 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         -*)
-            log_error "Unknown option: $1"
+            error "Unknown option: $1"
             usage
             exit 2
             ;;
         *)
             if [[ -n "$SERVER_NAME" ]]; then
-                log_error "Multiple server names specified"
+                error "Multiple server names specified"
                 usage
                 exit 2
             fi
@@ -137,7 +113,7 @@ validation_error() {
     local message="$1"
     ((ERRORS++))
     if [[ "$JSON_OUTPUT" == false ]]; then
-        log_error "$message"
+        error "$message"
     fi
 }
 
@@ -145,14 +121,14 @@ validation_warning() {
     local message="$1"
     ((WARNINGS++))
     if [[ "$JSON_OUTPUT" == false ]]; then
-        log_warning "$message"
+        warning "$message"
     fi
 }
 
 validation_success() {
     local message="$1"
     if [[ "$VERBOSE" == true && "$JSON_OUTPUT" == false ]]; then
-        log_success "$message"
+        success "$message"
     fi
 }
 
@@ -161,7 +137,7 @@ validate_system_requirements() {
     local section="system"
 
     if [[ "$JSON_OUTPUT" == false ]]; then
-        log_info "Validating system requirements..."
+        info "Validating system requirements..."
     fi
 
     # Check Docker
@@ -186,11 +162,11 @@ validate_system_requirements() {
     fi
 
     # Check required directories
-    local dirs=("$CONFIG_DIR" "$SERVERS_DIR" "$BACKUPS_DIR")
+    local dirs=("config/modpacks" "servers" "backups")
     for dir in "${dirs[@]}"; do
         if [[ ! -d "$dir" ]]; then
             if [[ "$AUTO_FIX" == true ]]; then
-                mkdir -p "$dir"
+                ensure_directory "$dir"
                 validation_success "Created directory: $dir"
             else
                 validation_error "Required directory missing: $dir"
@@ -203,7 +179,7 @@ validate_system_requirements() {
     # Check script permissions
     local scripts=("start-server.sh" "stop-server.sh" "restart-server.sh" "list-servers.sh" "backup.sh" "restore.sh" "add-modpack.sh" "health-check.sh" "auto-restart.sh")
     for script in "${scripts[@]}"; do
-        local script_path="$SCRIPT_DIR/$script"
+        local script_path="scripts/$script"
         if [[ -f "$script_path" ]]; then
             if [[ ! -x "$script_path" ]]; then
                 if [[ "$AUTO_FIX" == true ]]; then
@@ -221,7 +197,7 @@ validate_system_requirements() {
     done
 
     # Check contracts
-    if [[ ! -f "$PROJECT_ROOT/specs/001-docker-multi-server/contracts/management-api.md" ]]; then
+    if [[ ! -f "specs/001-docker-multi-server/contracts/management-api.md" ]]; then
         validation_warning "Management API contract not found"
     else
         validation_success "Management API contract exists"
@@ -232,7 +208,7 @@ validate_system_requirements() {
 get_server_list() {
     if [[ "$ALL_SERVERS" == true ]]; then
         # Get all configured servers
-        for config_file in "$CONFIG_DIR"/*.env; do
+        for config_file in config/modpacks/*.env; do
             if [[ -f "$config_file" ]]; then
                 basename "$config_file" .env
             fi
@@ -257,7 +233,8 @@ validate_server_name() {
 # Validate configuration file
 validate_config_file() {
     local server_name="$1"
-    local config_file="$CONFIG_DIR/${server_name}.env"
+    local config_file
+    config_file=$(get_config_file "$server_name")
     local section="server:$server_name"
 
     if [[ ! -f "$config_file" ]]; then
@@ -281,11 +258,11 @@ validate_config_file() {
     local type
     type=$(grep "^TYPE=" "$config_file" | cut -d'=' -f2- | sed 's/^"//' | sed 's/"$//')
     case "$type" in
-        VANILLA|PAPER|FORGE|FABRIC|AUTO_CURSEFORGE)
+        VANILLA|PAPER|FORGE|FABRIC|AUTO_CURSEFORGE|MODRINTH)
             validation_success "Server type valid: $type"
             ;;
         *)
-            validation_error "Invalid server type: $type (must be VANILLA, PAPER, FORGE, FABRIC, or AUTO_CURSEFORGE)"
+            validation_error "Invalid server type: $type (must be VANILLA, PAPER, FORGE, FABRIC, AUTO_CURSEFORGE, or MODRINTH)"
             ;;
     esac
 
@@ -326,13 +303,13 @@ validate_config_file() {
 # Validate server directories
 validate_server_directories() {
     local server_name="$1"
-    local server_dir="$SERVERS_DIR/$server_name"
+    local server_dir="servers/$server_name"
     local section="server:$server_name"
 
     # Check main server directory
     if [[ ! -d "$server_dir" ]]; then
         if [[ "$AUTO_FIX" == true ]]; then
-            mkdir -p "$server_dir"
+            ensure_directory "$server_dir"
             validation_success "Created server directory: $server_dir"
         else
             validation_warning "Server directory missing: $server_dir"
@@ -347,7 +324,7 @@ validate_server_directories() {
         local full_path="$server_dir/$subdir"
         if [[ ! -d "$full_path" ]]; then
             if [[ "$AUTO_FIX" == true ]]; then
-                mkdir -p "$full_path"
+                ensure_directory "$full_path"
                 validation_success "Created subdirectory: $full_path"
             else
                 validation_warning "Server subdirectory missing: $full_path"
@@ -358,10 +335,11 @@ validate_server_directories() {
     done
 
     # Check backups directory
-    local backup_dir="$BACKUPS_DIR/$server_name"
+    local backup_dir
+    backup_dir=$(get_backup_dir "$server_name")
     if [[ ! -d "$backup_dir" ]]; then
         if [[ "$AUTO_FIX" == true ]]; then
-            mkdir -p "$backup_dir"
+            ensure_directory "$backup_dir"
             validation_success "Created backup directory: $backup_dir"
         else
             validation_warning "Backup directory missing: $backup_dir"
@@ -390,7 +368,7 @@ validate_server() {
     local server_name="$1"
 
     if [[ "$JSON_OUTPUT" == false ]]; then
-        log_info "Validating server: $server_name"
+        info "Validating server: $server_name"
     fi
 
     validate_server_name "$server_name"
@@ -459,7 +437,7 @@ main() {
         return 4
     else
         if [[ "$JSON_OUTPUT" == false ]]; then
-            log_success "All validations passed"
+            success "All validations passed"
         fi
         return 0
     fi
