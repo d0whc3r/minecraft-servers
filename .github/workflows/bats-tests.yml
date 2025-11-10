@@ -114,6 +114,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
+    env:
+      # Environment variables from .env.template
+      EULA: TRUE
+      NETWORK_NAME: minecraft-network
+      BASE_PORT: 25565
+      COMPOSE_PROJECT_NAME: minecraft-servers
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      ENABLE_RCON: true
+      RCON_PASSWORD: minecraft
+      RCON_PORT: 25575
+      BROADCAST_RCON_TO_OPS: false
+      TZ: UTC
+      ENABLE_ROLLING_LOGS: true
+      USE_AIKAR_FLAGS: true
+      ONLINE_MODE: false
+      ALLOW_FLIGHT: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v5

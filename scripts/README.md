@@ -292,6 +292,18 @@ The package.json scripts are designed to work seamlessly with CI/CD pipelines:
   run: pnpm run test
 ```
 
+### Environment Variables in CI
+
+The BATS test suite automatically injects environment variables from `.env.template`:
+
+- `EULA=TRUE` - Minecraft EULA acceptance
+- `CF_API_KEY` - From GitHub secrets for CurseForge API access
+- `RCON_PASSWORD`, `ENABLE_RCON`, etc. - All server configuration variables
+
+**Required GitHub Secret:**
+
+- `CF_API_KEY` - Your CurseForge API key (configure in repository settings)
+
 ### Local Development vs CI
 
 - **Local Development**: Use `pnpm run lint` for fast feedback

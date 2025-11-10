@@ -123,7 +123,8 @@ rcon-cli --host your-server-ip --port 25575 --password yourpassword
 - 🏥 [**Monitoring**](docs/MONITORING.md) - Health checks and auto-restart
 - 🔧 [**Troubleshooting**](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - 🔐 [**Environment Variables**](docs/ENVIRONMENT_VARIABLES.md) - Complete configuration reference
-- 📚 [**Modpack Guides**](docs/modpacks/) - Individual setup guides for each modpack
+- � [**CI/CD Pipeline**](docs/CI_CD.md) - Pipeline configuration and GitHub Actions setup
+- �📚 [**Modpack Guides**](docs/modpacks/) - Individual setup guides for each modpack
 
 ## Quick Command Reference
 
@@ -217,8 +218,27 @@ The project includes comprehensive CI/CD workflows using GitHub Actions:
 
 - **BATS Test Suite** (`bats-tests.yml`) - Comprehensive testing
   - Parallel test execution across modpacks
-  - Docker environment testing
-  - Performance optimizations
+  - Docker environment testing with real server startup
+  - **Environment variables** from `.env.template` automatically injected
+  - **CF_API_KEY** must be configured as a GitHub repository secret
+
+### Environment Variables in CI
+
+The BATS test suite automatically injects all environment variables from `.env.template`:
+
+- `EULA=TRUE` - Minecraft EULA acceptance
+- `CF_API_KEY` - **Must be set as GitHub secret** for CurseForge downloads
+- `RCON_PASSWORD`, `ENABLE_RCON`, etc. - All server configuration variables
+
+### Setting up GitHub Secrets
+
+To run the full test suite, you need to configure the CurseForge API key:
+
+1. Go to your GitHub repository → **Settings** → **Secrets and variables** → **Actions**
+2. Click **New repository secret**
+3. Name: `CF_API_KEY`
+4. Value: Your CurseForge API key (get it from [console.curseforge.com](https://console.curseforge.com/))
+5. Click **Add secret**
 
 ### Local Development Commands
 

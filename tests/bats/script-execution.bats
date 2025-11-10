@@ -243,6 +243,8 @@ get_modpack_name() {
 
     echo "🚀 Testing full startup for ${#modpack_configs[@]} modpack(s) in this chunk..."
     echo "📋 Modpacks to test: $(for config in "${modpack_configs[@]}"; do basename "$config" .env; done | tr '\n' ' ')"
+    echo "⏱️  Max wait time per server: ${max_wait_time}s"
+    echo "🔍 Check interval: ${check_interval}s"
     echo "---"
 
     for config_file in "${modpack_configs[@]}"; do
@@ -254,17 +256,19 @@ get_modpack_name() {
         echo ""
         echo "[$total_servers/${#modpack_configs[@]}] Testing: $modpack_name"
         echo "Monitoring: Check every ${check_interval}s, max ${max_wait_time}s"
+        echo "Container: $container_name"
 
         # Start the server in background
+        echo "🚀 Starting server '$modpack_name'..."
         ./scripts/start-server.sh "$modpack_name" &
         local server_pid=$!
 
         # Wait for container to be created
-        echo "→ Waiting for container creation..."
+        echo "⏳ Waiting for container creation..."
         local wait_container=0
         while [ $wait_container -lt 30 ]; do
             if docker ps -a --filter "name=${container_name}" --format "{{.Names}}" | grep -q "^${container_name}$"; then
-                echo "  ✓ Container created"
+                echo "  ✅ Container created successfully"
                 break
             fi
             sleep 1
@@ -272,7 +276,7 @@ get_modpack_name() {
         done
 
         if [ $wait_container -ge 30 ]; then
-            echo "  ✗ Container not created after 30s"
+            echo "  ❌ Container not created after 30s"
             failed_servers+=("$modpack_name:container_not_created")
             kill $server_pid >/dev/null 2>&1 || true
             continue
@@ -282,8 +286,11 @@ get_modpack_name() {
         local elapsed=0
         local server_ready=false
         local last_log_line=""
+        local last_progress_time=0
 
         echo "→ Monitoring startup progress..."
+        echo "   📊 Progress updates every 5 seconds"
+        echo "   🔍 Checking for 'Done!' message"
 
         while [ $elapsed -lt $max_wait_time ]; do
             # CRITICAL: Check container status FIRST before any operation
@@ -295,9 +302,9 @@ get_modpack_name() {
                 local exit_code
                 exit_code=$(docker inspect "${container_name}" --format='{{.State.ExitCode}}' 2>/dev/null || echo "unknown")
 
-                echo "  ✗ Container stopped (status: $container_status, exit code: $exit_code)"
-                echo "  Last 20 log lines:"
-                docker logs "$container_name" 2>&1 | tail -20 | sed 's/^/    /'
+                echo "  ❌ Container stopped (status: $container_status, exit code: $exit_code)"
+                echo "  📄 Last 20 log lines:"
+                docker logs "$container_name" 2>&1 | tail -20 | sed 's/^/     /'
 
                 if [ "$exit_code" = "unknown" ]; then
                     failed_servers+=("$modpack_name:container_disappeared")
@@ -311,14 +318,15 @@ get_modpack_name() {
             fi
 
             # Container is running - safe to get logs
-            # Get last 2 lines of logs to show progress (only every 15s to reduce noise)
-            if [ $((elapsed % 15)) -eq 0 ] || [ $elapsed -eq 0 ]; then
+            # Show progress more frequently (every 5 seconds instead of 15)
+            if [ $((elapsed - last_progress_time)) -ge 5 ] || [ $elapsed -eq 0 ]; then
                 local current_log_tail
-                current_log_tail=$(docker logs "$container_name" 2>&1 | tail -2 | tr '\n' ' ' | sed 's/  */ /g')
+                current_log_tail=$(docker logs "$container_name" 2>&1 | tail -3 | tr '\n' ' | ' | sed 's/  */ /g' | sed 's/| $//')
 
                 if [ "$current_log_tail" != "$last_log_line" ] && [ -n "$current_log_tail" ]; then
-                    echo "  [${elapsed}s] ${current_log_tail:0:100}..."
+                    echo "  📝 [${elapsed}s] $modpack_name: ${current_log_tail:0:120}..."
                     last_log_line="$current_log_tail"
+                    last_progress_time=$elapsed
                 fi
             fi
 
@@ -328,22 +336,22 @@ get_modpack_name() {
 
             if echo "$current_logs" | grep -q 'Done ([0-9.]*s)! For help, type "help"'; then
                 server_ready=true
-                echo "  ✓ Server fully ready!"
+                echo "  ✅ Server '$modpack_name' fully ready after ${elapsed}s!"
                 break
             fi
 
             # Alternative check for older Minecraft versions
             if echo "$current_logs" | grep -q 'Done! For help, type "help"'; then
                 server_ready=true
-                echo "  ✓ Server fully ready!"
+                echo "  ✅ Server '$modpack_name' fully ready after ${elapsed}s!"
                 break
             fi
 
             # Check for fatal errors
             if echo "$current_logs" | grep -q -i "java.lang.OutOfMemoryError\|Server crashed\|Failed to start\|Could not reserve enough space\|Exception in thread"; then
-                echo "  ✗ Fatal error detected in logs"
-                echo "  Last 20 log lines:"
-                echo "$current_logs" | tail -20 | sed 's/^/    /'
+                echo "  ❌ Fatal error detected in '$modpack_name' logs"
+                echo "  📄 Last 20 log lines:"
+                echo "$current_logs" | tail -20 | sed 's/^/     /'
                 failed_servers+=("$modpack_name:fatal_error")
                 kill $server_pid >/dev/null 2>&1 || true
                 docker rm "$container_name" >/dev/null 2>&1 || true
@@ -393,25 +401,27 @@ get_modpack_name() {
 
     # Final summary
     echo ""
-    echo "=== FINAL SUMMARY ==="
-    echo "Total tested: $total_servers"
-    echo "Successful: ${#successful_servers[@]}"
-    echo "Failed: ${#failed_servers[@]}"
+    echo "🎯 === FINAL TEST SUMMARY ==="
+    echo "📊 Total servers tested: $total_servers"
+    echo "✅ Successful: ${#successful_servers[@]}"
+    echo "❌ Failed: ${#failed_servers[@]}"
 
     if [ ${#successful_servers[@]} -gt 0 ]; then
         echo ""
-        echo "✅ Successful servers:"
+        echo "✅ SUCCESSFUL SERVERS:"
         for server in "${successful_servers[@]}"; do
-            echo "  - $server"
+            echo "  🟢 $server"
         done
     fi
 
     if [ ${#failed_servers[@]} -gt 0 ]; then
         echo ""
-        echo "❌ Failed servers:"
+        echo "❌ FAILED SERVERS:"
         for server in "${failed_servers[@]}"; do
-            echo "  - $server"
+            echo "  🔴 $server"
         done
+        echo ""
+        echo "💡 Check the test artifacts for detailed logs"
     fi
 
     # Assert all servers succeeded
