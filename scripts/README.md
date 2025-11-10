@@ -278,3 +278,62 @@ Scripts are organized by purpose:
 4. **Server** (`server:*`) - Individual server operations
 5. **Backup** (`backup*`) - Data protection
 6. **Development** (`dev:*`, `ci`) - Development workflow
+
+## CI/CD Pipeline Integration
+
+The package.json scripts are designed to work seamlessly with CI/CD pipelines:
+
+### GitHub Actions Usage
+
+```yaml
+# Quick validation (recommended for PRs and pushes)
+- name: Run validation
+  run: pnpm run validate
+
+# Full validation (manual workflow trigger with Docker)
+- name: Run full validation
+  run: pnpm run validate:all
+
+# Individual pipeline steps
+- name: Check formatting
+  run: pnpm run format:check
+
+- name: Lint scripts
+  run: pnpm run lint
+
+- name: Run tests
+  run: pnpm run test
+```
+
+### Local Development vs CI
+
+- **Local Development**: Use `pnpm run validate` for fast feedback
+- **CI Pipeline**: Use `pnpm run validate` for automated checks
+- **Full Validation**: Use `pnpm run validate:all` when Docker is available
+- **Pre-commit**: Uses `pnpm run format` for automatic formatting
+- **Pre-push**: Uses `pnpm run test:quick` for lightweight testing
+
+### Validation Scripts
+
+- `validate` - Quick validation (format + lint + quick tests)
+  - ✅ Fast feedback for development
+  - ✅ No Docker required
+  - ✅ Used in CI pipelines
+  - ✅ Suitable for pre-commit hooks
+
+- `validate:all` - Full validation (format + lint + all tests)
+  - ✅ Comprehensive testing with Docker
+  - ✅ Tests complete server startup
+  - ❌ Slower execution
+  - ❌ Requires Docker environment
+  - ✅ Manual workflow trigger available
+
+### Pipeline Benefits
+
+Using these scripts in CI/CD provides:
+
+- **Consistency** - Same validation locally and in CI
+- **Maintainability** - Single source of truth for quality checks
+- **Performance** - Optimized scripts for different contexts
+- **Reliability** - Comprehensive error handling and reporting
+- **Integration** - Easy integration with various CI platforms

@@ -30,7 +30,7 @@ A Docker-based system for running multiple Minecraft server instances with diffe
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/minecraft-servers.git
+git clone https://github.com/d0whc3r/minecraft-servers.git
 cd minecraft-servers
 ```
 
@@ -206,6 +206,49 @@ services:
 - ✅ Unique container names prevent overwrites
 - ✅ Scales to unlimited servers
 
+## CI/CD Pipeline
+
+The project includes comprehensive CI/CD workflows using GitHub Actions:
+
+### Available Workflows
+
+- **Code Quality** (`code-quality.yml`) - Unified validation pipeline
+  - `validate` - Quick validation (format, lint, lightweight tests)
+  - `validate:all` - Full validation with Docker (manual trigger only)
+
+- **BATS Test Suite** (`bats-tests.yml`) - Comprehensive testing
+  - Parallel test execution across modpacks
+  - Docker environment testing
+  - Performance optimizations
+
+### Local Development Commands
+
+Use these commands for local development and validation:
+
+```bash
+# Quick validation (recommended for development and CI)
+pnpm run validate
+
+# Full validation (requires Docker, comprehensive testing)
+pnpm run validate:all
+
+# Individual checks
+pnpm run format:check # Check code formatting
+pnpm run lint         # Lint shell scripts
+pnpm run test         # Run all tests
+pnpm run test:quick   # Run lightweight tests
+```
+
+### Pipeline Integration
+
+The CI/CD pipeline automatically runs on:
+
+- **Push to master** - Quick validation suite
+- **Pull requests** - Quick validation suite
+- **Manual trigger** - Full validation with Docker
+- **Pre-commit** - Code formatting (via Husky)
+- **Pre-push** - Quick tests (via Husky)
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
@@ -221,9 +264,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- 📝 [Issues](https://github.com/yourusername/minecraft-servers/issues)
-- 💬 [Discussions](https://github.com/yourusername/minecraft-servers/discussions)
-- 📧 [Email](mailto:your-email@example.com)
+- 📝 [Issues](https://github.com/d0whc3r/minecraft-servers/issues)
+- 💬 [Discussions](https://github.com/d0whc3r/minecraft-servers/discussions)
 - 🔒 [Security Policy](SECURITY.md)
 - 📋 [Code of Conduct](CODE_OF_CONDUCT.md)
 

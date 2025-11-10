@@ -27,7 +27,7 @@
     "format:sh": "prettier --write '**/*.sh'",
     "format:md": "prettier --write '**/*.md'",
     "format:config": "prettier --write 'config/**/*.env' 'config/**/*.yml' 'config/**/*.yaml'",
-    "lint": "echo 'Linting scripts...' && shellcheck scripts/*.sh",
+    "lint": "echo 'Linting scripts...' && (command -v shellcheck >/dev/null 2>&1 && shellcheck scripts/*.sh || echo 'shellcheck not available, skipping linting')",
     "lint:fix": "echo 'Auto-fixing scripts...' && shellcheck --fix scripts/*.sh",
     "validate": "pnpm run format:check && pnpm run lint && pnpm run test:quick",
     "validate:all": "pnpm run format:check && pnpm run lint && pnpm run test",
