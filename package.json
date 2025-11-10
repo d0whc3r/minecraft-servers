@@ -3,31 +3,68 @@
   "version": "1.0.0",
   "description": "Minecraft server management system with automated testing suite",
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/d0whc3r/minecraft-servers.git"
+  },
+  "homepage": "https://github.com/d0whc3r/minecraft-servers#readme",
+  "bugs": {
+    "url": "https://github.com/d0whc3r/minecraft-servers/issues"
+  },
+  "author": "d0whc3r",
+  "license": "ISC",
+  "packageManager": "pnpm@10.20.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
   "scripts": {
     "test": "./node_modules/.bin/bats tests/bats/",
     "test:verbose": "./node_modules/.bin/bats --verbose tests/bats/",
+    "test:quick": "./node_modules/.bin/bats --filter 'US1-TC00[1-6]:' tests/bats/",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "format:sh": "prettier --write '**/*.sh'",
     "format:md": "prettier --write '**/*.md'",
     "format:config": "prettier --write 'config/**/*.env' 'config/**/*.yml' 'config/**/*.yaml'",
-    "prepare": "husky"
+    "lint": "echo 'Linting scripts...' && shellcheck scripts/*.sh",
+    "validate": "pnpm run format:check && pnpm run lint && pnpm run test:quick",
+    "prepare": "husky",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "server:start": "./scripts/start-server.sh",
+    "server:stop": "./scripts/stop-server.sh",
+    "server:restart": "./scripts/restart-server.sh",
+    "backup": "./scripts/backup.sh",
+    "restore": "./scripts/restore.sh",
+    "health-check": "./scripts/health-check.sh"
   },
   "keywords": [
     "minecraft",
     "server",
     "docker",
+    "docker-compose",
     "testing",
     "bats",
-    "bash"
+    "bash",
+    "automation",
+    "modpacks",
+    "game-server"
   ],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.20.0",
   "devDependencies": {
     "bats": "^1.13.0",
     "husky": "^9.1.7",
     "prettier": "^3.6.2",
     "prettier-plugin-sh": "^0.18.0"
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "useTabs": false,
+    "printWidth": 100,
+    "endOfLine": "lf",
+    "plugins": ["prettier-plugin-sh"]
   }
 }

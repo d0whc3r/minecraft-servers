@@ -11,6 +11,7 @@ A Docker-based system for running multiple Minecraft server instances with diffe
 - 📦 **Pre-Configured Modpacks**: Vanilla, SkyFactory 4, RLCraft, Solo Leveling series, Dragon Block C, My Hero Academia, Cobbleverse, Slimes Adventure, and more
 - 🔌 **Easy Extensibility**: Add custom modpacks with simple scripts
 - 🔒 **Complete Isolation**: Each server has isolated configs, worlds, and mods
+- 🔧 **RCON Support**: Remote console access enabled for all servers (port = SERVER_PORT + 1000)
 - ✅ **Production Ready**: Comprehensive validation, monitoring, and troubleshooting
 
 ## Prerequisites
@@ -60,6 +61,24 @@ Open Minecraft Java Edition and connect to:
 - **Address**: `your-server-ip:25567`
 - **Version**: 1.20.4
 
+### 5. RCON Access (Optional)
+
+All servers have RCON enabled for remote console access:
+
+```bash
+# Connect to RCON (example for vanilla server)
+# Address: your-server-ip:26567
+# Password: (configured in .env RCON_PASSWORD)
+
+# Using rcon-cli tool:
+rcon-cli --host your-server-ip --port 25575 --password yourpassword
+
+# Example commands:
+# list          # Show online players
+# op username   # Give operator permissions
+# stop          # Stop the server gracefully
+```
+
 ## Management Scripts
 
 | Script               | Purpose                        | Usage                                       |
@@ -79,20 +98,20 @@ Open Minecraft Java Edition and connect to:
 
 ## Pre-Configured Modpacks
 
-| Modpack                       | Version | Memory | Port  | Type              | Platform   |
-| ----------------------------- | ------- | ------ | ----- | ----------------- | ---------- |
-| **SkyFactory 4**              | 1.12.2  | 4G     | 25565 | Skyblock          | CurseForge |
-| **RLCraft**                   | 1.12.2  | 6G     | 25566 | Hardcore survival | CurseForge |
-| **Vanilla (Paper)**           | 1.20.4  | 2G     | 25567 | Optimized vanilla | Paper      |
-| **Cobbleverse**               | 1.21.1  | 6G     | 25568 | Pokemon adventure | Modrinth   |
-| **Slimes Adventure**          | 1.19.2  | 4G     | 25569 | Exploration       | Modrinth   |
-| **SoloCraft**                 | 1.20.1  | 3G     | 25570 | Survival focused  | Modrinth   |
-| **Solo Leveling Reawakening** | 1.20.1  | 4G     | 25571 | Hunter RPG        | CurseForge |
-| **Unofficial Dragon Block C** | 1.12.2  | 4G     | 25572 | Dragon Ball RPG   | CurseForge |
-| **Amazing FPS Booster**       | 1.20.1  | 2G     | 25573 | Performance opt.  | CurseForge |
-| **Solo Leveling Shadows**     | 1.20.1  | 6G     | 25574 | Advanced RPG      | CurseForge |
-| **Solo Leveling Level Up**    | 1.20.1  | 4G     | 25575 | RPG progression   | CurseForge |
-| **My Hero Adventure**         | 1.12.2  | 4G     | 25576 | Hero Academia     | CurseForge |
+| Modpack                       | Version | Memory | Port  | RCON  | Type              | Platform   |
+| ----------------------------- | ------- | ------ | ----- | ----- | ----------------- | ---------- |
+| **SkyFactory 4**              | 1.12.2  | 4G     | 25565 | 26565 | Skyblock          | CurseForge |
+| **RLCraft**                   | 1.12.2  | 6G     | 25566 | 26566 | Hardcore survival | CurseForge |
+| **Vanilla (Paper)**           | 1.20.4  | 2G     | 25567 | 26567 | Optimized vanilla | Paper      |
+| **Cobbleverse**               | 1.21.1  | 6G     | 25568 | 26568 | Pokemon adventure | Modrinth   |
+| **Slimes Adventure**          | 1.19.2  | 4G     | 25569 | 26569 | Exploration       | Modrinth   |
+| **SoloCraft**                 | 1.20.1  | 3G     | 25570 | 26570 | Survival focused  | Modrinth   |
+| **Solo Leveling Reawakening** | 1.20.1  | 4G     | 25571 | 26571 | Hunter RPG        | CurseForge |
+| **Unofficial Dragon Block C** | 1.12.2  | 4G     | 25572 | 26572 | Dragon Ball RPG   | CurseForge |
+| **Amazing FPS Booster**       | 1.20.1  | 2G     | 25573 | 26573 | Performance opt.  | CurseForge |
+| **Solo Leveling Shadows**     | 1.20.1  | 6G     | 25574 | 26574 | Advanced RPG      | CurseForge |
+| **Solo Leveling Level Up**    | 1.20.1  | 4G     | 25575 | 26575 | RPG progression   | CurseForge |
+| **My Hero Adventure**         | 1.12.2  | 4G     | 25576 | 26576 | Hero Academia     | CurseForge |
 
 ## Documentation
 

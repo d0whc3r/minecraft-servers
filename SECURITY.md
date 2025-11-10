@@ -17,10 +17,10 @@ If you discover a security vulnerability in this project, please help us by repo
 
 **Please do NOT report security vulnerabilities through public GitHub issues.**
 
-Instead, please report security vulnerabilities by emailing:
+Instead, please report security vulnerabilities by contacting the maintainer directly:
 
-- **Email**: [your-security-email@example.com]
-- **Subject**: `[SECURITY] Vulnerability Report - Minecraft Multi-Server System`
+- **GitHub DM**: Send a direct message to [@d0whc3r](https://github.com/d0whc3r) on GitHub
+- **Repository**: https://github.com/d0whc3r/minecraft-servers
 
 ### What to Include
 
@@ -37,13 +37,6 @@ When reporting a security vulnerability, please include:
 We will acknowledge your report within **48 hours** and provide a more detailed response within **7 days** indicating our next steps.
 
 We will keep you informed about our progress throughout the process of fixing the vulnerability.
-
-### Disclosure Policy
-
-- We follow a **responsible disclosure** process
-- We will credit reporters in our security advisories (unless you prefer to remain anonymous)
-- We will not disclose vulnerability details until a fix is available
-- We will coordinate public disclosure with the reporter
 
 ## Security Best Practices
 
@@ -104,8 +97,8 @@ Security updates will be:
 
 For security-related questions or concerns:
 
-- **Security Issues**: [your-security-email@example.com]
-- **General Support**: [your-general-email@example.com]
+- **Security Issues**: GitHub DM to [@d0whc3r](https://github.com/d0whc3r)
+- **General Support**: Open an issue on [GitHub](https://github.com/d0whc3r/minecraft-servers/issues)
 - **GitHub Issues**: For non-security related issues
 
 ## Acknowledgments
