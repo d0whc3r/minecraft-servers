@@ -97,21 +97,26 @@ runs:
         echo "  ENABLE_RCON: ${ENABLE_RCON:-NOT_SET}"
 
         # Create .env file with required variables for Docker Compose
-        printf '# CI Environment - Auto-generated\n' > .env
-        printf 'EULA=%s\n' "${EULA:-TRUE}" >> .env
-        printf 'NETWORK_NAME=%s\n' "${NETWORK_NAME:-minecraft-network}" >> .env
-        printf 'BASE_PORT=%s\n' "${BASE_PORT:-25565}" >> .env
-        printf 'COMPOSE_PROJECT_NAME=%s\n' "${COMPOSE_PROJECT_NAME:-minecraft-servers}" >> .env
-        printf 'CF_API_KEY=%s\n' "${CF_API_KEY:-dummy_key}" >> .env
-        printf 'ENABLE_RCON=%s\n' "${ENABLE_RCON:-true}" >> .env
-        printf 'RCON_PASSWORD=%s\n' "${RCON_PASSWORD:-minecraft}" >> .env
-        printf 'RCON_PORT=%s\n' "${RCON_PORT:-25575}" >> .env
-        printf 'BROADCAST_RCON_TO_OPS=%s\n' "${BROADCAST_RCON_TO_OPS:-false}" >> .env
-        printf 'TZ=%s\n' "${TZ:-UTC}" >> .env
-        printf 'ENABLE_ROLLING_LOGS=%s\n' "${ENABLE_ROLLING_LOGS:-true}" >> .env
-        printf 'USE_AIKAR_FLAGS=%s\n' "${USE_AIKAR_FLAGS:-true}" >> .env
-        printf 'ONLINE_MODE=%s\n' "${ONLINE_MODE:-false}" >> .env
-        printf 'ALLOW_FLIGHT=%s\n' "${ALLOW_FLIGHT:-true}" >> .env
+        # Use heredoc for most variables, handle CF_API_KEY separately to avoid expansion issues
+        cat << EOF > .env
+        # CI Environment - Auto-generated
+        EULA=${EULA:-TRUE}
+        NETWORK_NAME=${NETWORK_NAME:-minecraft-network}
+        BASE_PORT=${BASE_PORT:-25565}
+        COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-minecraft-servers}
+        ENABLE_RCON=${ENABLE_RCON:-true}
+        RCON_PASSWORD=${RCON_PASSWORD:-minecraft}
+        RCON_PORT=${RCON_PORT:-25575}
+        BROADCAST_RCON_TO_OPS=${BROADCAST_RCON_TO_OPS:-false}
+        TZ=${TZ:-UTC}
+        ENABLE_ROLLING_LOGS=${ENABLE_ROLLING_LOGS:-true}
+        USE_AIKAR_FLAGS=${USE_AIKAR_FLAGS:-true}
+        ONLINE_MODE=${ONLINE_MODE:-false}
+        ALLOW_FLIGHT=${ALLOW_FLIGHT:-true}
+        EOF
+
+        # Handle CF_API_KEY separately to avoid shell expansion of special characters
+        echo "CF_API_KEY=${CF_API_KEY:-dummy_key}" >> .env
 
         echo "✅ .env file created"
 
