@@ -59,7 +59,7 @@ body:
     description: Information about your environment.
     placeholder: |
       - OS: [e.g., Ubuntu 20.04]
-      - Docker version: [e.g., 24.0.1]
+      - Docker version: [e.g., 28.5.2]
       - Docker Compose version: [e.g., v2.18.1]
       - Minecraft Multi-Server version: [e.g., v1.0.0]
       - Modpack: [e.g., ATM8, vanilla]

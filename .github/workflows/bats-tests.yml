@@ -125,10 +125,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Load configuration
+        id: config
+        run: |
+          # Load configuration from .github/workflows/config
+          if [ -f ".github/workflows/config" ]; then
+            echo "Loading configuration from .github/workflows/config"
+            while IFS='=' read -r key value; do
+              # Skip comments and empty lines
+              [[ $key =~ ^[[:space:]]*# ]] && continue
+              [[ -z "$key" ]] && continue
+              # Remove whitespace
+              key=$(echo "$key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+              value=$(echo "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+              echo "$key=$value" >> $GITHUB_OUTPUT
+            done < .github/workflows/config
+          else
+            echo "Configuration file not found, using defaults"
+          fi
+
       - name: Setup Docker Environment
         uses: ./.github/actions/setup-docker
         with:
-          docker-version: "24.0.7"
+          docker-version: ${{ steps.config.outputs.DOCKER_VERSION || '28.5.2' }}
 
       - name: Cache Docker temporary files
         uses: actions/cache@v4
@@ -211,6 +230,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Load configuration
+        id: config
+        run: |
+          # Load configuration from .github/workflows/config
+          if [ -f ".github/workflows/config" ]; then
+            echo "Loading configuration from .github/workflows/config"
+            while IFS='=' read -r key value; do
+              # Skip comments and empty lines
+              [[ $key =~ ^[[:space:]]*# ]] && continue
+              [[ -z "$key" ]] && continue
+              # Remove whitespace
+              key=$(echo "$key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+              value=$(echo "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+              echo "$key=$value" >> $GITHUB_OUTPUT
+            done < .github/workflows/config
+          else
+            echo "Configuration file not found, using defaults"
+          fi
+
       - name: Cache pnpm dependencies
         uses: actions/cache@v4
         with:
@@ -248,12 +286,12 @@ jobs:
       - name: Setup Dependencies
         uses: ./.github/actions/setup-deps
         with:
-          node-version: "22"
+          node-version: ${{ steps.config.outputs.NODE_VERSION || '22' }}
 
       - name: Setup Docker Environment
         uses: ./.github/actions/setup-docker
         with:
-          docker-version: "24.0.7"
+          docker-version: ${{ steps.config.outputs.DOCKER_VERSION || '28.5.2' }}
 
       - name: Prepare Test Environment
         uses: ./.github/actions/prepare-test-env
@@ -264,8 +302,8 @@ jobs:
         uses: ./.github/actions/run-bats-tests
         with:
           test-pattern: "tests/bats/script-execution.bats"
-          timeout: "45"
-          parallel-jobs: "1"
+          timeout: ${{ steps.config.outputs.TEST_TIMEOUT_MINUTES || '45' }}
+          parallel-jobs: ${{ steps.config.outputs.PARALLEL_JOBS || '1' }}
 
       - name: Upload test artifacts
         if: always()
@@ -329,8 +367,8 @@ jobs:
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔧 Technical Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **Docker Version:** 24.0.7" >> $GITHUB_STEP_SUMMARY
-          echo "- **Node.js Version:** 22" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docker Version:** ${{ steps.config.outputs.DOCKER_VERSION || '28.5.2' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node.js Version:** ${{ steps.config.outputs.NODE_VERSION || '22' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **pnpm Version:** 10.20.0 (from packageManager)" >> $GITHUB_STEP_SUMMARY
           echo "- **BATS Version:** 1.13.0 (from package.json devDependencies)" >> $GITHUB_STEP_SUMMARY
 

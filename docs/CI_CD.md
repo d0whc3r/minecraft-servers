@@ -2,6 +2,49 @@
 
 This document explains how to configure and use the CI/CD pipelines for the Minecraft Multi-Server System.
 
+## Pipeline Configuration
+
+### Configuration File (`.github/workflows/config`)
+
+All pipeline settings are centralized in `.github/workflows/config` - the single source of truth for CI/CD configuration.
+
+**Key Settings:**
+
+```bash
+# Test execution settings
+TEST_TIMEOUT_MINUTES=45 # Test timeout per job
+PARALLEL_JOBS=1         # Parallel jobs per runner
+
+# Docker settings
+DOCKER_VERSION=28.5.2 # Docker version to use
+
+# Dependency versions
+NODE_VERSION=22 # Node.js version
+
+# Chunking strategy
+CHUNK_STRATEGY=medium # small/medium/large chunking
+
+# Cache settings
+CACHE_DOCKER_IMAGES=true # Enable Docker image caching
+CACHE_PNPM_STORE=true    # Enable pnpm caching
+CACHE_NODE_MODULES=true  # Enable node_modules caching
+
+# Artifact settings
+ARTIFACT_RETENTION_DAYS=7 # How long to keep test artifacts
+```
+
+**How to Modify:**
+
+1. Edit `.github/workflows/config`
+2. Commit and push changes
+3. All workflows will automatically use new values
+4. No need to update multiple workflow files
+
+**Affected Workflows:**
+
+- `bats-tests.yml` - Uses all configuration values
+- `code-quality.yml` - Uses Node.js version
+
 ## GitHub Actions Workflows
 
 ### 1. Code Quality (`code-quality.yml`)
