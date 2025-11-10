@@ -79,28 +79,29 @@ Open Minecraft Java Edition and connect to:
 
 ## Pre-Configured Modpacks
 
-| Modpack                       | Version | Memory | Port  | Type              | Platform   | Status   |
-| ----------------------------- | ------- | ------ | ----- | ----------------- | ---------- | -------- |
-| **All The Mods 8**            | 1.20.1  | 8G     | 25565 | Kitchen sink      | CurseForge | ✅ Ready |
-| **SkyFactory 4**              | 1.12.2  | 4G     | 25566 | Skyblock          | CurseForge | ✅ Ready |
-| **Prominence II RPG**         | 1.20.1  | 6G     | 25567 | RPG adventure     | CurseForge | ✅ Ready |
-| **RLCraft**                   | 1.12.2  | 6G     | 25568 | Hardcore survival | CurseForge | ✅ Ready |
-| **Vanilla (Paper)**           | 1.20.4  | 2G     | 25569 | Optimized vanilla | Paper      | ✅ Ready |
-| **Cobbleverse**               | 1.21.1  | 6G     | 25570 | Pokemon adventure | Modrinth   | ✅ Ready |
-| **Slimes Adventure**          | 1.19.2  | 4G     | 25571 | Exploration       | Modrinth   | ✅ Ready |
-| **SoloCraft**                 | 1.20.1  | 3G     | 25572 | Survival focused  | Modrinth   | ✅ Ready |
-| **Solo Leveling Reawakening** | 1.20.1  | 4G     | 25573 | Hunter RPG        | CurseForge | ✅ Ready |
-| **Unofficial Dragon Block C** | 1.12.2  | 4G     | 25574 | Dragon Ball RPG   | CurseForge | ✅ Ready |
-| **Amazing FPS Booster**       | 1.20.1  | 2G     | 25575 | Performance opt.  | CurseForge | ✅ Ready |
-| **Solo Leveling Shadows**     | 1.20.1  | 6G     | 25576 | Advanced RPG      | CurseForge | ✅ Ready |
-| **Solo Leveling Level Up**    | 1.20.1  | 4G     | 25577 | RPG progression   | CurseForge | ✅ Ready |
-| **My Hero Adventure**         | 1.12.2  | 4G     | 25578 | Hero Academia     | CurseForge | ✅ Ready |
+| Modpack                       | Version | Memory | Port  | Type              | Platform   |
+| ----------------------------- | ------- | ------ | ----- | ----------------- | ---------- |
+| **All The Mods 8**            | 1.20.1  | 8G     | 25565 | Kitchen sink      | CurseForge |
+| **SkyFactory 4**              | 1.12.2  | 4G     | 25566 | Skyblock          | CurseForge |
+| **Prominence II RPG**         | 1.20.1  | 6G     | 25567 | RPG adventure     | CurseForge |
+| **RLCraft**                   | 1.12.2  | 6G     | 25568 | Hardcore survival | CurseForge |
+| **Vanilla (Paper)**           | 1.20.4  | 2G     | 25569 | Optimized vanilla | Paper      |
+| **Cobbleverse**               | 1.21.1  | 6G     | 25570 | Pokemon adventure | Modrinth   |
+| **Slimes Adventure**          | 1.19.2  | 4G     | 25571 | Exploration       | Modrinth   |
+| **SoloCraft**                 | 1.20.1  | 3G     | 25572 | Survival focused  | Modrinth   |
+| **Solo Leveling Reawakening** | 1.20.1  | 4G     | 25573 | Hunter RPG        | CurseForge |
+| **Unofficial Dragon Block C** | 1.12.2  | 4G     | 25574 | Dragon Ball RPG   | CurseForge |
+| **Amazing FPS Booster**       | 1.20.1  | 2G     | 25575 | Performance opt.  | CurseForge |
+| **Solo Leveling Shadows**     | 1.20.1  | 6G     | 25576 | Advanced RPG      | CurseForge |
+| **Solo Leveling Level Up**    | 1.20.1  | 4G     | 25577 | RPG progression   | CurseForge |
+| **My Hero Adventure**         | 1.12.2  | 4G     | 25578 | Hero Academia     | CurseForge |
 
 ## Documentation
 
 - 📖 [**Quick Start Guide**](docs/QUICKSTART.md) - Detailed setup instructions
 - 🏗️ [**Architecture**](docs/ARCHITECTURE.md) - Template-based orchestration design
 - ➕ [**Adding Modpacks**](docs/ADDING_MODPACKS.md) - How to add custom configurations
+- ➕ [**Add New Modpack Config**](docs/ADD_NEW_MODPACK_CONFIG.md) - Step-by-step configuration guide
 - 💾 [**Backup & Restore**](docs/BACKUP_RESTORE.md) - Backup strategy and recovery
 - 🏥 [**Monitoring**](docs/MONITORING.md) - Health checks and auto-restart
 - 🔧 [**Troubleshooting**](docs/TROUBLESHOOTING.md) - Common issues and solutions
@@ -161,6 +162,7 @@ minecraft-servers/
     ├── QUICKSTART.md
     ├── ARCHITECTURE.md
     ├── ADDING_MODPACKS.md
+    ├── ADD_NEW_MODPACK_CONFIG.md
     ├── BACKUP_RESTORE.md
     ├── MONITORING.md
     ├── TROUBLESHOOTING.md
@@ -187,99 +189,6 @@ services:
 - ✅ Unique container names prevent overwrites
 - ✅ Scales to unlimited servers
 
-## Health Monitoring & Auto-Restart
-
-The system includes comprehensive health monitoring:
-
-```bash
-# Check all servers
-./scripts/health-check.sh --all --verbose
-
-# Start continuous monitoring
-./scripts/auto-restart.sh --daemon --interval=300
-```
-
-**Health Checks Monitor**:
-
-- Container running status
-- Network port responsiveness
-- Server log errors
-- Disk space usage
-- Docker health status
-
-## Backup & Recovery
-
-Automated backup system with integrity verification:
-
-```bash
-# Create backup (server stopped temporarily)
-./scripts/backup.sh atm8
-
-# Restore from backup
-./scripts/restore.sh atm8 backups/atm8/backup-2024-01-01.tar.gz
-
-# List available backups
-ls -la backups/atm8/
-```
-
-**Features**:
-
-- SHA256 checksum verification
-- 3-backup rolling retention
-- Atomic operations
-- Temporary server stop for consistency
-
-## Adding Custom Modpacks
-
-Easy addition of custom servers:
-
-```bash
-# Use pre-configured template
-./scripts/add-modpack.sh my-atm8 --modpack=atm8 --port=25570
-
-# Add custom CurseForge modpack
-./scripts/add-modpack.sh my-custom --port=25571
-# Then edit config/modpacks/my-custom.env manually
-```
-
-## Validation & Troubleshooting
-
-Comprehensive validation and troubleshooting tools:
-
-```bash
-# Validate entire setup
-./scripts/validate-config.sh --all --fix
-
-# Quick system check
-./scripts/validate-config.sh --system
-
-# Get help with issues
-cat docs/TROUBLESHOOTING.md
-```
-
-## Production Deployment
-
-For production use:
-
-1. **Enable Monitoring**:
-
-   ```bash
-   nohup ./scripts/auto-restart.sh --daemon --interval=300 > monitoring.log 2>&1 &
-   ```
-
-2. **Set Up Backups**:
-
-   ```bash
-   # Add to crontab for daily backups
-   0 2 * * * /path/to/minecraft-servers/scripts/backup.sh --all
-   ```
-
-3. **Monitor Logs**:
-   ```bash
-   # Check health status
-   ./scripts/health-check.sh --all --json
-   ```
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
@@ -288,10 +197,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
 - Improving management scripts
 - Testing requirements
 - Documentation standards
-
-## License
-
-[Your License Here]
 
 ## Support
 
