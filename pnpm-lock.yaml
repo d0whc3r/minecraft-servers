@@ -11,6 +11,9 @@ importers:
       bats:
         specifier: ^1.13.0
         version: 1.13.0
+      husky:
+        specifier: ^9.1.7
+        version: 9.1.7
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
@@ -26,6 +29,11 @@ packages:
 
   bats@1.13.0:
     resolution: {integrity: sha512-giSYKGTOcPZyJDbfbTtzAedLcNWdjCLbXYU3/MwPnjyvDXzu6Dgw8d2M+8jHhZXSmsCMSQqCp+YBsJ603UO4vQ==}
+    hasBin: true
+
+  husky@9.1.7:
+    resolution: {integrity: sha512-5gs5ytaNjBrh5Ow3zrvdUUY+0VxIuWVL4i9irt6friV+BqdCfmV11CQTWMiBYWHbXhco+J1kHfTOUkePhCDvMA==}
+    engines: {node: '>=18'}
     hasBin: true
 
   prettier-plugin-sh@0.18.0:
@@ -51,6 +59,8 @@ snapshots:
   '@reteps/dockerfmt@0.3.6': {}
 
   bats@1.13.0: {}
+
+  husky@9.1.7: {}
 
   prettier-plugin-sh@0.18.0(prettier@3.6.2):
     dependencies:

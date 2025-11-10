@@ -154,6 +154,15 @@ pnpm run format:config # Config files (.env, .yml, .yaml)
 
 **Note:** Test files (`.bats`) are excluded from automatic formatting due to their special syntax.
 
+### Git Hooks
+
+This project uses **Husky** for automatic code quality enforcement:
+
+- **Pre-commit**: Automatically formats code with Prettier and stages changes
+- **Pre-push**: Runs tests 1-6 (excluding expensive test 7) before pushing
+
+**Hooks are automatically configured** - no manual setup required.
+
 ## Submitting Changes
 
 ### Pull Request Process
