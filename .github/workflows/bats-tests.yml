@@ -19,7 +19,7 @@ jobs:
       total-modpacks: ${{ steps.generate-matrix.outputs.total-modpacks }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Generate test matrix
         id: generate-matrix
@@ -116,7 +116,7 @@ jobs:
       matrix: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Cache pnpm dependencies
         uses: actions/cache@v4
@@ -167,7 +167,7 @@ jobs:
     if: always()
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download test artifacts
         uses: actions/download-artifact@v6
