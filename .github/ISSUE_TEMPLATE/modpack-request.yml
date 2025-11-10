@@ -1,0 +1,91 @@
+---
+name: Modpack Request
+description: Request a new pre-configured modpack
+title: "[MODPACK] "
+labels: ["modpack", "enhancement"]
+assignees: []
+body:
+- type: markdown
+  attributes:
+    value: |
+      ## Modpack Request
+
+      Request a new pre-configured modpack to be added to the system.
+
+- type: input
+  id: modpack-name
+  attributes:
+    label: Modpack Name
+    description: The official name of the modpack.
+    placeholder: "All The Mods 9"
+  validations:
+    required: true
+
+- type: input
+  id: modpack-url
+  attributes:
+    label: Modpack URL
+    description: Link to the modpack page on CurseForge or Modrinth.
+    placeholder: "https://www.curseforge.com/minecraft/modpacks/all-the-mods-9"
+  validations:
+    required: true
+
+- type: dropdown
+  id: platform
+  attributes:
+    label: Platform
+    description: Where is the modpack hosted?
+    options:
+      - CurseForge
+      - Modrinth
+  validations:
+    required: true
+
+- type: input
+  id: minecraft-version
+  attributes:
+    label: Minecraft Version
+    description: The Minecraft version this modpack uses.
+    placeholder: "1.20.1"
+  validations:
+    required: true
+
+- type: input
+  id: recommended-memory
+  attributes:
+    label: Recommended Memory
+    description: Minimum recommended RAM for this modpack.
+    placeholder: "8G"
+  validations:
+    required: true
+
+- type: textarea
+  id: description
+  attributes:
+    label: Description
+    description: Brief description of what makes this modpack special.
+    placeholder: "Describe the modpack's theme, gameplay style, or unique features..."
+  validations:
+    required: true
+
+- type: textarea
+  id: requirements
+  attributes:
+    label: Special Requirements
+    description: Any special setup requirements or known issues.
+    placeholder: "Any special configuration needed, known bugs, or compatibility issues..."
+
+- type: checkboxes
+  id: checklist
+  attributes:
+    label: Checklist
+    description: Please check all that apply.
+    options:
+    - label: This modpack is publicly available and legal
+      required: true
+    - label: The modpack has active support/maintenance
+      required: false
+    - label: I have tested this modpack personally
+      required: false
+    - label: I am willing to help test the implementation
+      required: false

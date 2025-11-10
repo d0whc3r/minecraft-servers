@@ -4,11 +4,11 @@ A Docker-based system for running multiple Minecraft server instances with diffe
 
 ## Features
 
-- 🚀 **Multi-Server Support**: Run 14+ Minecraft servers concurrently with different modpacks
+- 🚀 **Multi-Server Support**: Run 12+ Minecraft servers concurrently with different modpacks
 - 🔧 **Template-Based Configuration**: Single docker-compose.yml for all servers
 - 💾 **Automated Backups**: 3-backup rolling window with integrity verification
 - 🏥 **Health Monitoring**: Built-in health checks with auto-restart on failure
-- 📦 **Pre-Configured Modpacks**: Vanilla, ATM8, SkyFactory 4, Prominence II RPG, RLCraft, Solo Leveling series, Dragon Block C, My Hero Academia, Cobbleverse, Slimes Adventure, and more
+- 📦 **Pre-Configured Modpacks**: Vanilla, SkyFactory 4, RLCraft, Solo Leveling series, Dragon Block C, My Hero Academia, Cobbleverse, Slimes Adventure, and more
 - 🔌 **Easy Extensibility**: Add custom modpacks with simple scripts
 - 🔒 **Complete Isolation**: Each server has isolated configs, worlds, and mods
 - ✅ **Production Ready**: Comprehensive validation, monitoring, and troubleshooting
@@ -57,7 +57,7 @@ docker logs -f mc-vanilla
 
 Open Minecraft Java Edition and connect to:
 
-- **Address**: `your-server-ip:25569`
+- **Address**: `your-server-ip:25567`
 - **Version**: 1.20.4
 
 ## Management Scripts
@@ -81,20 +81,18 @@ Open Minecraft Java Edition and connect to:
 
 | Modpack                       | Version | Memory | Port  | Type              | Platform   |
 | ----------------------------- | ------- | ------ | ----- | ----------------- | ---------- |
-| **All The Mods 8**            | 1.20.1  | 8G     | 25565 | Kitchen sink      | CurseForge |
-| **SkyFactory 4**              | 1.12.2  | 4G     | 25566 | Skyblock          | CurseForge |
-| **Prominence II RPG**         | 1.20.1  | 6G     | 25567 | RPG adventure     | CurseForge |
-| **RLCraft**                   | 1.12.2  | 6G     | 25568 | Hardcore survival | CurseForge |
-| **Vanilla (Paper)**           | 1.20.4  | 2G     | 25569 | Optimized vanilla | Paper      |
-| **Cobbleverse**               | 1.21.1  | 6G     | 25570 | Pokemon adventure | Modrinth   |
-| **Slimes Adventure**          | 1.19.2  | 4G     | 25571 | Exploration       | Modrinth   |
-| **SoloCraft**                 | 1.20.1  | 3G     | 25572 | Survival focused  | Modrinth   |
-| **Solo Leveling Reawakening** | 1.20.1  | 4G     | 25573 | Hunter RPG        | CurseForge |
-| **Unofficial Dragon Block C** | 1.12.2  | 4G     | 25574 | Dragon Ball RPG   | CurseForge |
-| **Amazing FPS Booster**       | 1.20.1  | 2G     | 25575 | Performance opt.  | CurseForge |
-| **Solo Leveling Shadows**     | 1.20.1  | 6G     | 25576 | Advanced RPG      | CurseForge |
-| **Solo Leveling Level Up**    | 1.20.1  | 4G     | 25577 | RPG progression   | CurseForge |
-| **My Hero Adventure**         | 1.12.2  | 4G     | 25578 | Hero Academia     | CurseForge |
+| **SkyFactory 4**              | 1.12.2  | 4G     | 25565 | Skyblock          | CurseForge |
+| **RLCraft**                   | 1.12.2  | 6G     | 25566 | Hardcore survival | CurseForge |
+| **Vanilla (Paper)**           | 1.20.4  | 2G     | 25567 | Optimized vanilla | Paper      |
+| **Cobbleverse**               | 1.21.1  | 6G     | 25568 | Pokemon adventure | Modrinth   |
+| **Slimes Adventure**          | 1.19.2  | 4G     | 25569 | Exploration       | Modrinth   |
+| **SoloCraft**                 | 1.20.1  | 3G     | 25570 | Survival focused  | Modrinth   |
+| **Solo Leveling Reawakening** | 1.20.1  | 4G     | 25571 | Hunter RPG        | CurseForge |
+| **Unofficial Dragon Block C** | 1.12.2  | 4G     | 25572 | Dragon Ball RPG   | CurseForge |
+| **Amazing FPS Booster**       | 1.20.1  | 2G     | 25573 | Performance opt.  | CurseForge |
+| **Solo Leveling Shadows**     | 1.20.1  | 6G     | 25574 | Advanced RPG      | CurseForge |
+| **Solo Leveling Level Up**    | 1.20.1  | 4G     | 25575 | RPG progression   | CurseForge |
+| **My Hero Adventure**         | 1.12.2  | 4G     | 25576 | Hero Academia     | CurseForge |
 
 ## Documentation
 
@@ -127,10 +125,10 @@ Open Minecraft Java Edition and connect to:
 ./scripts/auto-restart.sh --daemon --interval=300
 
 # View logs for specific server
-docker logs -f mc-atm8
+docker logs -f mc-vanilla
 
 # Create backup
-./scripts/backup.sh atm8
+./scripts/backup.sh vanilla
 
 # Start a Solo Leveling server
 ./scripts/start-server.sh solo-leveling-shadows
@@ -150,7 +148,7 @@ minecraft-servers/
 ├── .env                        # Global configuration
 ├── scripts/                    # Management scripts (11 total)
 ├── config/
-│   ├── modpacks/              # Per-server .env files (14+ pre-configured)
+│   ├── modpacks/              # Per-server .env files (12 pre-configured)
 │   └── templates/             # Configuration templates
 ├── servers/                    # Server data (gitignored)
 │   └── {name}/
@@ -198,11 +196,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
 - Testing requirements
 - Documentation standards
 
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 ## Support
 
 - 📝 [Issues](https://github.com/yourusername/minecraft-servers/issues)
 - 💬 [Discussions](https://github.com/yourusername/minecraft-servers/discussions)
 - 📧 [Email](mailto:your-email@example.com)
+- 🔒 [Security Policy](SECURITY.md)
+- 📋 [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## Acknowledgments
 
