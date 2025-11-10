@@ -28,8 +28,8 @@ get_modpack_name() {
     basename "$config_file" .env
 }
 
-# Test Case: US1-TC001 - All existing modpacks can be started
-@test "US1-TC001: All existing modpacks can be started successfully" {
+# Test Case: US1-TC001 - Script syntax validation (lightweight)
+@test "US1-TC001: Script syntax validation" {
     local modpack_configs=()
     local failed_modpacks=()
     local total_modpacks=0
@@ -44,37 +44,30 @@ get_modpack_name() {
         local modpack_name
         modpack_name=$(basename "$config_file" .env)
 
-        echo "Testing modpack: $modpack_name"
+        echo "Validating script for modpack: $modpack_name"
 
-        # Test script execution (with timeout to prevent hanging)
-        # The script expects only the server name, it automatically finds the config
-        # Use a shorter timeout since we're just testing script execution, not full server startup
-        timeout 10 ./scripts/start-server.sh "$modpack_name"
-
-        if [ $? -eq 0 ]; then
-            # Check if container was created (not necessarily running yet, as MC servers take time to start)
-            local expected_container="mc-${modpack_name}"
-            if docker ps -a --filter "name=${expected_container}" --format "{{.Names}}" | grep -q "^${expected_container}$"; then
-                echo "✓ Modpack $modpack_name started successfully (container created)"
-                # Clean up container
-                docker stop "$expected_container" >/dev/null 2>&1 || true
-                docker rm "$expected_container" >/dev/null 2>&1 || true
-            else
-                echo "✗ Modpack $modpack_name container not created"
-                failed_modpacks+=("$modpack_name:container_not_created")
-                # Clean up any failed containers
-                docker rm "$expected_container" >/dev/null 2>&1 || true
-            fi
+        # Test script syntax validation only (no actual execution)
+        # Check if script would run without syntax errors by doing a dry-run check
+        if bash -n ./scripts/start-server.sh 2>/dev/null; then
+            echo "✓ Script syntax is valid for $modpack_name"
         else
-            echo "✗ Modpack $modpack_name script execution failed"
-            failed_modpacks+=("$modpack_name:script_failed")
+            echo "✗ Script syntax error detected"
+            failed_modpacks+=("$modpack_name:syntax_error")
+        fi
+
+        # Verify config file exists and is readable
+        if [ -f "$config_file" ] && [ -r "$config_file" ]; then
+            echo "✓ Config file exists and is readable for $modpack_name"
+        else
+            echo "✗ Config file issue for $modpack_name"
+            failed_modpacks+=("$modpack_name:config_issue")
         fi
     done
 
-    # Assert no modpacks failed
+    # Assert no modpacks failed validation
     [ ${#failed_modpacks[@]} -eq 0 ]
 
-    echo "Tested $total_modpacks modpacks"
+    echo "Validated $total_modpacks modpacks"
     if [ ${#failed_modpacks[@]} -gt 0 ]; then
         echo "Failed: ${failed_modpacks[*]}"
     fi
@@ -296,22 +289,22 @@ get_modpack_name() {
             # CRITICAL: Check container status FIRST before any operation
             local container_status
             container_status=$(docker inspect "${container_name}" --format='{{.State.Status}}' 2>/dev/null || echo "not_found")
-            
+
             if [ "$container_status" != "running" ]; then
                 # Container is not running - could be exited, dead, or removed
                 local exit_code
                 exit_code=$(docker inspect "${container_name}" --format='{{.State.ExitCode}}' 2>/dev/null || echo "unknown")
-                
+
                 echo "  ✗ Container stopped (status: $container_status, exit code: $exit_code)"
                 echo "  Last 20 log lines:"
                 docker logs "$container_name" 2>&1 | tail -20 | sed 's/^/    /'
-                
+
                 if [ "$exit_code" = "unknown" ]; then
                     failed_servers+=("$modpack_name:container_disappeared")
                 else
                     failed_servers+=("$modpack_name:stopped_exit_$exit_code")
                 fi
-                
+
                 kill $server_pid >/dev/null 2>&1 || true
                 docker rm "$container_name" >/dev/null 2>&1 || true
                 break
@@ -322,7 +315,7 @@ get_modpack_name() {
             if [ $((elapsed % 15)) -eq 0 ] || [ $elapsed -eq 0 ]; then
                 local current_log_tail
                 current_log_tail=$(docker logs "$container_name" 2>&1 | tail -2 | tr '\n' ' ' | sed 's/  */ /g')
-                
+
                 if [ "$current_log_tail" != "$last_log_line" ] && [ -n "$current_log_tail" ]; then
                     echo "  [${elapsed}s] ${current_log_tail:0:100}..."
                     last_log_line="$current_log_tail"
@@ -332,7 +325,7 @@ get_modpack_name() {
             # Check for server ready message (most reliable indicator)
             local current_logs
             current_logs=$(docker logs "$container_name" 2>&1)
-            
+
             if echo "$current_logs" | grep -q 'Done ([0-9.]*s)! For help, type "help"'; then
                 server_ready=true
                 echo "  ✓ Server fully ready!"
@@ -365,7 +358,7 @@ get_modpack_name() {
         if [ "$server_ready" = true ]; then
             echo "  ✅ Completed in ${elapsed}s"
             successful_servers+=("$modpack_name")
-            
+
             # Clean up
             ./scripts/stop-server.sh "$modpack_name" >/dev/null 2>&1 || true
             docker rm "$container_name" >/dev/null 2>&1 || true
@@ -375,7 +368,7 @@ get_modpack_name() {
                 # Check one last time if container is still running
                 local final_status
                 final_status=$(docker inspect "${container_name}" --format='{{.State.Status}}' 2>/dev/null || echo "not_found")
-                
+
                 if [ "$final_status" = "running" ]; then
                     echo "  ⏰ Timeout after ${max_wait_time}s (container still running)"
                     echo "  Last 20 log lines:"
@@ -389,7 +382,7 @@ get_modpack_name() {
                     docker logs "$container_name" 2>&1 | tail -20 | sed 's/^/    /'
                     failed_servers+=("$modpack_name:timeout_stopped_$final_exit_code")
                 fi
-                
+
                 # Clean up
                 kill $server_pid >/dev/null 2>&1 || true
                 ./scripts/stop-server.sh "$modpack_name" >/dev/null 2>&1 || true
@@ -404,7 +397,7 @@ get_modpack_name() {
     echo "Total tested: $total_servers"
     echo "Successful: ${#successful_servers[@]}"
     echo "Failed: ${#failed_servers[@]}"
-    
+
     if [ ${#successful_servers[@]} -gt 0 ]; then
         echo ""
         echo "✅ Successful servers:"
@@ -412,7 +405,7 @@ get_modpack_name() {
             echo "  - $server"
         done
     fi
-    
+
     if [ ${#failed_servers[@]} -gt 0 ]; then
         echo ""
         echo "❌ Failed servers:"

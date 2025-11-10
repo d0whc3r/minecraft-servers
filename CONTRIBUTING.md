@@ -159,7 +159,16 @@ pnpm run format:config # Config files (.env, .yml, .yaml)
 This project uses **Husky** for automatic code quality enforcement:
 
 - **Pre-commit**: Automatically formats code with Prettier and stages changes
-- **Pre-push**: Runs tests 1-6 (excluding expensive test 7) before pushing
+- **Pre-push**: Runs lightweight tests 1-6 (excluding expensive test 7) before pushing
+
+**Test Details:**
+
+- **US1-TC001**: Script syntax validation (no Docker required)
+- **US1-TC002**: Configuration file validation
+- **US1-TC003**: Error handling for invalid inputs
+- **US1-TC004**: Script accessibility checks
+- **US1-TC005**: Dynamic modpack detection
+- **US1-TC006**: Modpack name extraction
 
 **Hooks are automatically configured** - no manual setup required.
 
