@@ -52,20 +52,20 @@ Edit these critical variables:
 
 ```env
 # Server Type (choose one)
-TYPE=AUTO_CURSEFORGE    # For CurseForge modpacks
-TYPE=MODRINTH          # For Modrinth modpacks
-TYPE=FORGE             # For Forge modpacks
-TYPE=FABRIC            # For Fabric modpacks
-TYPE=PAPER             # For vanilla with plugins
+TYPE=AUTO_CURSEFORGE # For CurseForge modpacks
+TYPE=MODRINTH        # For Modrinth modpacks
+TYPE=FORGE           # For Forge modpacks
+TYPE=FABRIC          # For Fabric modpacks
+TYPE=PAPER           # For vanilla with plugins
 
 # Minecraft Version (CRITICAL)
-VERSION=1.20.1         # Must match EXACTLY with the modpack
+VERSION=1.20.1 # Must match EXACTLY with the modpack
 
 # RAM Memory
-MEMORY=4G              # Adjust according to modpack (2G-16G)
+MEMORY=4G # Adjust according to modpack (2G-16G)
 
 # Unique Port (check existing ports)
-SERVER_PORT=25570      # Must be unique across all servers
+SERVER_PORT=25570 # Must be unique across all servers
 
 # Server Name (no spaces, lowercase)
 SERVER_NAME=your-modpack
@@ -78,7 +78,7 @@ SERVER_NAME=your-modpack
 ```env
 TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/modpack-name
-VERSION=1.20.1  # Leave empty for auto-detection
+VERSION=1.20.1 # Leave empty for auto-detection
 ```
 
 #### For Modrinth Modpacks:
@@ -86,7 +86,7 @@ VERSION=1.20.1  # Leave empty for auto-detection
 ```env
 TYPE=MODRINTH
 MODRINTH_MODPACK=modpack-name
-VERSION=1.20.1  # MUST match the modpack's Minecraft version
+VERSION=1.20.1 # MUST match the modpack's Minecraft version
 ```
 
 #### For Custom Forge/Fabric Modpacks:

@@ -15,31 +15,31 @@ BACKUP_RETENTION=3
 
 # Validate arguments
 if [[ $# -ne 1 ]]; then
-    echo "Usage: $0 <server-name>" >&2
-    echo "Example: $0 atm8" >&2
-    exit 2
+  echo "Usage: $0 <server-name>" >&2
+  echo "Example: $0 atm8" >&2
+  exit 2
 fi
 
 SERVER_NAME="$1"
 
 # Validate server name
 if ! validate_server_name "$SERVER_NAME"; then
-    exit 2
+  exit 2
 fi
 
 # Check if server config exists
 CONFIG_FILE=$(get_config_file "$SERVER_NAME")
 if [[ ! -f "$CONFIG_FILE" ]]; then
-    error "Server configuration not found: $CONFIG_FILE"
-    exit 3
+  error "Server configuration not found: $CONFIG_FILE"
+  exit 3
 fi
 
 # Check if server is running
 CONTAINER_NAME=$(get_container_name "$SERVER_NAME")
 if ! container_running "$CONTAINER_NAME"; then
-    error "Server '$SERVER_NAME' is not running (container: $CONTAINER_NAME)"
-    error "Start the server first with: ./scripts/start-server.sh $SERVER_NAME"
-    exit 3
+  error "Server '$SERVER_NAME' is not running (container: $CONTAINER_NAME)"
+  error "Start the server first with: ./scripts/start-server.sh $SERVER_NAME"
+  exit 3
 fi
 
 # Setup backup paths
@@ -63,9 +63,9 @@ START_TIME=$(date +%s)
 
 # Stop server temporarily for atomic backup
 info "Stopping server temporarily for backup..."
-if ! docker stop "$CONTAINER_NAME" >/dev/null 2>&1; then
-    error "Failed to stop server container"
-    exit 1
+if ! docker stop "$CONTAINER_NAME" > /dev/null 2>&1; then
+  error "Failed to stop server container"
+  exit 1
 fi
 
 # Wait for server to stop gracefully
@@ -73,12 +73,12 @@ sleep 5
 
 # Create backup archive
 info "Creating backup archive..."
-if ! tar czf "$BACKUP_PATH" -C "$PROJECT_ROOT/servers/${SERVER_NAME}" data/ 2>/dev/null; then
-    # Restart server on failure
-    warning "Backup failed, restarting server..."
-    docker start "$CONTAINER_NAME" >/dev/null 2>&1
-    error "Failed to create backup archive"
-    exit 1
+if ! tar czf "$BACKUP_PATH" -C "$PROJECT_ROOT/servers/${SERVER_NAME}" data/ 2> /dev/null; then
+  # Restart server on failure
+  warning "Backup failed, restarting server..."
+  docker start "$CONTAINER_NAME" > /dev/null 2>&1
+  error "Failed to create backup archive"
+  exit 1
 fi
 
 # Calculate checksum
@@ -88,22 +88,22 @@ echo "$CHECKSUM  $BACKUP_FILENAME" > "$CHECKSUM_PATH"
 
 # Restart server
 info "Restarting server..."
-if ! docker start "$CONTAINER_NAME" >/dev/null 2>&1; then
-    error "Failed to restart server after backup"
-    error "Server may need manual restart: docker start $CONTAINER_NAME"
-    exit 1
+if ! docker start "$CONTAINER_NAME" > /dev/null 2>&1; then
+  error "Failed to restart server after backup"
+  error "Server may need manual restart: docker start $CONTAINER_NAME"
+  exit 1
 fi
 
 # Calculate backup size and compression ratio
-BACKUP_SIZE=$(stat -f%z "$BACKUP_PATH" 2>/dev/null || stat -c%s "$BACKUP_PATH" 2>/dev/null || echo "0")
+BACKUP_SIZE=$(stat -f%z "$BACKUP_PATH" 2> /dev/null || stat -c%s "$BACKUP_PATH" 2> /dev/null || echo "0")
 BACKUP_SIZE_MB=$((BACKUP_SIZE / 1024 / 1024))
 
 # Estimate original size (rough approximation)
-ORIGINAL_ESTIMATE_MB=$(du -sm "$SERVER_DATA_DIR" 2>/dev/null | cut -f1 || echo "0")
+ORIGINAL_ESTIMATE_MB=$(du -sm "$SERVER_DATA_DIR" 2> /dev/null | cut -f1 || echo "0")
 if [[ $ORIGINAL_ESTIMATE_MB -gt 0 ]]; then
-    COMPRESSION_RATIO=$((BACKUP_SIZE_MB * 100 / ORIGINAL_ESTIMATE_MB))
+  COMPRESSION_RATIO=$((BACKUP_SIZE_MB * 100 / ORIGINAL_ESTIMATE_MB))
 else
-    COMPRESSION_RATIO=0
+  COMPRESSION_RATIO=0
 fi
 
 # Calculate duration
@@ -114,16 +114,16 @@ DURATION=$((END_TIME - START_TIME))
 info "Checking backup retention (keeping $BACKUP_RETENTION most recent)..."
 BACKUP_FILES=("$BACKUP_DIR"/*.tar.gz)
 if [[ ${#BACKUP_FILES[@]} -gt $BACKUP_RETENTION ]]; then
-    # Sort by modification time (newest first), skip first N, delete rest
-    TO_DELETE=$(ls -t "$BACKUP_DIR"/*.tar.gz 2>/dev/null | tail -n +$((BACKUP_RETENTION + 1)) || true)
-    if [[ -n "$TO_DELETE" ]]; then
-        echo "$TO_DELETE" | while read -r old_backup; do
-            if [[ -f "$old_backup" ]]; then
-                info "Deleting old backup: $(basename "$old_backup")"
-                rm -f "$old_backup" "${old_backup}.sha256"
-            fi
-        done
-    fi
+  # Sort by modification time (newest first), skip first N, delete rest
+  TO_DELETE=$(ls -t "$BACKUP_DIR"/*.tar.gz 2> /dev/null | tail -n +$((BACKUP_RETENTION + 1)) || true)
+  if [[ -n "$TO_DELETE" ]]; then
+    echo "$TO_DELETE" | while read -r old_backup; do
+      if [[ -f "$old_backup" ]]; then
+        info "Deleting old backup: $(basename "$old_backup")"
+        rm -f "$old_backup" "${old_backup}.sha256"
+      fi
+    done
+  fi
 fi
 
 # Success output
@@ -132,7 +132,7 @@ echo "Server: $SERVER_NAME"
 echo "Backup: $BACKUP_PATH"
 echo "Size: ${BACKUP_SIZE_MB}MB"
 if [[ $COMPRESSION_RATIO -gt 0 ]]; then
-    echo "Compression: ${COMPRESSION_RATIO}%"
+  echo "Compression: ${COMPRESSION_RATIO}%"
 fi
 echo "Checksum: $CHECKSUM"
 echo "Duration: ${DURATION}s"
@@ -140,13 +140,13 @@ echo "Duration: ${DURATION}s"
 # List current backups
 echo ""
 echo "Current backups for $SERVER_NAME:"
-ls -la "$BACKUP_DIR"/*.tar.gz 2>/dev/null | while read -r line; do
-    if [[ -n "$line" ]]; then
-        filename=$(basename "$(echo "$line" | awk '{print $9}')")
-        size=$(echo "$line" | awk '{print $5}')
-        size_mb=$((size / 1024 / 1024))
-        echo "  $filename (${size_mb}MB)"
-    fi
+ls -la "$BACKUP_DIR"/*.tar.gz 2> /dev/null | while read -r line; do
+  if [[ -n "$line" ]]; then
+    filename=$(basename "$(echo "$line" | awk '{print $9}')")
+    size=$(echo "$line" | awk '{print $5}')
+    size_mb=$((size / 1024 / 1024))
+    echo "  $filename (${size_mb}MB)"
+  fi
 done
 
 exit 0

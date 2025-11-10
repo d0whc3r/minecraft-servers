@@ -176,7 +176,7 @@ services:
   minecraft-server:
     container_name: mc-${SERVER_NAME}
     env_file: config/modpacks/${SERVER_NAME}.env
-    ports: ["${SERVER_PORT}:25565"]
+    ports: ['${SERVER_PORT}:25565']
 ```
 
 **Benefits**:

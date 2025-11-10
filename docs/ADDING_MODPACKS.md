@@ -146,7 +146,7 @@ For CurseForge modpacks not in templates:
    ```env
    # Custom Modpack Configuration
    TYPE=AUTO_CURSEFORGE
-   VERSION=1.20.1  # Check modpack requirements
+   VERSION=1.20.1 # Check modpack requirements
    MEMORY=6G
    CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/your-modpack-name
    SERVER_NAME=Your Modpack Server
@@ -175,7 +175,7 @@ For non-CurseForge modpacks:
    ```env
    # Forge Modpack Configuration
    TYPE=FORGE
-   VERSION=1.19.2  # Match modpack version
+   VERSION=1.19.2 # Match modpack version
    MEMORY=8G
    SERVER_NAME=Forge Server
    SERVER_PORT=25581
@@ -203,7 +203,7 @@ For vanilla servers with plugins:
    ```bash
    # Create plugins directory
    mkdir servers/plugins-server/data/plugins
-
+   
    # Copy plugin JARs
    cp *.jar servers/plugins-server/data/plugins/
    ```
@@ -214,10 +214,10 @@ For vanilla servers with plugins:
 
 ```env
 # Server Configuration
-TYPE=PAPER|FORGE|FABRIC|AUTO_CURSEFORGE
+TYPE=PAPER | FORGE | FABRIC | AUTO_CURSEFORGE
 VERSION=1.20.1
 MEMORY=4G
-CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/name  # If AUTO_CURSEFORGE
+CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/name # If AUTO_CURSEFORGE
 SERVER_NAME=Display Name
 SERVER_PORT=25565
 MAX_PLAYERS=20
@@ -350,7 +350,7 @@ rm config/modpacks/unused-server.env
 rm -rf servers/unused-server backups/unused-server
 
 # Or use manual port assignment
-./scripts/add-modpack.sh new-server --port=25565  # If available
+./scripts/add-modpack.sh new-server --port=25565 # If available
 ```
 
 ### "Invalid memory format"
@@ -361,9 +361,9 @@ rm -rf servers/unused-server backups/unused-server
 
 ```bash
 # Use correct format
-./scripts/add-modpack.sh server --memory=4G     # ✅
-./scripts/add-modpack.sh server --memory=4096M  # ✅
-./scripts/add-modpack.sh server --memory=4GB    # ❌ (no B)
+./scripts/add-modpack.sh server --memory=4G    # ✅
+./scripts/add-modpack.sh server --memory=4096M # ✅
+./scripts/add-modpack.sh server --memory=4GB   # ❌ (no B)
 ```
 
 ### Modpack Won't Download
@@ -402,7 +402,7 @@ sudo ./scripts/add-modpack.sh server-name
 ```bash
 # Create multiple servers
 for i in {1..3}; do
-    ./scripts/add-modpack.sh "atm8-test-$i" --modpack=atm8
+  ./scripts/add-modpack.sh "atm8-test-$i" --modpack=atm8
 done
 ```
 

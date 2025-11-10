@@ -77,7 +77,7 @@ USE_AIKAR_FLAGS=true
 # Gameplay
 MAX_PLAYERS=10
 DIFFICULTY=normal
-PVP=false  # Friendly co-op gameplay
+PVP=false # Friendly co-op gameplay
 ```
 
 ### Customization
@@ -103,7 +103,7 @@ Since this modpack is designed for solo/small groups, consider enabling autopaus
 ```bash
 # Edit config/modpacks/solocraft-modpack.env
 ENABLE_AUTOPAUSE=true
-AUTOPAUSE_TIMEOUT_EST=300  # Pause after 5min of no players
+AUTOPAUSE_TIMEOUT_EST=300 # Pause after 5min of no players
 AUTOPAUSE_TIMEOUT_INIT=300
 ```
 

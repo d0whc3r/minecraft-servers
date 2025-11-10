@@ -12,7 +12,7 @@ source "$SCRIPT_DIR/common.sh"
 
 # Show usage information
 usage() {
-    cat << EOF
+  cat << EOF
 Usage: $0 [OPTIONS] [SERVER_NAME]
 
 Check health status of Minecraft servers.
@@ -48,290 +48,290 @@ JSON_OUTPUT=false
 SERVER_NAME=""
 
 while [[ $# -gt 0 ]]; do
-    case $1 in
-        -a|--all)
-            ALL_SERVERS=true
-            shift
-            ;;
-        -v|--verbose)
-            VERBOSE=true
-            shift
-            ;;
-        -j|--json)
-            JSON_OUTPUT=true
-            shift
-            ;;
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        -*)
-            log_error "Unknown option: $1"
-            usage
-            exit 2
-            ;;
-        *)
-            if [[ -n "$SERVER_NAME" ]]; then
-                log_error "Multiple server names specified"
-                usage
-                exit 2
-            fi
-            SERVER_NAME="$1"
-            shift
-            ;;
-    esac
+  case $1 in
+    -a | --all)
+      ALL_SERVERS=true
+      shift
+      ;;
+    -v | --verbose)
+      VERBOSE=true
+      shift
+      ;;
+    -j | --json)
+      JSON_OUTPUT=true
+      shift
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -*)
+      log_error "Unknown option: $1"
+      usage
+      exit 2
+      ;;
+    *)
+      if [[ -n "$SERVER_NAME" ]]; then
+        log_error "Multiple server names specified"
+        usage
+        exit 2
+      fi
+      SERVER_NAME="$1"
+      shift
+      ;;
+  esac
 done
 
 # Validate arguments
 if [[ "$ALL_SERVERS" == false && -z "$SERVER_NAME" ]]; then
-    log_error "Must specify either --all or a server name"
-    usage
-    exit 2
+  log_error "Must specify either --all or a server name"
+  usage
+  exit 2
 fi
 
 if [[ "$ALL_SERVERS" == true && -n "$SERVER_NAME" ]]; then
-    log_error "Cannot specify both --all and a server name"
-    usage
-    exit 2
+  log_error "Cannot specify both --all and a server name"
+  usage
+  exit 2
 fi
 
 # Get list of servers to check
 get_server_list() {
-    if [[ "$ALL_SERVERS" == true ]]; then
-        # Get all configured servers
-        for config_file in config/modpacks/*.env; do
-            if [[ -f "$config_file" ]]; then
-                basename "$config_file" .env
-            fi
-        done | sort
-    else
-        echo "$SERVER_NAME"
-    fi
+  if [[ "$ALL_SERVERS" == true ]]; then
+    # Get all configured servers
+    for config_file in config/modpacks/*.env; do
+      if [[ -f "$config_file" ]]; then
+        basename "$config_file" .env
+      fi
+    done | sort
+  else
+    echo "$SERVER_NAME"
+  fi
 }
 
 # Check if server is configured
 server_exists() {
-    local server_name="$1"
-    check_config_exists "$server_name"
+  local server_name="$1"
+  check_config_exists "$server_name"
 }
 
 # Get server configuration
 get_server_config() {
-    local server_name="$1"
-    local key="$2"
-    local config_file
-    config_file=$(get_config_file "$server_name")
+  local server_name="$1"
+  local key="$2"
+  local config_file
+  config_file=$(get_config_file "$server_name")
 
-    if [[ ! -f "$config_file" ]]; then
-        return 1
-    fi
+  if [[ ! -f "$config_file" ]]; then
+    return 1
+  fi
 
-    grep "^${key}=" "$config_file" | cut -d'=' -f2- | sed 's/^"//' | sed 's/"$//'
+  grep "^${key}=" "$config_file" | cut -d'=' -f2- | sed 's/^"//' | sed 's/"$//'
 }
 
 # Check if Docker container is running
 check_container_running() {
-    local server_name="$1"
-    local container_name
-    container_name=$(get_container_name "$server_name")
-    container_running "$container_name"
+  local server_name="$1"
+  local container_name
+  container_name=$(get_container_name "$server_name")
+  container_running "$container_name"
 }
 
 # Check if server is responding on configured port
 check_server_port() {
-    local server_name="$1"
-    local port
+  local server_name="$1"
+  local port
 
-    port=$(get_server_config "$server_name" "SERVER_PORT")
-    if [[ -z "$port" ]]; then
-        return 1
-    fi
+  port=$(get_server_config "$server_name" "SERVER_PORT")
+  if [[ -z "$port" ]]; then
+    return 1
+  fi
 
-    check_port_open "$port"
+  check_port_open "$port"
 }
 
 # Check server process health via Docker logs
 check_server_logs() {
-    local server_name="$1"
-    local container_name="mc-${server_name}"
+  local server_name="$1"
+  local container_name="mc-${server_name}"
 
-    # Get recent logs (last 50 lines)
-    local logs
-    logs=$(docker logs --tail 50 "$container_name" 2>/dev/null)
+  # Get recent logs (last 50 lines)
+  local logs
+  logs=$(docker logs --tail 50 "$container_name" 2> /dev/null)
 
-    # Check for error patterns
-    if echo "$logs" | grep -qi "error\|exception\|failed\|crash"; then
-        return 1
-    fi
+  # Check for error patterns
+  if echo "$logs" | grep -qi "error\|exception\|failed\|crash"; then
+    return 1
+  fi
 
-    # Check for successful startup indicators
-    if echo "$logs" | grep -q "Done.*For help"; then
-        return 0
-    fi
-
-    # If container is running but no clear indicators, assume healthy
+  # Check for successful startup indicators
+  if echo "$logs" | grep -q "Done.*For help"; then
     return 0
+  fi
+
+  # If container is running but no clear indicators, assume healthy
+  return 0
 }
 
 # Check disk space for server data
 check_disk_space() {
-    local server_name="$1"
-    local server_dir="servers/$server_name"
+  local server_name="$1"
+  local server_dir="servers/$server_name"
 
-    if [[ ! -d "$server_dir" ]]; then
-        return 1
-    fi
+  if [[ ! -d "$server_dir" ]]; then
+    return 1
+  fi
 
-    # Check if disk usage is over 90%
-    local usage
-    usage=$(df "$server_dir" | tail -1 | awk '{print $5}' | sed 's/%//')
+  # Check if disk usage is over 90%
+  local usage
+  usage=$(df "$server_dir" | tail -1 | awk '{print $5}' | sed 's/%//')
 
-    if [[ "$usage" -gt 90 ]]; then
-        return 1
-    fi
+  if [[ "$usage" -gt 90 ]]; then
+    return 1
+  fi
 
-    return 0
+  return 0
 }
 
 # Perform comprehensive health check for a server
 check_server_health() {
-    local server_name="$1"
-    local health_status="healthy"
-    local issues=()
-    local details=()
+  local server_name="$1"
+  local health_status="healthy"
+  local issues=()
+  local details=()
 
-    # Check if server is configured
-    if ! server_exists "$server_name"; then
-        echo "error:server_not_found"
-        return 1
-    fi
+  # Check if server is configured
+  if ! server_exists "$server_name"; then
+    echo "error:server_not_found"
+    return 1
+  fi
 
-    # Check if server directory exists (is deployed)
-    local server_dir="servers/$server_name"
-    if [[ ! -d "$server_dir" ]]; then
-        health_status="not_deployed"
-        details+=("server:not_deployed")
+  # Check if server directory exists (is deployed)
+  local server_dir="servers/$server_name"
+  if [[ ! -d "$server_dir" ]]; then
+    health_status="not_deployed"
+    details+=("server:not_deployed")
+  else
+    # Check container running
+    if check_container_running "$server_name"; then
+      details+=("container:running")
     else
-        # Check container running
-        if check_container_running "$server_name"; then
-            details+=("container:running")
-        else
-            health_status="stopped"
-            issues+=("container_not_running")
-            details+=("container:stopped")
-        fi
-
-        # Check port connectivity (only if container is running)
-        if check_container_running "$server_name"; then
-            if check_server_port "$server_name"; then
-                details+=("port:responsive")
-            else
-                health_status="unhealthy"
-                issues+=("port_not_responding")
-                details+=("port:unresponsive")
-            fi
-        else
-            details+=("port:unknown")
-        fi
-
-        # Check logs for errors (only if container is running)
-        if check_container_running "$server_name"; then
-            if check_server_logs "$server_name"; then
-                details+=("logs:healthy")
-            else
-                health_status="warning"
-                issues+=("logs_show_errors")
-                details+=("logs:errors_detected")
-            fi
-        else
-            details+=("logs:unknown")
-        fi
-
-        # Check disk space (only for deployed servers and only warn if container is running)
-        if check_container_running "$server_name"; then
-            if check_disk_space "$server_name"; then
-                details+=("disk:healthy")
-            else
-                health_status="warning"
-                issues+=("low_disk_space")
-                details+=("disk:low_space")
-            fi
-        else
-            details+=("disk:not_checked")
-        fi
+      health_status="stopped"
+      issues+=("container_not_running")
+      details+=("container:stopped")
     fi
 
-    # Format output
-    if [[ "$JSON_OUTPUT" == true ]]; then
-        local issues_json="[]"
-        local details_json="[]"
-
-        if [[ ${#issues[@]} -gt 0 ]]; then
-            issues_json=$(printf '%s\n' "${issues[@]}" | jq -R . | jq -s .)
-        fi
-
-        if [[ ${#details[@]} -gt 0 ]]; then
-            details_json=$(printf '%s\n' "${details[@]}" | jq -R . | jq -s .)
-        fi
-
-        jq -n \
-            --arg server "$server_name" \
-            --arg status "$health_status" \
-            --argjson issues "$issues_json" \
-            --argjson details "$details_json" \
-            '{server: $server, status: $status, issues: $issues, details: $details}'
+    # Check port connectivity (only if container is running)
+    if check_container_running "$server_name"; then
+      if check_server_port "$server_name"; then
+        details+=("port:responsive")
+      else
+        health_status="unhealthy"
+        issues+=("port_not_responding")
+        details+=("port:unresponsive")
+      fi
     else
-        if [[ "$VERBOSE" == true ]]; then
-            echo "$server_name:$health_status"
-            if [[ ${#issues[@]} -gt 0 ]]; then
-                echo "  Issues: ${issues[*]}"
-            fi
-            echo "  Details: ${details[*]}"
-        else
-            echo "$server_name:$health_status"
-        fi
+      details+=("port:unknown")
     fi
 
-    # Return health status as exit code
-    case "$health_status" in
-        healthy) return 0 ;;
-        warning) return 0 ;;  # Warnings don't fail the check
-        stopped) return 0 ;;  # Stopped servers are not errors
-        not_deployed) return 0 ;;  # Not deployed servers are not errors
-        unhealthy) return 1 ;;
-    esac
+    # Check logs for errors (only if container is running)
+    if check_container_running "$server_name"; then
+      if check_server_logs "$server_name"; then
+        details+=("logs:healthy")
+      else
+        health_status="warning"
+        issues+=("logs_show_errors")
+        details+=("logs:errors_detected")
+      fi
+    else
+      details+=("logs:unknown")
+    fi
+
+    # Check disk space (only for deployed servers and only warn if container is running)
+    if check_container_running "$server_name"; then
+      if check_disk_space "$server_name"; then
+        details+=("disk:healthy")
+      else
+        health_status="warning"
+        issues+=("low_disk_space")
+        details+=("disk:low_space")
+      fi
+    else
+      details+=("disk:not_checked")
+    fi
+  fi
+
+  # Format output
+  if [[ "$JSON_OUTPUT" == true ]]; then
+    local issues_json="[]"
+    local details_json="[]"
+
+    if [[ ${#issues[@]} -gt 0 ]]; then
+      issues_json=$(printf '%s\n' "${issues[@]}" | jq -R . | jq -s .)
+    fi
+
+    if [[ ${#details[@]} -gt 0 ]]; then
+      details_json=$(printf '%s\n' "${details[@]}" | jq -R . | jq -s .)
+    fi
+
+    jq -n \
+      --arg server "$server_name" \
+      --arg status "$health_status" \
+      --argjson issues "$issues_json" \
+      --argjson details "$details_json" \
+      '{server: $server, status: $status, issues: $issues, details: $details}'
+  else
+    if [[ "$VERBOSE" == true ]]; then
+      echo "$server_name:$health_status"
+      if [[ ${#issues[@]} -gt 0 ]]; then
+        echo "  Issues: ${issues[*]}"
+      fi
+      echo "  Details: ${details[*]}"
+    else
+      echo "$server_name:$health_status"
+    fi
+  fi
+
+  # Return health status as exit code
+  case "$health_status" in
+    healthy) return 0 ;;
+    warning) return 0 ;;      # Warnings don't fail the check
+    stopped) return 0 ;;      # Stopped servers are not errors
+    not_deployed) return 0 ;; # Not deployed servers are not errors
+    unhealthy) return 1 ;;
+  esac
 }
 
 # Main execution
 main() {
-    local servers
-    servers=$(get_server_list)
-    local overall_status=0
-    local results=()
+  local servers
+  servers=$(get_server_list)
+  local overall_status=0
+  local results=()
 
+  if [[ "$JSON_OUTPUT" == true ]]; then
+    echo "[" >&2
+    local first=true
+  fi
+
+  for server in $servers; do
     if [[ "$JSON_OUTPUT" == true ]]; then
-        echo "[" >&2
-        local first=true
+      if [[ "$first" == false ]]; then
+        echo "," >&2
+      fi
+      first=false
     fi
 
-    for server in $servers; do
-        if [[ "$JSON_OUTPUT" == true ]]; then
-            if [[ "$first" == false ]]; then
-                echo "," >&2
-            fi
-            first=false
-        fi
-
-        if ! check_server_health "$server"; then
-            overall_status=4  # Health check failed
-        fi
-    done
-
-    if [[ "$JSON_OUTPUT" == true ]]; then
-        echo "]" >&2
+    if ! check_server_health "$server"; then
+      overall_status=4 # Health check failed
     fi
+  done
 
-    return $overall_status
+  if [[ "$JSON_OUTPUT" == true ]]; then
+    echo "]" >&2
+  fi
+
+  return $overall_status
 }
 
 # Run main function

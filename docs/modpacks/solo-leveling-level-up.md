@@ -78,12 +78,12 @@ MEMORY=4G
 USE_AIKAR_FLAGS=true
 
 # IMPORTANT: Server name restrictions
-SERVER_NAME=solo-leveling-level-up  # Must be lowercase, no spaces!
+SERVER_NAME=solo-leveling-level-up # Must be lowercase, no spaces!
 
 # Gameplay
 MAX_PLAYERS=20
 DIFFICULTY=normal
-PVP=true  # Essential for hunter combat
+PVP=true # Essential for hunter combat
 ```
 
 ### Server Name Restrictions
@@ -172,7 +172,7 @@ For more players or better performance:
 MEMORY=6G
 INIT_MEMORY=6G
 MAX_MEMORY=6G
-VIEW_DISTANCE=14  # Increase for better visuals
+VIEW_DISTANCE=14 # Increase for better visuals
 ```
 
 ## Gameplay Tips

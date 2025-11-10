@@ -79,12 +79,12 @@ MEMORY=4G
 USE_AIKAR_FLAGS=true
 
 # IMPORTANT: Server name restrictions
-SERVER_NAME=solo-leveling-reawakening  # Must be lowercase, no spaces!
+SERVER_NAME=solo-leveling-reawakening # Must be lowercase, no spaces!
 
 # Gameplay
 MAX_PLAYERS=20
 DIFFICULTY=normal
-PVP=true  # Player vs player combat enabled
+PVP=true # Player vs player combat enabled
 ```
 
 ### Server Name Restrictions
@@ -173,7 +173,7 @@ For more players or better performance:
 MEMORY=6G
 INIT_MEMORY=6G
 MAX_MEMORY=6G
-VIEW_DISTANCE=10  # Reduce if needed
+VIEW_DISTANCE=10 # Reduce if needed
 ```
 
 ## Gameplay Tips

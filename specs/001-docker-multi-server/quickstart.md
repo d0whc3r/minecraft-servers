@@ -353,7 +353,7 @@ Each server needs RAM. Default allocations:
 nano config/modpacks/atm8.env
 
 # Change MEMORY value:
-MEMORY=6G  # 6 gigabytes
+MEMORY=6G # 6 gigabytes
 
 # Restart server to apply
 ./scripts/restart-server.sh atm8
@@ -437,24 +437,24 @@ MAX_PLAYERS=15
 nano docker-compose.yml
 
 # Add service (follow existing pattern):
-  mynewserver:
-    image: itzg/minecraft-server:latest
-    container_name: mc-mynewserver
-    environment:
-      EULA: "TRUE"
-    env_file:
-      - config/modpacks/mynewserver.env
-    ports:
-      - "25570:25565"
-    volumes:
-      - ./servers/mynewserver/data:/data
-      - ./servers/mynewserver/mods:/mods
-      - ./backups/mynewserver:/backups
-    networks:
-      - minecraft-network
-    restart: unless-stopped
-    stdin_open: true
-    tty: true
+mynewserver:
+image: itzg/minecraft-server:latest
+container_name: mc-mynewserver
+environment:
+EULA: "TRUE"
+env_file:
+- config/modpacks/mynewserver.env
+ports:
+- "25570:25565"
+volumes:
+- ./servers/mynewserver/data:/data
+- ./servers/mynewserver/mods:/mods
+- ./backups/mynewserver:/backups
+networks:
+- minecraft-network
+restart: unless-stopped
+stdin_open: true
+tty: true
 ```
 
 4. **Create directories**:

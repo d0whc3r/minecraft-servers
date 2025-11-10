@@ -79,12 +79,12 @@ MEMORY=6G
 USE_AIKAR_FLAGS=true
 
 # IMPORTANT: Server name restrictions
-SERVER_NAME=solo-leveling-shadows  # Must be lowercase, no spaces!
+SERVER_NAME=solo-leveling-shadows # Must be lowercase, no spaces!
 
 # Gameplay
 MAX_PLAYERS=30
 DIFFICULTY=normal
-PVP=true  # Essential for hunter combat
+PVP=true # Essential for hunter combat
 ```
 
 ### Server Name Restrictions
@@ -173,7 +173,7 @@ For more players or better performance:
 MEMORY=8G
 INIT_MEMORY=8G
 MAX_MEMORY=8G
-VIEW_DISTANCE=16  # Increase for better visuals
+VIEW_DISTANCE=16 # Increase for better visuals
 ```
 
 ## Gameplay Tips

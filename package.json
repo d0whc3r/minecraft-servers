@@ -9,13 +9,27 @@
     "test:start-server": "./node_modules/.bin/bats tests/bats/start-server.bats",
     "test:docker": "./node_modules/.bin/bats tests/bats/docker-integration.bats",
     "test:config": "./node_modules/.bin/bats tests/bats/config-validation.bats",
-    "test:error": "./node_modules/.bin/bats tests/bats/error-handling.bats"
+    "test:error": "./node_modules/.bin/bats tests/bats/error-handling.bats",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "format:sh": "prettier --write '**/*.sh'",
+    "format:md": "prettier --write '**/*.md'",
+    "format:config": "prettier --write 'config/**/*.env' 'config/**/*.yml' 'config/**/*.yaml'"
   },
-  "keywords": ["minecraft", "server", "docker", "testing", "bats", "bash"],
+  "keywords": [
+    "minecraft",
+    "server",
+    "docker",
+    "testing",
+    "bats",
+    "bash"
+  ],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.20.0",
   "devDependencies": {
-    "bats": "^1.13.0"
+    "bats": "^1.13.0",
+    "prettier": "^3.6.2",
+    "prettier-plugin-sh": "^0.18.0"
   }
 }

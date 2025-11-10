@@ -13,10 +13,10 @@ source "$SCRIPT_DIR/common.sh"
 
 # Validate arguments
 if [[ $# -lt 2 ]] || [[ $# -gt 3 ]]; then
-    echo "Usage: $0 <server-name> <backup-file> [--force]" >&2
-    echo "Example: $0 atm8 atm8-20251108-143022.tar.gz" >&2
-    echo "Example: $0 vanilla vanilla-20251108-120000.tar.gz --force" >&2
-    exit 2
+  echo "Usage: $0 <server-name> <backup-file> [--force]" >&2
+  echo "Example: $0 atm8 atm8-20251108-143022.tar.gz" >&2
+  echo "Example: $0 vanilla vanilla-20251108-120000.tar.gz --force" >&2
+  exit 2
 fi
 
 SERVER_NAME="$1"
@@ -24,75 +24,75 @@ BACKUP_FILE="$2"
 FORCE=false
 
 if [[ $# -eq 3 ]]; then
-    if [[ "$3" == "--force" ]]; then
-        FORCE=true
-    else
-        error "Invalid option: $3"
-        error "Use --force to skip confirmation prompt"
-        exit 2
-    fi
+  if [[ "$3" == "--force" ]]; then
+    FORCE=true
+  else
+    error "Invalid option: $3"
+    error "Use --force to skip confirmation prompt"
+    exit 2
+  fi
 fi
 
 # Validate server name
 if ! validate_server_name "$SERVER_NAME"; then
-    exit 2
+  exit 2
 fi
 
 # Check if server config exists
 CONFIG_FILE=$(get_config_file "$SERVER_NAME")
 if [[ ! -f "$CONFIG_FILE" ]]; then
-    error "Server configuration not found: $CONFIG_FILE"
-    exit 3
+  error "Server configuration not found: $CONFIG_FILE"
+  exit 3
 fi
 
 # Resolve backup file path
 if [[ "$BACKUP_FILE" == /* ]]; then
-    # Absolute path
-    BACKUP_PATH="$BACKUP_FILE"
+  # Absolute path
+  BACKUP_PATH="$BACKUP_FILE"
 else
-    # Relative to backup directory
-    BACKUP_DIR=$(get_backup_dir "$SERVER_NAME")
-    BACKUP_PATH="$BACKUP_DIR/${BACKUP_FILE}"
+  # Relative to backup directory
+  BACKUP_DIR=$(get_backup_dir "$SERVER_NAME")
+  BACKUP_PATH="$BACKUP_DIR/${BACKUP_FILE}"
 fi
 
 # Check if backup file exists
 if [[ ! -f "$BACKUP_PATH" ]]; then
-    error "Backup file not found: $BACKUP_PATH"
-    exit 3
+  error "Backup file not found: $BACKUP_PATH"
+  exit 3
 fi
 
 # Check if checksum file exists
 CHECKSUM_PATH="${BACKUP_PATH}.sha256"
 if [[ ! -f "$CHECKSUM_PATH" ]]; then
-    error "Checksum file not found: $CHECKSUM_PATH"
-    exit 3
+  error "Checksum file not found: $CHECKSUM_PATH"
+  exit 3
 fi
 
 # Verify backup integrity
 info "Verifying backup integrity..."
-if ! sha256sum -c "$CHECKSUM_PATH" >/dev/null 2>&1; then
-    error "Backup integrity check failed!"
-    error "The backup file may be corrupted or modified."
-    exit 4
+if ! sha256sum -c "$CHECKSUM_PATH" > /dev/null 2>&1; then
+  error "Backup integrity check failed!"
+  error "The backup file may be corrupted or modified."
+  exit 4
 fi
 
 # Get backup size
-BACKUP_SIZE=$(stat -f%z "$BACKUP_PATH" 2>/dev/null || stat -c%s "$BACKUP_PATH" 2>/dev/null || echo "0")
+BACKUP_SIZE=$(stat -f%z "$BACKUP_PATH" 2> /dev/null || stat -c%s "$BACKUP_PATH" 2> /dev/null || echo "0")
 BACKUP_SIZE_MB=$((BACKUP_SIZE / 1024 / 1024))
 
 # Confirmation prompt (unless --force)
 if [[ "$FORCE" != true ]]; then
-    echo ""
-    warning "WARNING: This will replace all world data for server: $SERVER_NAME"
-    echo "Backup: $(basename "$BACKUP_PATH") (${BACKUP_SIZE_MB}MB)"
-    echo "Server will be stopped during restore."
-    echo ""
-    read -p "Proceed? [y/N]: " -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        info "Restore cancelled by user"
-        exit 126
-    fi
+  echo ""
+  warning "WARNING: This will replace all world data for server: $SERVER_NAME"
+  echo "Backup: $(basename "$BACKUP_PATH") (${BACKUP_SIZE_MB}MB)"
+  echo "Server will be stopped during restore."
+  echo ""
+  read -p "Proceed? [y/N]: " -n 1 -r
+  echo ""
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    info "Restore cancelled by user"
+    exit 126
+  fi
 fi
 
 info "Starting restore for server: $SERVER_NAME"
@@ -106,12 +106,12 @@ CONTAINER_NAME=$(get_container_name "$SERVER_NAME")
 SERVER_WAS_RUNNING=false
 
 if container_running "$CONTAINER_NAME"; then
-    SERVER_WAS_RUNNING=true
-    info "Stopping running server..."
-    if ! docker stop "$CONTAINER_NAME" >/dev/null 2>&1; then
-        error "Failed to stop server container"
-        exit 1
-    fi
+  SERVER_WAS_RUNNING=true
+  info "Stopping running server..."
+  if ! docker stop "$CONTAINER_NAME" > /dev/null 2>&1; then
+    error "Failed to stop server container"
+    exit 1
+  fi
 fi
 
 # Wait for server to stop
@@ -125,36 +125,36 @@ ensure_directory "$SERVER_DATA_DIR"
 
 # Clear existing data (with confirmation already given)
 info "Clearing existing world data..."
-if ! rm -rf "${SERVER_DATA_DIR:?}"/* 2>/dev/null; then
-    warning "Failed to clear some files (may not exist yet)"
+if ! rm -rf "${SERVER_DATA_DIR:?}"/* 2> /dev/null; then
+  warning "Failed to clear some files (may not exist yet)"
 fi
 
 # Extract backup
 info "Extracting backup archive..."
-if ! tar xzf "$BACKUP_PATH" -C "$PROJECT_ROOT/servers/${SERVER_NAME}" 2>/dev/null; then
-    error "Failed to extract backup archive"
-    # Try to restart server if it was running
-    if [[ "$SERVER_WAS_RUNNING" == true ]]; then
-        warning "Attempting to restart server after failed restore..."
-        docker start "$CONTAINER_NAME" >/dev/null 2>&1 || true
-    fi
-    exit 1
+if ! tar xzf "$BACKUP_PATH" -C "$PROJECT_ROOT/servers/${SERVER_NAME}" 2> /dev/null; then
+  error "Failed to extract backup archive"
+  # Try to restart server if it was running
+  if [[ "$SERVER_WAS_RUNNING" == true ]]; then
+    warning "Attempting to restart server after failed restore..."
+    docker start "$CONTAINER_NAME" > /dev/null 2>&1 || true
+  fi
+  exit 1
 fi
 
 # Set correct ownership (Minecraft user in itzg image is UID 1000)
 info "Setting file permissions..."
-if ! chown -R 1000:1000 "$SERVER_DATA_DIR" 2>/dev/null; then
-    warning "Failed to set ownership (may not be running as root)"
+if ! chown -R 1000:1000 "$SERVER_DATA_DIR" 2> /dev/null; then
+  warning "Failed to set ownership (may not be running as root)"
 fi
 
 # Restart server if it was running before
 if [[ "$SERVER_WAS_RUNNING" == true ]]; then
-    info "Restarting server..."
-    if ! docker start "$CONTAINER_NAME" >/dev/null 2>&1; then
-        error "Failed to restart server after restore"
-        error "Server may need manual restart: docker start $CONTAINER_NAME"
-        exit 1
-    fi
+  info "Restarting server..."
+  if ! docker start "$CONTAINER_NAME" > /dev/null 2>&1; then
+    error "Failed to restart server after restore"
+    error "Server may need manual restart: docker start $CONTAINER_NAME"
+    exit 1
+  fi
 fi
 
 # Calculate duration
@@ -169,10 +169,10 @@ echo "Data restored: ${BACKUP_SIZE_MB}MB"
 echo "Duration: ${DURATION}s"
 
 if [[ "$SERVER_WAS_RUNNING" == true ]]; then
-    echo "Server status: Restarted"
+  echo "Server status: Restarted"
 else
-    echo "Server status: Stopped (was not running before restore)"
-    echo "Start with: ./scripts/start-server.sh $SERVER_NAME"
+  echo "Server status: Stopped (was not running before restore)"
+  echo "Start with: ./scripts/start-server.sh $SERVER_NAME"
 fi
 
 exit 0

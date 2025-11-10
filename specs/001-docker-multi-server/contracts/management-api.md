@@ -566,7 +566,7 @@ mkdir -p "./servers/$SERVER_NAME"/{data,mods}
 mkdir -p "./backups/$SERVER_NAME"
 
 # Add to docker-compose.yml (append service block)
-cat >> docker-compose.yml <<EOF
+cat >> docker-compose.yml << EOF
   $SERVER_NAME:
     image: itzg/minecraft-server:latest
     container_name: mc-$SERVER_NAME
@@ -798,7 +798,7 @@ docker compose exec <server-name> rcon-cli <command>
 **Down with volumes**:
 
 ```bash
-docker compose down -v  # WARNING: Deletes all data
+docker compose down -v # WARNING: Deletes all data
 ```
 
 ---

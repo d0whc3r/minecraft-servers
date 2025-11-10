@@ -75,7 +75,7 @@ USE_AIKAR_FLAGS=true
 # Gameplay
 MAX_PLAYERS=20
 DIFFICULTY=normal
-ALLOW_FLIGHT=true  # For flying Pokemon
+ALLOW_FLIGHT=true # For flying Pokemon
 ```
 
 ### Customization

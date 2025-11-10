@@ -143,8 +143,8 @@ docker exec -it mc-skyfactory4 rcon-cli
 
 # Common commands
 op PlayerName
-tp @a 0 64 0  # Teleport all to spawn
-gamemode 1 PlayerName  # Creative mode
+tp @a 0 64 0          # Teleport all to spawn
+gamemode 1 PlayerName # Creative mode
 
 # Exit
 exit

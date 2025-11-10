@@ -51,7 +51,7 @@ Then set in your `.env` file:
 ```bash
 TYPE=MODRINTH
 MODRINTH_MODPACK=cobbleverse
-VERSION=1.21.1  # MUST match modpack's Minecraft version
+VERSION=1.21.1 # MUST match modpack's Minecraft version
 ```
 
 ## Common Gameplay Variables
@@ -198,7 +198,7 @@ Example for modpack:
 ```bash
 TYPE=MODRINTH
 MODRINTH_MODPACK=cobbleverse
-VERSION=1.21.1  # CRITICAL: Must match modpack's Minecraft version
+VERSION=1.21.1 # CRITICAL: Must match modpack's Minecraft version
 MEMORY=6G
 ```
 
@@ -343,5 +343,5 @@ VERSION=1.19.2
 MEMORY=8G
 SERVER_PORT=25566
 SERVER_NAME=ATM8 Server
-JAVA_VERSION=java17  # Use Java 17 for this modpack
+JAVA_VERSION=java17 # Use Java 17 for this modpack
 ```

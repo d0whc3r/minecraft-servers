@@ -78,10 +78,10 @@ MEMORY=2G
 USE_AIKAR_FLAGS=true
 
 # IMPORTANT: Server name restrictions
-SERVER_NAME=amazing-fps-booster  # Must be lowercase, no spaces!
+SERVER_NAME=amazing-fps-booster # Must be lowercase, no spaces!
 
 # Resource saving
-ENABLE_AUTOPAUSE=true  # Highly recommended
+ENABLE_AUTOPAUSE=true # Highly recommended
 AUTOPAUSE_TIMEOUT_EST=300
 ```
 
@@ -187,7 +187,7 @@ To adjust autopause settings:
 
 ```bash
 # Edit config/modpacks/amazing-fps-booster.env
-AUTOPAUSE_TIMEOUT_EST=600  # 10 minutes
+AUTOPAUSE_TIMEOUT_EST=600 # 10 minutes
 AUTOPAUSE_TIMEOUT_INIT=600
 ```
 

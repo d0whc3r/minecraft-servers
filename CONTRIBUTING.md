@@ -125,6 +125,35 @@ The project uses GitHub Actions for continuous integration:
 - **Multi-environment testing** (different modpacks)
 - **Code quality checks** (linting, formatting)
 
+### Code Formatting
+
+This project uses **Prettier** for consistent code formatting across all file types:
+
+**Before committing, ensure your code is properly formatted:**
+
+```bash
+# Check formatting
+pnpm run format:check
+
+# Auto-format all files
+pnpm run format
+
+# Format specific file types
+pnpm run format:sh     # Bash scripts
+pnpm run format:md     # Markdown files
+pnpm run format:config # Config files (.env, .yml, .yaml)
+```
+
+**Prettier configuration:**
+
+- **JavaScript/TypeScript**: Single quotes, semicolons, 2-space indentation
+- **Bash scripts**: 2-space indentation, proper line breaks
+- **Markdown**: 80-character line width, preserved prose wrapping
+- **YAML/JSON**: 2-space indentation, consistent formatting
+- **Environment files**: Preserved as-is (excluded from formatting)
+
+**Note:** Test files (`.bats`) are excluded from automatic formatting due to their special syntax.
+
 ## Submitting Changes
 
 ### Pull Request Process
@@ -220,7 +249,6 @@ docs/
 To add a new pre-configured modpack:
 
 1. **Research the modpack**:
-
    - Check CurseForge/Modrinth for download URLs
    - Verify Minecraft version compatibility
    - Determine recommended memory requirements
@@ -240,7 +268,6 @@ To add a new pre-configured modpack:
    ```
 
 4. **Add documentation**:
-
    - Create `docs/modpacks/modpack-name.md`
    - Update modpack table in README.md
    - Add to CI test matrix if appropriate

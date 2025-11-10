@@ -69,11 +69,11 @@ source "$(dirname "$0")/common.sh"
 
 # Use common functions
 if ! validate_server_name "$SERVER_NAME"; then
-    exit 2
+  exit 2
 fi
 
 if ! check_docker_running; then
-    exit 1
+  exit 1
 fi
 
 info "Starting operation..."
@@ -138,21 +138,21 @@ source "$(dirname "$0")/common.sh"
 SERVER_NAME="$1"
 
 if ! validate_server_name "$SERVER_NAME"; then
-    exit 2
+  exit 2
 fi
 
 if ! check_config_exists "$SERVER_NAME"; then
-    exit 3
+  exit 3
 fi
 
 ensure_directory "servers/${SERVER_NAME}/data"
 ensure_network
 
 if docker_compose_up "$SERVER_NAME"; then
-    success "Server started"
+  success "Server started"
 else
-    error "Failed to start server"
-    exit 1
+  error "Failed to start server"
+  exit 1
 fi
 ```
 
@@ -162,14 +162,14 @@ fi
 source "$(dirname "$0")/common.sh"
 
 for server in $(list_available_servers); do
-    container=$(get_container_name "$server")
-    if container_running "$container"; then
-        port=$(get_server_port "$server")
-        uptime=$(get_container_uptime "$container")
-        success "$server is running on port $port (uptime: $uptime)"
-    else
-        warning "$server is not running"
-    fi
+  container=$(get_container_name "$server")
+  if container_running "$container"; then
+    port=$(get_server_port "$server")
+    uptime=$(get_container_uptime "$container")
+    success "$server is running on port $port (uptime: $uptime)"
+  else
+    warning "$server is not running"
+  fi
 done
 ```
 
@@ -181,10 +181,10 @@ source "$(dirname "$0")/common.sh"
 data_dir=$(get_data_dir "$SERVER_NAME")
 
 if confirm "Delete server data at $data_dir?"; then
-    if remove_directory "$data_dir"; then
-        success "Data removed"
-    fi
+  if remove_directory "$data_dir"; then
+    success "Data removed"
+  fi
 else
-    info "Cancelled"
+  info "Cancelled"
 fi
 ```

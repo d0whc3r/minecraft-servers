@@ -67,11 +67,11 @@ services:
     image: itzg/minecraft-server:latest
     container_name: mc-${SERVER_NAME}
     environment:
-      EULA: "TRUE"
+      EULA: 'TRUE'
     env_file:
       - config/modpacks/${SERVER_NAME}.env
     ports:
-      - "${SERVER_PORT}:25565"
+      - '${SERVER_PORT}:25565'
     volumes:
       - ./servers/${SERVER_NAME}/data:/data
       - ./servers/${SERVER_NAME}/mods:/mods

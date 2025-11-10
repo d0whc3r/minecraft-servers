@@ -53,9 +53,9 @@
 
 ```env
 # Exclude client-side mods
-MODRINTH_EXCLUDE_FILES: |
-  clientmod1
-  clientmod2
+MODRINTH_EXCLUDE_FILES: \
+  | clientmod1
+clientmod2
 ```
 
 **Action Required**: Investigate which mods are client-only
@@ -81,7 +81,6 @@ MODRINTH_EXCLUDE_FILES: |
 ### Immediate Actions
 
 1. **Remove client-only modpacks**:
-
    - `amazing-fps-booster` - FPS optimization is client-side only
 
 2. **Investigate each Exit 1 server individually**:

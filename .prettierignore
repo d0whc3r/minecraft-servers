@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+
+# Generated files
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# Minecraft server files
+servers/*/world/
+servers/*/world_nether/
+servers/*/world_the_end/
+servers/*/logs/
+servers/*/crash-reports/
+servers/*/plugins/
+servers/*/mods/
+servers/*/config/
+
+# Backups
+backups/
+
+# Docker volumes
+volumes/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# CI/CD
+.github/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.bak
+
+# Environment files (keep original formatting)
+.env
+.env.local
+.env.*.local
+
+# Binary files
+*.jar
+*.zip
+*.tar.gz
+
+# Test files (BATS framework has special syntax)
+*.bats

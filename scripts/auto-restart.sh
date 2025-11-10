@@ -12,7 +12,7 @@ source "$SCRIPT_DIR/common.sh"
 
 # Show usage information
 usage() {
-    cat << EOF
+  cat << EOF
 Usage: $0 [OPTIONS]
 
 Automatically restart unhealthy Minecraft servers.
@@ -50,240 +50,240 @@ VERBOSE=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
-    case $1 in
-        -d|--daemon)
-            DAEMON_MODE=true
-            shift
-            ;;
-        -i|--interval=*)
-            INTERVAL="${1#*=}"
-            if ! [[ "$INTERVAL" =~ ^[0-9]+$ ]] || [[ "$INTERVAL" -lt 30 ]]; then
-                error "Interval must be a number >= 30 seconds"
-                exit 2
-            fi
-            shift
-            ;;
-        -t|--timeout=*)
-            TIMEOUT="${1#*=}"
-            if ! [[ "$TIMEOUT" =~ ^[0-9]+$ ]] || [[ "$TIMEOUT" -lt 30 ]]; then
-                error "Timeout must be a number >= 30 seconds"
-                exit 2
-            fi
-            shift
-            ;;
-        -f|--force)
-            FORCE_RESTART=true
-            shift
-            ;;
-        -n|--dry-run)
-            DRY_RUN=true
-            shift
-            ;;
-        -v|--verbose)
-            VERBOSE=true
-            shift
-            ;;
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        -*)
-            error "Unknown option: $1"
-            usage
-            exit 2
-            ;;
-        *)
-            error "Unexpected argument: $1"
-            usage
-            exit 2
-            ;;
-    esac
+  case $1 in
+    -d | --daemon)
+      DAEMON_MODE=true
+      shift
+      ;;
+    -i | --interval=*)
+      INTERVAL="${1#*=}"
+      if ! [[ "$INTERVAL" =~ ^[0-9]+$ ]] || [[ "$INTERVAL" -lt 30 ]]; then
+        error "Interval must be a number >= 30 seconds"
+        exit 2
+      fi
+      shift
+      ;;
+    -t | --timeout=*)
+      TIMEOUT="${1#*=}"
+      if ! [[ "$TIMEOUT" =~ ^[0-9]+$ ]] || [[ "$TIMEOUT" -lt 30 ]]; then
+        error "Timeout must be a number >= 30 seconds"
+        exit 2
+      fi
+      shift
+      ;;
+    -f | --force)
+      FORCE_RESTART=true
+      shift
+      ;;
+    -n | --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    -v | --verbose)
+      VERBOSE=true
+      shift
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -*)
+      error "Unknown option: $1"
+      usage
+      exit 2
+      ;;
+    *)
+      error "Unexpected argument: $1"
+      usage
+      exit 2
+      ;;
+  esac
 done
 
 # Get list of configured servers
 get_configured_servers() {
-    for config_file in config/modpacks/*.env; do
-        if [[ -f "$config_file" ]]; then
-            basename "$config_file" .env
-        fi
-    done | sort
+  for config_file in config/modpacks/*.env; do
+    if [[ -f "$config_file" ]]; then
+      basename "$config_file" .env
+    fi
+  done | sort
 }
 
 # Check if server container exists
 server_container_exists() {
-    local server_name="$1"
-    local container_name
-    container_name=$(get_container_name "$server_name")
-    container_exists "$container_name"
+  local server_name="$1"
+  local container_name
+  container_name=$(get_container_name "$server_name")
+  container_exists "$container_name"
 }
 
 # Check server health status
 get_server_health() {
-    local server_name="$1"
-    local container_name
-    container_name=$(get_container_name "$server_name")
+  local server_name="$1"
+  local container_name
+  container_name=$(get_container_name "$server_name")
 
-    if ! container_exists "$container_name"; then
-        echo "not_deployed"
-        return
-    fi
+  if ! container_exists "$container_name"; then
+    echo "not_deployed"
+    return
+  fi
 
-    # Get container status
-    local status
-    status=$(docker inspect --format='{{.State.Status}}' "$container_name" 2>/dev/null || echo "unknown")
+  # Get container status
+  local status
+  status=$(docker inspect --format='{{.State.Status}}' "$container_name" 2> /dev/null || echo "unknown")
 
-    if [[ "$status" != "running" ]]; then
-        echo "stopped"
-        return
-    fi
+  if [[ "$status" != "running" ]]; then
+    echo "stopped"
+    return
+  fi
 
-    # Get health status
-    local health
-    health=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}unknown{{end}}' "$container_name" 2>/dev/null || echo "unknown")
+  # Get health status
+  local health
+  health=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}unknown{{end}}' "$container_name" 2> /dev/null || echo "unknown")
 
-    echo "$health"
+  echo "$health"
 }
 
 # Restart a server
 restart_server() {
-    local server_name="$1"
-    local reason="$2"
+  local server_name="$1"
+  local reason="$2"
 
-    if [[ "$DRY_RUN" == true ]]; then
-        info "[DRY RUN] Would restart $server_name (reason: $reason)"
-        return 0
-    fi
+  if [[ "$DRY_RUN" == true ]]; then
+    info "[DRY RUN] Would restart $server_name (reason: $reason)"
+    return 0
+  fi
 
-    warning "Restarting $server_name (reason: $reason)"
+  warning "Restarting $server_name (reason: $reason)"
 
-    # Use existing restart script
-    if [[ -x "scripts/restart-server.sh" ]]; then
-        if timeout "$TIMEOUT" "scripts/restart-server.sh" "$server_name"; then
-            success "Successfully restarted $server_name"
-            return 0
-        else
-            error "Failed to restart $server_name"
-            return 1
-        fi
+  # Use existing restart script
+  if [[ -x "scripts/restart-server.sh" ]]; then
+    if timeout "$TIMEOUT" "scripts/restart-server.sh" "$server_name"; then
+      success "Successfully restarted $server_name"
+      return 0
     else
-        # Fallback to direct docker commands
-        local container_name
-        container_name=$(get_container_name "$server_name")
-
-        if docker restart "$container_name" >/dev/null 2>&1; then
-            success "Successfully restarted $server_name"
-            return 0
-        else
-            error "Failed to restart $server_name"
-            return 1
-        fi
+      error "Failed to restart $server_name"
+      return 1
     fi
+  else
+    # Fallback to direct docker commands
+    local container_name
+    container_name=$(get_container_name "$server_name")
+
+    if docker restart "$container_name" > /dev/null 2>&1; then
+      success "Successfully restarted $server_name"
+      return 0
+    else
+      error "Failed to restart $server_name"
+      return 1
+    fi
+  fi
 }
 
 # Check and restart unhealthy servers
 check_and_restart() {
-    local servers
-    servers=$(get_configured_servers)
-    local restart_count=0
-    local failed_count=0
+  local servers
+  servers=$(get_configured_servers)
+  local restart_count=0
+  local failed_count=0
 
-    for server in $servers; do
-        local health
-        health=$(get_server_health "$server")
+  for server in $servers; do
+    local health
+    health=$(get_server_health "$server")
 
-        if [[ "$VERBOSE" == true ]]; then
-            info "Server $server health: $health"
-        fi
-
-        local needs_restart=false
-        local reason=""
-
-        case "$health" in
-            unhealthy)
-                needs_restart=true
-                reason="unhealthy"
-                ;;
-            stopped)
-                needs_restart=true
-                reason="stopped"
-                ;;
-            unknown)
-                # If health is unknown but container exists, it might be a health check issue
-                if server_container_exists "$server"; then
-                    needs_restart=true
-                    reason="health_check_unknown"
-                fi
-                ;;
-        esac
-
-        if [[ "$FORCE_RESTART" == true && "$health" != "not_deployed" ]]; then
-            needs_restart=true
-            reason="force_restart"
-        fi
-
-        if [[ "$needs_restart" == true ]]; then
-            if restart_server "$server" "$reason"; then
-                ((restart_count++))
-            else
-                ((failed_count++))
-            fi
-        fi
-    done
-
-    # Report results
-    if [[ "$restart_count" -gt 0 ]]; then
-        success "Restarted $restart_count server(s)"
+    if [[ "$VERBOSE" == true ]]; then
+      info "Server $server health: $health"
     fi
 
-    if [[ "$failed_count" -gt 0 ]]; then
-        error "Failed to restart $failed_count server(s)"
-        return 3
-    fi
+    local needs_restart=false
+    local reason=""
 
-    if [[ "$restart_count" -eq 0 && "$failed_count" -eq 0 ]]; then
-        if [[ "$VERBOSE" == true ]]; then
-            info "No servers needed restarting"
+    case "$health" in
+      unhealthy)
+        needs_restart=true
+        reason="unhealthy"
+        ;;
+      stopped)
+        needs_restart=true
+        reason="stopped"
+        ;;
+      unknown)
+        # If health is unknown but container exists, it might be a health check issue
+        if server_container_exists "$server"; then
+          needs_restart=true
+          reason="health_check_unknown"
         fi
+        ;;
+    esac
+
+    if [[ "$FORCE_RESTART" == true && "$health" != "not_deployed" ]]; then
+      needs_restart=true
+      reason="force_restart"
     fi
 
-    return 0
+    if [[ "$needs_restart" == true ]]; then
+      if restart_server "$server" "$reason"; then
+        ((restart_count++))
+      else
+        ((failed_count++))
+      fi
+    fi
+  done
+
+  # Report results
+  if [[ "$restart_count" -gt 0 ]]; then
+    success "Restarted $restart_count server(s)"
+  fi
+
+  if [[ "$failed_count" -gt 0 ]]; then
+    error "Failed to restart $failed_count server(s)"
+    return 3
+  fi
+
+  if [[ "$restart_count" -eq 0 && "$failed_count" -eq 0 ]]; then
+    if [[ "$VERBOSE" == true ]]; then
+      info "No servers needed restarting"
+    fi
+  fi
+
+  return 0
 }
 
 # Daemon mode - run continuously
 run_daemon() {
-    info "Starting auto-restart daemon (interval: ${INTERVAL}s)"
+  info "Starting auto-restart daemon (interval: ${INTERVAL}s)"
 
-    while true; do
-        local start_time
-        start_time=$(date +%s)
+  while true; do
+    local start_time
+    start_time=$(date +%s)
 
-        if ! check_and_restart; then
-            error "Health check cycle failed"
-        fi
+    if ! check_and_restart; then
+      error "Health check cycle failed"
+    fi
 
-        local end_time
-        end_time=$(date +%s)
-        local elapsed=$((end_time - start_time))
-        local sleep_time=$((INTERVAL - elapsed))
+    local end_time
+    end_time=$(date +%s)
+    local elapsed=$((end_time - start_time))
+    local sleep_time=$((INTERVAL - elapsed))
 
-        if [[ "$sleep_time" -gt 0 ]]; then
-            if [[ "$VERBOSE" == true ]]; then
-                info "Sleeping for ${sleep_time}s until next check"
-            fi
-            sleep "$sleep_time"
-        else
-            warning "Health check took longer than interval (${elapsed}s > ${INTERVAL}s)"
-        fi
-    done
+    if [[ "$sleep_time" -gt 0 ]]; then
+      if [[ "$VERBOSE" == true ]]; then
+        info "Sleeping for ${sleep_time}s until next check"
+      fi
+      sleep "$sleep_time"
+    else
+      warning "Health check took longer than interval (${elapsed}s > ${INTERVAL}s)"
+    fi
+  done
 }
 
 # Main execution
 main() {
-    if [[ "$DAEMON_MODE" == true ]]; then
-        run_daemon
-    else
-        check_and_restart
-    fi
+  if [[ "$DAEMON_MODE" == true ]]; then
+    run_daemon
+  else
+    check_and_restart
+  fi
 }
 
 # Run main function

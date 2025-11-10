@@ -164,28 +164,28 @@ crontab -e
 docker exec -it mc-vanilla rcon-cli
 
 # Common commands
-op PlayerName                    # Make admin
-deop PlayerName                  # Remove admin
-whitelist on                     # Enable whitelist
-whitelist add PlayerName         # Add to whitelist
-ban PlayerName                   # Ban player
-pardon PlayerName                # Unban player
-kick PlayerName                  # Kick from server
+op PlayerName            # Make admin
+deop PlayerName          # Remove admin
+whitelist on             # Enable whitelist
+whitelist add PlayerName # Add to whitelist
+ban PlayerName           # Ban player
+pardon PlayerName        # Unban player
+kick PlayerName          # Kick from server
 
 # Game rules
-gamerule keepInventory true      # Keep items on death
-gamerule doFireTick false        # Disable fire spread
-gamerule mobGriefing false       # Prevent mob damage to blocks
-gamerule doDaylightCycle false   # Stop day/night cycle
+gamerule keepInventory true    # Keep items on death
+gamerule doFireTick false      # Disable fire spread
+gamerule mobGriefing false     # Prevent mob damage to blocks
+gamerule doDaylightCycle false # Stop day/night cycle
 
 # Teleport
-tp PlayerName X Y Z              # Teleport to coords
-tp PlayerName TargetPlayer       # Teleport to player
+tp PlayerName X Y Z        # Teleport to coords
+tp PlayerName TargetPlayer # Teleport to player
 
 # World management
-save-all                         # Save world
-save-off                         # Disable auto-save
-save-on                          # Enable auto-save
+save-all # Save world
+save-off # Disable auto-save
+save-on  # Enable auto-save
 
 exit
 ```

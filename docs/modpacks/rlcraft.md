@@ -135,12 +135,12 @@ RLCraft on servers needs special rules:
 
 ```properties
 # In server.properties
-spawn-protection=16  # Protect spawn area
+spawn-protection=16 # Protect spawn area
 
 # Recommended gamerules (set in console)
-/gamerule keepInventory true      # Optional: reduce rage quits
-/gamerule doFireTick false        # Optional: prevent base burn-down
-/gamerule mobGriefing false       # Optional: protect builds
+/gamerule keepInventory true # Optional: reduce rage quits
+/gamerule doFireTick false   # Optional: prevent base burn-down
+/gamerule mobGriefing false  # Optional: protect builds
 ```
 
 ## Performance Tips
@@ -201,9 +201,9 @@ docker exec -it mc-rlcraft rcon-cli
 
 # Useful admin commands
 op PlayerName
-gamemode 1 PlayerName           # Creative (for stuck players)
-effect PlayerName clear          # Remove negative effects
-tp PlayerName 0 100 0            # Rescue from dangerous location
+gamemode 1 PlayerName   # Creative (for stuck players)
+effect PlayerName clear # Remove negative effects
+tp PlayerName 0 100 0   # Rescue from dangerous location
 
 # Give basic survival kit
 give PlayerName minecraft:bread 16

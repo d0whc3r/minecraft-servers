@@ -78,12 +78,12 @@ MEMORY=4G
 USE_AIKAR_FLAGS=true
 
 # IMPORTANT: Server name restrictions
-SERVER_NAME=my-hero-adventure  # Must be lowercase, no spaces!
+SERVER_NAME=my-hero-adventure # Must be lowercase, no spaces!
 
 # Gameplay
 MAX_PLAYERS=20
 DIFFICULTY=normal
-PVP=true  # Essential for hero combat
+PVP=true # Essential for hero combat
 ```
 
 ### Server Name Restrictions
@@ -172,7 +172,7 @@ For more players or better performance:
 MEMORY=6G
 INIT_MEMORY=6G
 MAX_MEMORY=6G
-VIEW_DISTANCE=12  # Increase for better exploration
+VIEW_DISTANCE=12 # Increase for better exploration
 ```
 
 ## Gameplay Tips

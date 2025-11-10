@@ -210,7 +210,7 @@ docker start mc-atm8
 
 ```bash
 # View backup directory
-ls -la backups/<server-name>/
+ls -la backups/ < server-name > /
 
 # Example output:
 # -rw-r--r--  1 user  staff  816889856 Nov  8 14:30 atm8-20251108-143022.tar.gz
@@ -342,12 +342,12 @@ Create a validation script:
 #!/bin/bash
 # validate-backups.sh
 for backup in backups/*/*.tar.gz; do
-    echo "Validating: $backup"
-    if ! sha256sum -c "${backup}.sha256" >/dev/null 2>&1; then
-        echo "FAILED: $backup"
-    else
-        echo "OK: $backup"
-    fi
+  echo "Validating: $backup"
+  if ! sha256sum -c "${backup}.sha256" > /dev/null 2>&1; then
+    echo "FAILED: $backup"
+  else
+    echo "OK: $backup"
+  fi
 done
 ```
 
@@ -409,7 +409,7 @@ find backups/atm8/ -name "*.tar.gz" -mtime +1 | wc -l
 
 # Alert if no recent backup
 if [[ $(find backups/atm8/ -name "*.tar.gz" -mtime +1 | wc -l) -gt 0 ]]; then
-    echo "WARNING: No backup in last 24 hours"
+  echo "WARNING: No backup in last 24 hours"
 fi
 ```
 

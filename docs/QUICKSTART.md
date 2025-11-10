@@ -12,9 +12,9 @@ Get your first Minecraft server running in ~5 minutes.
 ### Verify Docker Installation
 
 ```bash
-docker --version          # Should show 20.10.x+
-docker compose version    # Should show v2.x.x+
-docker ps                 # Should run without errors
+docker --version       # Should show 20.10.x+
+docker compose version # Should show v2.x.x+
+docker ps              # Should run without errors
 ```
 
 ## Quick Start
@@ -172,7 +172,7 @@ crontab -e
 nano config/modpacks/vanilla.env
 
 # Change memory:
-MEMORY=4G  # 4 gigabytes
+MEMORY=4G # 4 gigabytes
 
 # Restart server
 ./scripts/restart-server.sh vanilla
@@ -235,7 +235,7 @@ sudo ufw allow 25569/tcp
 docker stats mc-vanilla
 
 # Increase memory
-nano config/modpacks/vanilla.env  # Increase MEMORY
+nano config/modpacks/vanilla.env # Increase MEMORY
 
 # Check TPS (ticks per second)
 docker exec mc-vanilla rcon-cli tps

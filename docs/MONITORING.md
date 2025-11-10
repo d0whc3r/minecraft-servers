@@ -164,8 +164,8 @@ The JSON output format enables integration with monitoring systems:
 UNHEALTHY=$(./scripts/health-check.sh --all --json | jq '.[] | select(.status == "unhealthy") | .server')
 
 if [ -n "$UNHEALTHY" ]; then
-    echo "Alert: Unhealthy servers: $UNHEALTHY"
-    # Send email, Slack notification, etc.
+  echo "Alert: Unhealthy servers: $UNHEALTHY"
+  # Send email, Slack notification, etc.
 fi
 ```
 

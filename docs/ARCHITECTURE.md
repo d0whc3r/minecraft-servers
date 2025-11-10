@@ -22,7 +22,7 @@ services:
     image: itzg/minecraft-server:latest
     container_name: mc-${SERVER_NAME}
     env_file: config/modpacks/${SERVER_NAME}.env
-    ports: ["${SERVER_PORT}:25565"]
+    ports: ['${SERVER_PORT}:25565']
     volumes:
       - ./servers/${SERVER_NAME}/data:/data
       - ./servers/${SERVER_NAME}/mods:/mods
@@ -157,9 +157,9 @@ User Request → Script → Validation → Docker Compose → Container → Mine
 ```bash
 # scripts/add-modpack.sh template definitions
 declare -A TEMPLATES=(
-    ["atm8"]="All The Mods 8:AUTO_CURSEFORGE:1.20.1:8G:https://www.curseforge.com/minecraft/modpacks/all-the-mods-8"
-    ["skyfactory4"]="SkyFactory 4:AUTO_CURSEFORGE:1.12.2:4G:https://www.curseforge.com/minecraft/modpacks/skyfactory-4"
-    ["vanilla"]="Vanilla Optimized:PAPER:1.20.4:2G:"
+  ["atm8"]="All The Mods 8:AUTO_CURSEFORGE:1.20.1:8G:https://www.curseforge.com/minecraft/modpacks/all-the-mods-8"
+  ["skyfactory4"]="SkyFactory 4:AUTO_CURSEFORGE:1.12.2:4G:https://www.curseforge.com/minecraft/modpacks/skyfactory-4"
+  ["vanilla"]="Vanilla Optimized:PAPER:1.20.4:2G:"
 )
 ```
 
@@ -198,10 +198,10 @@ Layer 5: Log Analysis (Errors)
 ```bash
 # Auto-restart daemon architecture
 while true; do
-    health-check.sh --all --json | process_results
-    identify_unhealthy_servers
-    restart_failed_servers
-    sleep $INTERVAL
+  health-check.sh --all --json | process_results
+  identify_unhealthy_servers
+  restart_failed_servers
+  sleep $INTERVAL
 done
 ```
 
