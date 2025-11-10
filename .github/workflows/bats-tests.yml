@@ -214,7 +214,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### ⚡ Performance Optimizations" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Parallel test execution across multiple runners" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Docker image caching for faster startup" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Docker image caching (latest, java8, java11, java17, java21)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Server data caching for faster test startup" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Dependency caching with pnpm" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Network and volume cleanup between tests" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Reusable GitHub Actions for maintainability" >> $GITHUB_STEP_SUMMARY

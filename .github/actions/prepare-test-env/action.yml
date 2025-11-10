@@ -10,19 +10,78 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Cache Docker images
+    - name: Cache Minecraft Server Images
       uses: actions/cache@v4
       with:
         path: |
-          ~/.docker
-        key: docker-images-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}
+          /tmp/docker-images
+        key: minecraft-server-images-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}
         restore-keys: |
-          docker-images-${{ runner.os }}-
+          minecraft-server-images-${{ runner.os }}-
 
-    - name: Pull Minecraft server image
+    - name: Pull and Cache Minecraft Server Images
       shell: bash
       run: |
-        docker pull itzg/minecraft-server:latest
+        set -e
+
+        # Create cache directory
+        mkdir -p /tmp/docker-images
+
+        # Define images to cache
+        IMAGES=(
+          "itzg/minecraft-server:latest"
+          "itzg/minecraft-server:java8"
+          "itzg/minecraft-server:java11"
+          "itzg/minecraft-server:java17"
+          "itzg/minecraft-server:java21"
+        )
+
+        echo "🔄 Pulling and caching Minecraft server images..."
+
+        for image in "${IMAGES[@]}"; do
+          echo "📥 Pulling $image..."
+          if docker pull "$image"; then
+            echo "✅ Successfully pulled $image"
+
+            # Save image to cache directory for faster loading
+            image_name=$(echo "$image" | tr '/' '_' | tr ':' '_')
+            docker save "$image" -o "/tmp/docker-images/${image_name}.tar"
+            echo "💾 Saved $image to cache"
+          else
+            echo "⚠️  Failed to pull $image, continuing..."
+          fi
+        done
+
+        echo "📊 Docker images cache prepared"
+
+    - name: Load Cached Minecraft Images
+      shell: bash
+      run: |
+        set -e
+
+        echo "🔄 Loading cached Minecraft images..."
+
+        # Load all cached images
+        for tar_file in /tmp/docker-images/*.tar; do
+          if [ -f "$tar_file" ]; then
+            echo "📤 Loading $(basename "$tar_file" .tar)..."
+            docker load -i "$tar_file"
+            echo "✅ Loaded $(basename "$tar_file" .tar)"
+          fi
+        done
+
+        echo "🎯 Cached images loaded successfully"
+
+    - name: Cache Server Data Directories
+      uses: actions/cache@v4
+      with:
+        path: |
+          servers/*/data
+          servers/*/mods
+        key: server-data-${{ runner.os }}-${{ hashFiles('config/modpacks/*.env') }}
+        restore-keys: |
+          server-data-${{ runner.os }}-
+          server-data-
 
     - name: Create test directories
       shell: bash
@@ -46,7 +105,7 @@ runs:
 
         echo "modpacks=$MODPACKS" >> $GITHUB_OUTPUT
         echo "count=$(echo $MODPACKS | wc -w)" >> $GITHUB_OUTPUT
-        
+
         # Set environment variable for BATS tests
         echo "TEST_MODPACKS=$MODPACKS" >> $GITHUB_ENV
 
@@ -58,3 +117,9 @@ runs:
         echo "Selected modpacks: ${{ steps.filter-modpacks.outputs.modpacks }}"
         echo "Modpack count: ${{ steps.filter-modpacks.outputs.count }}"
         echo "TEST_MODPACKS environment variable set for BATS tests"
+
+        # Show cache status
+        echo ""
+        echo "📊 Cache Status:"
+        echo "🐳 Docker images cached: $(docker images itzg/minecraft-server --format "table {{.Repository}}:{{.Tag}}" | wc -l) images"
+        echo "📁 Server data cache: $(find servers -name "data" -type d 2>/dev/null | wc -l) directories"
