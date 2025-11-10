@@ -6,10 +6,6 @@
   "scripts": {
     "test": "./node_modules/.bin/bats tests/bats/",
     "test:verbose": "./node_modules/.bin/bats --verbose tests/bats/",
-    "test:start-server": "./node_modules/.bin/bats tests/bats/start-server.bats",
-    "test:docker": "./node_modules/.bin/bats tests/bats/docker-integration.bats",
-    "test:config": "./node_modules/.bin/bats tests/bats/config-validation.bats",
-    "test:error": "./node_modules/.bin/bats tests/bats/error-handling.bats",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "format:sh": "prettier --write '**/*.sh'",
