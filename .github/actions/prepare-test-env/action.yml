@@ -19,41 +19,6 @@ runs:
         restore-keys: |
           minecraft-server-images-${{ runner.os }}-
 
-    - name: Pull and Cache Minecraft Server Images
-      shell: bash
-      run: |
-        set -e
-
-        # Create cache directory
-        mkdir -p /tmp/docker-images
-
-        # Define images to cache
-        IMAGES=(
-          "itzg/minecraft-server:latest"
-          "itzg/minecraft-server:java8"
-          "itzg/minecraft-server:java11"
-          "itzg/minecraft-server:java17"
-          "itzg/minecraft-server:java21"
-        )
-
-        echo "🔄 Pulling and caching Minecraft server images..."
-
-        for image in "${IMAGES[@]}"; do
-          echo "📥 Pulling $image..."
-          if docker pull "$image"; then
-            echo "✅ Successfully pulled $image"
-
-            # Save image to cache directory for faster loading
-            image_name=$(echo "$image" | tr '/' '_' | tr ':' '_')
-            docker save "$image" -o "/tmp/docker-images/${image_name}.tar"
-            echo "💾 Saved $image to cache"
-          else
-            echo "⚠️  Failed to pull $image, continuing..."
-          fi
-        done
-
-        echo "📊 Docker images cache prepared"
-
     - name: Load Cached Minecraft Images
       shell: bash
       run: |
@@ -62,15 +27,18 @@ runs:
         echo "🔄 Loading cached Minecraft images..."
 
         # Load all cached images
-        for tar_file in /tmp/docker-images/*.tar; do
-          if [ -f "$tar_file" ]; then
-            echo "📤 Loading $(basename "$tar_file" .tar)..."
-            docker load -i "$tar_file"
-            echo "✅ Loaded $(basename "$tar_file" .tar)"
-          fi
-        done
-
-        echo "🎯 Cached images loaded successfully"
+        if [ -d "/tmp/docker-images" ] && [ "$(ls -A /tmp/docker-images)" ]; then
+          for tar_file in /tmp/docker-images/*.tar; do
+            if [ -f "$tar_file" ]; then
+              echo "📤 Loading $(basename "$tar_file" .tar)..."
+              docker load -i "$tar_file"
+              echo "✅ Loaded $(basename "$tar_file" .tar)"
+            fi
+          done
+          echo "🎯 Cached images loaded successfully"
+        else
+          echo "⚠️  No cached images found, will download as needed"
+        fi
 
     - name: Cache Server Data Directories
       uses: actions/cache@v4

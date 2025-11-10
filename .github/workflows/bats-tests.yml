@@ -17,6 +17,7 @@ jobs:
     outputs:
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
       total-modpacks: ${{ steps.generate-matrix.outputs.total-modpacks }}
+      java-versions: ${{ steps.generate-matrix.outputs.java-versions }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -34,19 +35,15 @@ jobs:
           echo "Found $TOTAL_MODPACKS modpacks: ${MODPACK_ARRAY[*]}"
           echo "total-modpacks=$TOTAL_MODPACKS" >> $GITHUB_OUTPUT
 
-          # Determine chunk size based on total modpacks
-          if [ $TOTAL_MODPACKS -le 3 ]; then
-            CHUNK_SIZE=1
-          elif [ $TOTAL_MODPACKS -le 6 ]; then
-            CHUNK_SIZE=2
-          else
-            CHUNK_SIZE=3
-          fi
+          # Optimized chunking strategy: max 2 mods per chunk, max 2 parallel jobs
+          CHUNK_SIZE=2  # Maximum 2 modpacks per job to avoid timeouts
+          echo "Using chunk size: $CHUNK_SIZE (max 2 mods per job)"
 
-          echo "Using chunk size: $CHUNK_SIZE"
-
-          # Create matrix JSON
+          # Create matrix JSON with Java version analysis
           MATRIX_JSON="{\"include\":["
+
+          # Track all required Java versions across all chunks
+          ALL_JAVA_VERSIONS=""
 
           # Create chunks
           CHUNK_INDEX=0
@@ -84,11 +81,23 @@ jobs:
               fi
             done
 
+            # Analyze Java versions needed for this chunk
+            CHUNK_JAVA_VERSIONS=$(./scripts/analyze-java-versions.sh "${CHUNK_MODPACKS[@]}")
+            echo "Chunk $CHUNK_INDEX Java versions: $CHUNK_JAVA_VERSIONS"
+
+            # Add to global Java versions
+            for version in $CHUNK_JAVA_VERSIONS; do
+              if [[ "$ALL_JAVA_VERSIONS" != *"$version"* ]]; then
+                ALL_JAVA_VERSIONS="${ALL_JAVA_VERSIONS:+$ALL_JAVA_VERSIONS }$version"
+              fi
+            done
+
             # Escape special characters for JSON
             MODPACK_LIST=$(echo "$MODPACK_LIST" | sed 's/\\/\\\\/g; s/"/\\"/g')
             MODPACK_PATTERN=$(echo "$MODPACK_PATTERN" | sed 's/\\/\\\\/g; s/"/\\"/g')
+            CHUNK_JAVA_VERSIONS=$(echo "$CHUNK_JAVA_VERSIONS" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
-            MATRIX_JSON="${MATRIX_JSON}{\"chunk\":$CHUNK_INDEX,\"modpacks\":\"$MODPACK_LIST\",\"pattern\":\"$MODPACK_PATTERN\",\"count\":$CHUNK_COUNT},"
+            MATRIX_JSON="${MATRIX_JSON}{\"chunk\":$CHUNK_INDEX,\"modpacks\":\"$MODPACK_LIST\",\"pattern\":\"$MODPACK_PATTERN\",\"count\":$CHUNK_COUNT,\"java_versions\":\"$CHUNK_JAVA_VERSIONS\"},"
 
             i=$((i + CHUNK_SIZE))
             CHUNK_INDEX=$((CHUNK_INDEX + 1))
@@ -106,13 +115,81 @@ jobs:
           fi
 
           echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+          echo "java-versions=$ALL_JAVA_VERSIONS" >> $GITHUB_OUTPUT
 
-  # Parallel test execution jobs
-  test:
+  # Job to pre-download required Docker images
+  prepare-images:
     needs: prepare-matrix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Docker Environment
+        uses: ./.github/actions/setup-docker
+        with:
+          docker-version: "24.0.7"
+
+      - name: Cache Docker temporary files
+        uses: actions/cache@v4
+        with:
+          path: |
+            /tmp/docker-images
+            ~/.docker
+          key: docker-images-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}-${{ needs.prepare-matrix.outputs.java-versions }}
+          restore-keys: |
+            docker-images-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}-
+            docker-images-${{ runner.os }}-
+
+      - name: Pre-download Required Minecraft Images
+        run: |
+          set -e
+
+          # Create cache directory
+          mkdir -p /tmp/docker-images
+
+          # Parse required Java versions from prepare-matrix output
+          REQUIRED_VERSIONS="${{ needs.prepare-matrix.outputs.java-versions }}"
+          echo "🔍 Required Java versions: $REQUIRED_VERSIONS"
+
+          # Map versions to Docker image tags
+          declare -A VERSION_MAP=(
+              ["latest"]="itzg/minecraft-server:latest"
+              ["java8"]="itzg/minecraft-server:java8"
+              ["java11"]="itzg/minecraft-server:java11"
+              ["java17"]="itzg/minecraft-server:java17"
+              ["java21"]="itzg/minecraft-server:java21"
+          )
+
+          echo "📥 Pre-downloading required Minecraft server images..."
+
+          for version in $REQUIRED_VERSIONS; do
+            if [[ -n "${VERSION_MAP[$version]}" ]]; then
+              image="${VERSION_MAP[$version]}"
+              echo "📦 Downloading $image..."
+
+              if docker pull "$image"; then
+                echo "✅ Successfully downloaded $image"
+
+                # Save image to cache directory
+                image_name=$(echo "$image" | tr '/' '_' | tr ':' '_')
+                docker save "$image" -o "/tmp/docker-images/${image_name}.tar"
+                echo "💾 Saved $image to cache"
+              else
+                echo "⚠️  Failed to download $image, continuing..."
+              fi
+            else
+              echo "⚠️  Unknown version '$version', skipping..."
+            fi
+          done
+
+          echo "🎯 Pre-download complete. Images cached for test jobs."
+  test:
+    needs: [prepare-matrix, prepare-images]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
     env:
       # Environment variables from .env.template
@@ -152,9 +229,10 @@ jobs:
           path: |
             /tmp/docker-images
             ~/.docker
-          key: docker-cache-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}
+          key: docker-images-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}-${{ needs.prepare-matrix.outputs.java-versions }}
           restore-keys: |
-            docker-cache-${{ runner.os }}-
+            docker-images-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}-
+            docker-images-${{ runner.os }}-
 
       - name: Cache test artifacts and logs
         uses: actions/cache@v4
@@ -201,7 +279,7 @@ jobs:
 
   # Job to collect and summarize all test results
   summarize:
-    needs: [prepare-matrix, test]
+    needs: [prepare-matrix, prepare-images, test]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -231,19 +309,23 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📊 Execution Statistics" >> $GITHUB_STEP_SUMMARY
           echo "- **Total Modpacks:** ${{ needs.prepare-matrix.outputs.total-modpacks }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Parallel Chunks:** ${{ needs.prepare-matrix.outputs.matrix && fromJSON(needs.prepare-matrix.outputs.matrix).include.length || 0 }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Parallel Jobs:** Max 2 concurrent jobs" >> $GITHUB_STEP_SUMMARY
+          echo "- **Chunk Size:** Max 2 modpacks per job" >> $GITHUB_STEP_SUMMARY
+          echo "- **Required Java Versions:** ${{ needs.prepare-matrix.outputs.java-versions }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Test Duration:** Check individual job timings" >> $GITHUB_STEP_SUMMARY
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### ⚡ Performance Optimizations" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Parallel test execution across multiple runners" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Docker image caching (latest, java8, java11, java17, java21)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Parallel test execution: max 2 concurrent jobs for GitHub free runners" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Smart Docker image caching (only required Java versions: ${{ needs.prepare-matrix.outputs.java-versions }})" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Pre-download images in dedicated job to avoid duplication" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Server data caching for faster test startup" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ pnpm dependencies caching with node_modules" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Docker temporary files caching" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Test artifacts and logs caching" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Network and volume cleanup between tests" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Reusable GitHub Actions for maintainability" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Optimized chunking: max 2 modpacks per job to avoid timeouts" >> $GITHUB_STEP_SUMMARY
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔧 Technical Details" >> $GITHUB_STEP_SUMMARY
