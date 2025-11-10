@@ -20,12 +20,6 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install test dependencies
-      shell: bash
-      run: |
-        # Ensure bats is available
-        which bats || (echo "BATS not found, installing..." && exit 1)
-
     - name: Run BATS tests
       shell: bash
       run: |
@@ -43,7 +37,7 @@ runs:
         echo "---"
 
         # Execute tests with timeout
-        timeout ${{ fromJSON(inputs.timeout) }}m bats --jobs ${{ inputs.parallel-jobs }} --timing ${{ inputs.test-pattern }}
+        timeout ${{ fromJSON(inputs.timeout) }}m pnpm exec bats --jobs ${{ inputs.parallel-jobs }} --timing ${{ inputs.test-pattern }}
 
     - name: Generate test report
       shell: bash
