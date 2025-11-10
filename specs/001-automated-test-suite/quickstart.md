@@ -41,7 +41,7 @@ cd minecraft-servers
 
 # Ensure Docker is running
 docker --version
-docker-compose --version
+docker compose --version
 
 # Verify BATS installation
 bats --version

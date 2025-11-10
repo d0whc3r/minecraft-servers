@@ -187,7 +187,7 @@ get_backup_dir() {
 # DOCKER COMPOSE HELPERS
 # ============================================================================
 
-# Start server using docker-compose
+# Start server using docker compose
 # Args: $1 - server name
 # Returns: 0 on success, 1 on failure
 docker_compose_up() {
@@ -195,37 +195,37 @@ docker_compose_up() {
     local config_file
     config_file=$(get_config_file "$server_name")
     
-    # Load SERVER_PORT from config file for docker-compose port mapping
+    # Load SERVER_PORT from config file for docker compose port mapping
     # We need this in the environment for ${SERVER_PORT} substitution in docker-compose.yml
     export SERVER_PORT=$(grep "^SERVER_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "')
     
-    # Load JAVA_VERSION from config file for docker-compose image selection
+    # Load JAVA_VERSION from config file for docker compose image selection
     # We need this in the environment for ${JAVA_VERSION:-latest} substitution in docker-compose.yml
     export JAVA_VERSION=$(grep "^JAVA_VERSION=" "$config_file" | cut -d= -f2 | tr -d ' "' || echo "")
     
-    # Set dynamic environment variables for docker-compose substitution
+    # Set dynamic environment variables for docker compose substitution
     export CONTAINER_NAME="mc-${server_name}"
     export SERVER_DATA_DIR="$(pwd)/servers/${server_name}/data"
     export SERVER_MODS_DIR="$(pwd)/servers/${server_name}/mods"
     export SERVER_BACKUP_DIR="$(pwd)/backups/${server_name}"
     export SERVER_CONFIG_FILE="$config_file"
     
-    debug "Starting server with docker-compose -p mc-${server_name}"
+    debug "Starting server with docker compose -p mc-${server_name}"
     debug "Port mapping: ${SERVER_PORT}:25565"
-    docker-compose -p "mc-${server_name}" up -d 2>&1
+    docker compose -p "mc-${server_name}" up -d 2>&1
 }
 
-# Stop server using docker-compose
+# Stop server using docker compose
 # Args: $1 - server name
 # Returns: 0 on success, 1 on failure
 docker_compose_down() {
     local server_name="$1"
     
-    debug "Stopping server with docker-compose -p mc-${server_name} down"
-    docker-compose -p "mc-${server_name}" down -v 2>&1
+    debug "Stopping server with docker compose -p mc-${server_name} down"
+    docker compose -p "mc-${server_name}" down -v 2>&1
 }
 
-# Restart server using docker-compose
+# Restart server using docker compose
 # Args: $1 - server name
 # Returns: 0 on success, 1 on failure
 docker_compose_restart() {
@@ -233,10 +233,10 @@ docker_compose_restart() {
     local config_file
     config_file=$(get_config_file "$server_name")
     
-    # Load SERVER_PORT from config file for docker-compose port mapping
+    # Load SERVER_PORT from config file for docker compose port mapping
     export SERVER_PORT=$(grep "^SERVER_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "')
     
-    # Load JAVA_VERSION from config file for docker-compose image selection
+    # Load JAVA_VERSION from config file for docker compose image selection
     export JAVA_VERSION=$(grep "^JAVA_VERSION=" "$config_file" | cut -d= -f2 | tr -d ' "' || echo "")
     
     # Set dynamic environment variables
@@ -246,8 +246,8 @@ docker_compose_restart() {
     export SERVER_BACKUP_DIR="$(pwd)/backups/${server_name}"
     export SERVER_CONFIG_FILE="$config_file"
     
-    debug "Restarting server with docker-compose -p mc-${server_name} restart"
-    docker-compose -p "mc-${server_name}" restart 2>&1
+    debug "Restarting server with docker compose -p mc-${server_name} restart"
+    docker compose -p "mc-${server_name}" restart 2>&1
 }
 
 # ============================================================================

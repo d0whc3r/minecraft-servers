@@ -42,7 +42,7 @@ info ""
 info "Restarting server: ${YELLOW}${SERVER_NAME}${NC}"
 info ""
 
-# Restart with docker-compose
+# Restart with docker compose
 if docker_compose_restart "$SERVER_NAME"; then
     success "Server restarted successfully"
     info ""

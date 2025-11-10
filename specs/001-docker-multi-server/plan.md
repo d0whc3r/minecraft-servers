@@ -16,7 +16,7 @@ Deploy a multi-configuration Minecraft server system using Docker containers to 
 **Storage**: Docker volumes mapped to host filesystem (`./servers/{name}/data`, `./servers/{name}/mods`, `./backups/{name}`)  
 **Configuration Model**: Single template docker-compose.yml + per-server .env files (`config/modpacks/{name}.env`)  
 **Orchestration Pattern**: Template service instantiated via `SERVER_NAME` and `SERVER_PORT` environment variables  
-**Testing**: Manual integration testing, container health checks, docker-compose validation  
+**Testing**: Manual integration testing, container health checks, docker compose validation  
 **Target Platform**: Linux server (Ubuntu 20.04+, Debian 11+, or compatible with Docker support)  
 **Project Type**: Infrastructure/DevOps - Docker orchestration with Bash automation scripts  
 **Performance Goals**: Support minimum 5 concurrent servers, <5 minute deployment time, <30 second health check response  
@@ -42,11 +42,11 @@ services:
 
 ```bash
 # Start server by providing variables
-SERVER_NAME=atm8 SERVER_PORT=25565 docker-compose up -d
+SERVER_NAME=atm8 SERVER_PORT=25565 docker compose up -d
 # Creates unique container: mc-atm8
 
 # Start another server (no conflicts)
-SERVER_NAME=vanilla SERVER_PORT=25569 docker-compose up -d
+SERVER_NAME=vanilla SERVER_PORT=25569 docker compose up -d
 # Creates unique container: mc-vanilla
 ```
 

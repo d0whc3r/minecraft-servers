@@ -169,14 +169,14 @@ fi
 
 info ""
 
-# Stop the container using docker-compose (if running)
+# Stop the container using docker compose (if running)
 if [ "$CONTAINER_RUNNING" = true ] || [ "$CONTAINER_EXISTS" = true ]; then
     info "Stopping container..."
     if docker_compose_down "$SERVER_NAME"; then
         success "Container stopped and removed"
     else
         error "Failed to stop container"
-        echo "Check docker-compose logs for details" >&2
+        echo "Check docker compose logs for details" >&2
         exit 1
     fi
 fi

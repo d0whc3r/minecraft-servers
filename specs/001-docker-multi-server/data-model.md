@@ -54,8 +54,8 @@ stopped → starting → running → stopping → stopped
 **Lifecycle**:
 
 - Created: Via `add-modpack.sh` script or manual docker-compose.yml edit
-- Started: Via `docker-compose up -d {name}` or `start-all.sh`
-- Stopped: Via `docker-compose down {name}` or `stop-all.sh`
+- Started: Via `docker compose up -d {name}` or `start-all.sh`
+- Stopped: Via `docker compose down {name}` or `stop-all.sh`
 - Removed: Delete service from docker-compose.yml, remove ./servers/{name}/ and ./backups/{name}/
 
 **File Representation**:
@@ -87,11 +87,11 @@ services:
 
 ```bash
 # Start atm8 server
-SERVER_NAME=atm8 SERVER_PORT=25565 docker-compose up -d
+SERVER_NAME=atm8 SERVER_PORT=25565 docker compose up -d
 # Creates container: mc-atm8
 
 # Start skyfactory4 server (doesn't conflict with atm8)
-SERVER_NAME=skyfactory4 SERVER_PORT=25566 docker-compose up -d
+SERVER_NAME=skyfactory4 SERVER_PORT=25566 docker compose up -d
 # Creates container: mc-skyfactory4
 
 # Both containers run simultaneously, isolated, with their own .env configs
@@ -381,10 +381,10 @@ DIFFICULTY=normal
 
 **State Transitions**:
 
-- **stopped → starting**: Administrator executes `docker-compose up -d {name}`
+- **stopped → starting**: Administrator executes `docker compose up -d {name}`
 - **starting → running**: Health check passes (mc-health returns success)
 - **starting → unhealthy**: Health check fails after retries
-- **running → stopping**: Administrator executes `docker-compose down {name}`
+- **running → stopping**: Administrator executes `docker compose down {name}`
 - **running → unhealthy**: Health check fails during operation
 - **unhealthy → restarting**: Docker restart policy triggers
 - **restarting → starting**: Container recreates
@@ -394,7 +394,7 @@ DIFFICULTY=normal
 
 ```bash
 # Check state of all servers
-docker-compose ps
+docker compose ps
 
 # Check health of specific server
 docker inspect --format='{{.State.Health.Status}}' mc-atm8
@@ -525,11 +525,11 @@ cf_page_url:
 2. Add service to `docker-compose.yml` using template
 3. Assign unique port (next available offset)
 4. Create directories: `./servers/{name}/data`, `./servers/{name}/mods`, `./backups/{name}/`
-5. Run `docker-compose up -d {name}`
+5. Run `docker compose up -d {name}`
 
 ### Removing Server
 
-1. Stop container: `docker-compose down {name}`
+1. Stop container: `docker compose down {name}`
 2. Remove service from `docker-compose.yml`
 3. Optionally: Backup and delete `./servers/{name}/` and `./backups/{name}/`
 4. Optionally: Delete `config/modpacks/{name}.env`
@@ -538,7 +538,7 @@ cf_page_url:
 
 1. Update `VERSION` in `config/modpacks/{name}.env`
 2. Update `CF_PAGE_URL` if modpack has new version page
-3. Recreate container: `docker-compose up -d --force-recreate {name}`
+3. Recreate container: `docker compose up -d --force-recreate {name}`
 4. Image will download updated modpack automatically
 
 ---

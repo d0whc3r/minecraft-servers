@@ -254,7 +254,7 @@ nano config/modpacks/atm8.env
 # Change VERSION to new version number
 
 # Recreate container (downloads new modpack)
-docker-compose up -d --force-recreate
+docker compose up -d --force-recreate
 
 # Monitor startup
 docker logs -f mc-atm8

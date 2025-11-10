@@ -129,7 +129,7 @@ Press `Ctrl+C` to stop following logs (server keeps running).
 ### What Happened?
 
 1. **Docker downloaded the itzg/minecraft-server image** (~500MB)
-2. **Script ran docker-compose with SERVER_NAME=vanilla** creating container `mc-vanilla`
+2. **Script ran docker compose with SERVER_NAME=vanilla** creating container `mc-vanilla`
 3. **Container loaded config** from `config/modpacks/vanilla.env`
 4. **World generated** in `./servers/vanilla/data/`
 5. **Port mapped**: Server's 25565 → Your host's 25569

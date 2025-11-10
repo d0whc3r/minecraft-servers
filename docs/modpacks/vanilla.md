@@ -356,7 +356,7 @@ nano config/modpacks/vanilla.env
 # Change VERSION to new version (e.g., 1.20.5)
 
 # Recreate container
-docker-compose up -d --force-recreate
+docker compose up -d --force-recreate
 
 # Monitor startup
 docker logs -f mc-vanilla

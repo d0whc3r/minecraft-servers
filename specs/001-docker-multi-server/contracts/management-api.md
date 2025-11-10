@@ -32,7 +32,7 @@ This system is managed via command-line scripts and Docker Compose CLI rather th
 
 ### Common Arguments
 
-- `{server-name}`: Server instance name (must match docker-compose service name)
+- `{server-name}`: Server instance name (must match docker compose service name)
 - `--verbose`, `-v`: Enable verbose output
 - `--dry-run`, `-n`: Show what would happen without executing
 - `--help`, `-h`: Show usage information
@@ -101,8 +101,8 @@ if [[ ! -f "config/modpacks/${SERVER_NAME}.env" ]]; then
 fi
 # Load port from config
 SERVER_PORT=$(grep "^SERVER_PORT=" "config/modpacks/${SERVER_NAME}.env" | cut -d= -f2)
-# Start via docker-compose template
-SERVER_NAME=$SERVER_NAME SERVER_PORT=$SERVER_PORT docker-compose up -d
+# Start via docker compose template
+SERVER_NAME=$SERVER_NAME SERVER_PORT=$SERVER_PORT docker compose up -d
 ```
 
 ---
@@ -289,7 +289,7 @@ docker restart mc-$1
 ```bash
 #!/bin/bash
 SERVER_NAME=$1
-docker-compose restart "$SERVER_NAME"
+docker compose restart "$SERVER_NAME"
 ````
 
 ---
@@ -362,7 +362,7 @@ BACKUP_DIR="./backups/$SERVER_NAME"
 BACKUP_FILE="$BACKUP_DIR/$SERVER_NAME-$TIMESTAMP.tar.gz"
 
 # Stop server or issue save-off
-docker-compose stop "$SERVER_NAME"
+docker compose stop "$SERVER_NAME"
 
 # Create backup
 tar czf "$BACKUP_FILE" -C "./servers/$SERVER_NAME" data/
@@ -374,7 +374,7 @@ tar tzf "$BACKUP_FILE" > /dev/null
 sha256sum "$BACKUP_FILE" > "$BACKUP_FILE.sha256"
 
 # Restart server
-docker-compose start "$SERVER_NAME"
+docker compose start "$SERVER_NAME"
 
 # Clean old backups (keep 3)
 ls -t "$BACKUP_DIR"/*.tar.gz | tail -n +4 | xargs rm -f
@@ -455,7 +455,7 @@ BACKUP_FILE=$2
 sha256sum -c "$BACKUP_FILE.sha256"
 
 # Stop server
-docker-compose stop "$SERVER_NAME"
+docker compose stop "$SERVER_NAME"
 
 # Clear existing data
 rm -rf "./servers/$SERVER_NAME/data"/*
@@ -467,7 +467,7 @@ tar xzf "$BACKUP_FILE" -C "./servers/$SERVER_NAME"
 chown -R 1000:1000 "./servers/$SERVER_NAME/data"
 
 # Restart
-docker-compose start "$SERVER_NAME"
+docker compose start "$SERVER_NAME"
 ```
 
 ---
@@ -517,7 +517,7 @@ Assigning port: 25570 (auto-selected)
 ✓ Validated configuration
 
 New server ready. To start:
-  docker-compose up -d my-custom-atm8
+  docker compose up -d my-custom-atm8
 
 Configuration:
   Name: my-custom-atm8
@@ -584,7 +584,7 @@ cat >> docker-compose.yml <<EOF
 EOF
 
 # Validate
-docker-compose config > /dev/null
+docker compose config > /dev/null
 ```
 
 ---
@@ -654,7 +654,7 @@ Total: 5 servers | Running: 4 | Stopped: 1
 
 ```bash
 #!/bin/bash
-docker-compose ps --format json | jq '...'
+docker compose ps --format json | jq '...'
 ```
 
 ---
@@ -769,24 +769,24 @@ Configuration valid - ready to deploy
 
 ### 6.1 Standard Docker Compose Commands
 
-Users can directly use `docker-compose` for advanced operations:
+Users can directly use `docker compose` for advanced operations:
 
 **Start specific server**:
 
 ```bash
-docker-compose up -d <server-name>
+docker compose up -d <server-name>
 ```
 
 **View logs**:
 
 ```bash
-docker-compose logs -f <server-name>
+docker compose logs -f <server-name>
 ```
 
 **Execute command in container**:
 
 ```bash
-docker-compose exec <server-name> rcon-cli <command>
+docker compose exec <server-name> rcon-cli <command>
 ```
 
 **Scale (not recommended for this use case)**:
@@ -798,7 +798,7 @@ docker-compose exec <server-name> rcon-cli <command>
 **Down with volumes**:
 
 ```bash
-docker-compose down -v  # WARNING: Deletes all data
+docker compose down -v  # WARNING: Deletes all data
 ```
 
 ---

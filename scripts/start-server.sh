@@ -84,6 +84,6 @@ if docker_compose_up "$SERVER_NAME"; then
     exit 0
 else
     error "Failed to start server"
-    echo "Check docker-compose logs for details" >&2
+    echo "Check docker compose logs for details" >&2
     exit 1
 fi

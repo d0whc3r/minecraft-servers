@@ -58,7 +58,7 @@ services:
 
 ```bash
 # Start specific server by providing SERVER_NAME and SERVER_PORT
-SERVER_NAME=atm8 SERVER_PORT=25565 docker-compose up -d
+SERVER_NAME=atm8 SERVER_PORT=25565 docker compose up -d
 
 # Each invocation creates a unique container (mc-atm8, mc-skyfactory4, etc.)
 # Multiple containers run simultaneously without conflicts
@@ -89,7 +89,7 @@ Management scripts wrap the environment variable pattern:
 
 ```bash
 # start-server.sh atm8
-SERVER_NAME=$1 SERVER_PORT=$(get_port $1) docker-compose up -d
+SERVER_NAME=$1 SERVER_PORT=$(get_port $1) docker compose up -d
 
 # stop-server.sh atm8
 docker stop mc-$1
@@ -485,11 +485,11 @@ Backup logic in script, not manual commands
 **Key Commands**:
 
 ```bash
-docker-compose up -d <service>        # Start specific server
-docker-compose down <service>          # Stop specific server
-docker-compose logs -f <service>       # Follow logs
-docker-compose ps                      # List all services
-docker-compose restart <service>       # Restart server
+docker compose up -d <service>        # Start specific server
+docker compose down <service>          # Stop specific server
+docker compose logs -f <service>       # Follow logs
+docker compose ps                      # List all services
+docker compose restart <service>       # Restart server
 ```
 
 ---

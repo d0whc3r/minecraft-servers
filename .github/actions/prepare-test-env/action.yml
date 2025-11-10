@@ -46,6 +46,9 @@ runs:
 
         echo "modpacks=$MODPACKS" >> $GITHUB_OUTPUT
         echo "count=$(echo $MODPACKS | wc -w)" >> $GITHUB_OUTPUT
+        
+        # Set environment variable for BATS tests
+        echo "TEST_MODPACKS=$MODPACKS" >> $GITHUB_ENV
 
     - name: Display test configuration
       shell: bash
@@ -54,3 +57,4 @@ runs:
         echo "Modpack filter: ${{ inputs.modpack-filter }}"
         echo "Selected modpacks: ${{ steps.filter-modpacks.outputs.modpacks }}"
         echo "Modpack count: ${{ steps.filter-modpacks.outputs.count }}"
+        echo "TEST_MODPACKS environment variable set for BATS tests"

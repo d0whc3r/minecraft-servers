@@ -10,7 +10,7 @@ All variables from the `itzg/minecraft-server` Docker image are supported. This 
 
 ## How to Use
 
-Environment variables are defined in `config/modpacks/<server-name>.env` files. The docker-compose setup automatically loads these variables when starting a server.
+Environment variables are defined in `config/modpacks/<server-name>.env` files. The docker compose setup automatically loads these variables when starting a server.
 
 ```bash
 # Example: Starting a server with custom configuration

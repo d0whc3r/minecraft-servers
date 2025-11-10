@@ -39,9 +39,9 @@ The `common.sh` file provides a reusable foundation for all scripts, including:
 
 ### Docker Compose Helpers
 
-- `docker_compose_up(server)` - Start server using docker-compose
-- `docker_compose_down(server)` - Stop server using docker-compose
-- `docker_compose_restart(server)` - Restart server using docker-compose
+- `docker_compose_up(server)` - Start server using docker compose
+- `docker_compose_down(server)` - Stop server using docker compose
+- `docker_compose_restart(server)` - Restart server using docker compose
 
 ### File Operations
 

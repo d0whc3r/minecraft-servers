@@ -1,6 +1,6 @@
 # Dynamic Minecraft Multi-Server Configuration
 # This template instantiates a new server for each modpack dynamically
-# Usage: docker-compose -p mc-<server> --env-file config/modpacks/<server>.env up -d
+# Usage: docker compose -p mc-<server> --env-file config/modpacks/<server>.env up -d
 #
 # All itzg/minecraft-server environment variables are supported via the env_file.
 # See: https://docker-minecraft-server.readthedocs.io/en/latest/variables/

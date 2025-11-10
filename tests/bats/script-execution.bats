@@ -224,15 +224,32 @@ get_modpack_name() {
     local successful_servers=()
     local total_servers=0
 
-    # Get all modpack configurations
+    # Get modpack configurations - respect TEST_MODPACKS environment variable if set
     local modpack_configs=()
-    while IFS= read -r -d '' file; do
-        modpack_configs+=("$file")
-    done < <(find config/modpacks -name "*.env" -type f -print0 | sort -z)
+    if [ -n "${TEST_MODPACKS:-}" ]; then
+        echo "🔍 Using filtered modpacks from TEST_MODPACKS: $TEST_MODPACKS"
+        # Convert space-separated string to array
+        local test_modpacks_array=($TEST_MODPACKS)
+        for modpack_name in "${test_modpacks_array[@]}"; do
+            local config_file="config/modpacks/${modpack_name}.env"
+            if [ -f "$config_file" ]; then
+                modpack_configs+=("$config_file")
+            else
+                echo "⚠️  Warning: Config file not found: $config_file"
+            fi
+        done
+    else
+        echo "🔍 No TEST_MODPACKS filter set, testing all modpacks"
+        # Fallback to all modpacks if no filter is set
+        while IFS= read -r -d '' file; do
+            modpack_configs+=("$file")
+        done < <(find config/modpacks -name "*.env" -type f -print0 | sort -z)
+    fi
 
-    [ ${#modpack_configs[@]} -gt 0 ] || skip "No modpack configs found"
+    [ ${#modpack_configs[@]} -gt 0 ] || skip "No modpack configs found for this test chunk"
 
-    echo "Testing full startup for ${#modpack_configs[@]} modpack(s)..."
+    echo "🚀 Testing full startup for ${#modpack_configs[@]} modpack(s) in this chunk..."
+    echo "📋 Modpacks to test: $(for config in "${modpack_configs[@]}"; do basename "$config" .env; done | tr '\n' ' ')"
     echo "---"
 
     for config_file in "${modpack_configs[@]}"; do
