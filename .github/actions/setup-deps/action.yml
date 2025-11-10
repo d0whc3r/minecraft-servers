@@ -21,11 +21,10 @@ runs:
     - name: Install Bats
       shell: bash
       run: |
-        # Install bats-core from source for latest version
-        git clone https://github.com/bats-core/bats-core.git /tmp/bats-core
-        cd /tmp/bats-core
-        sudo ./install.sh /usr/local
-        bats --version
+        # BATS is installed via pnpm install (see package.json devDependencies)
+        # Scripts in package.json can use 'bats' directly (pnpm resolves it automatically)
+        echo "✅ BATS available via pnpm"
+        pnpm exec bats --version
 
     - name: Install dependencies
       shell: bash

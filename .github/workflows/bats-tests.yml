@@ -2,9 +2,9 @@ name: BATS Test Suite
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -140,19 +140,42 @@ jobs:
           path: |
             ~/.pnpm-store
             node_modules
-          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+            .pnpm-debug.log*
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('package.json') }}
           restore-keys: |
+            pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
             pnpm-${{ runner.os }}-
+
+      - name: Cache Docker temporary files
+        uses: actions/cache@v4
+        with:
+          path: |
+            /tmp/docker-images
+            ~/.docker
+          key: docker-cache-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}
+          restore-keys: |
+            docker-cache-${{ runner.os }}-
+
+      - name: Cache test artifacts and logs
+        uses: actions/cache@v4
+        with:
+          path: |
+            test-results/
+            *.log
+            .env
+          key: test-artifacts-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            test-artifacts-${{ runner.os }}-
 
       - name: Setup Dependencies
         uses: ./.github/actions/setup-deps
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Setup Docker Environment
         uses: ./.github/actions/setup-docker
         with:
-          docker-version: '24.0.7'
+          docker-version: "24.0.7"
 
       - name: Prepare Test Environment
         uses: ./.github/actions/prepare-test-env
@@ -162,9 +185,9 @@ jobs:
       - name: Run BATS Tests
         uses: ./.github/actions/run-bats-tests
         with:
-          test-pattern: 'tests/bats/script-execution.bats'
-          timeout: '45'
-          parallel-jobs: '1'
+          test-pattern: "tests/bats/script-execution.bats"
+          timeout: "45"
+          parallel-jobs: "1"
 
       - name: Upload test artifacts
         if: always()
@@ -216,7 +239,9 @@ jobs:
           echo "- ✅ Parallel test execution across multiple runners" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Docker image caching (latest, java8, java11, java17, java21)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Server data caching for faster test startup" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Dependency caching with pnpm" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ pnpm dependencies caching with node_modules" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Docker temporary files caching" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Test artifacts and logs caching" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Network and volume cleanup between tests" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Reusable GitHub Actions for maintainability" >> $GITHUB_STEP_SUMMARY
 
@@ -225,7 +250,7 @@ jobs:
           echo "- **Docker Version:** 24.0.7" >> $GITHUB_STEP_SUMMARY
           echo "- **Node.js Version:** 22" >> $GITHUB_STEP_SUMMARY
           echo "- **pnpm Version:** 10.20.0 (from packageManager)" >> $GITHUB_STEP_SUMMARY
-          echo "- **BATS Version:** Latest from bats-core" >> $GITHUB_STEP_SUMMARY
+          echo "- **BATS Version:** 1.13.0 (from package.json devDependencies)" >> $GITHUB_STEP_SUMMARY
 
           # Show matrix details
           echo "" >> $GITHUB_STEP_SUMMARY
