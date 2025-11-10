@@ -88,51 +88,32 @@ runs:
       run: |
         set -e
 
-        echo "📝 Creating .env file for Docker Compose..."
+        echo "📝 Creating .env file..."
+
+        # Debug: Show which environment variables are available
+        echo "🔍 Environment variables check:"
+        echo "  EULA: ${EULA:-NOT_SET}"
+        echo "  CF_API_KEY: ${CF_API_KEY:0:10}..." # Show first 10 chars for security
+        echo "  ENABLE_RCON: ${ENABLE_RCON:-NOT_SET}"
 
         # Create .env file with required variables for Docker Compose
-        echo '# ============================================================================' > .env
-        echo '# MINECRAFT MULTI-SERVER SHARED CONFIGURATION (CI Environment)' >> .env
-        echo '# ============================================================================' >> .env
-        echo '# Auto-generated for CI testing - DO NOT COMMIT' >> .env
-        echo '' >> .env
-        echo '# ============================================================================' >> .env
-        echo '# EULA - REQUIRED' >> .env
-        echo '# ============================================================================' >> .env
-        echo 'EULA=TRUE' >> .env
-        echo '' >> .env
-        echo '# ============================================================================' >> .env
-        echo '# DOCKER CONFIGURATION' >> .env
-        echo '# ============================================================================' >> .env
-        echo 'NETWORK_NAME=minecraft-network' >> .env
-        echo 'BASE_PORT=25565' >> .env
-        echo 'COMPOSE_PROJECT_NAME=minecraft-servers' >> .env
-        echo '' >> .env
-        echo '# ============================================================================' >> .env
-        echo '# CURSEFORGE API (for modpack downloads)' >> .env
-        echo '# ============================================================================' >> .env
-        echo "CF_API_KEY=\${CF_API_KEY:-dummy_key}" >> .env
-        echo '' >> .env
-        echo '# ============================================================================' >> .env
-        echo '# RCON (Remote Console) - Shared Configuration' >> .env
-        echo '# ============================================================================' >> .env
-        echo 'ENABLE_RCON=true' >> .env
-        echo 'RCON_PASSWORD=minecraft' >> .env
-        echo 'RCON_PORT=25575' >> .env
-        echo 'BROADCAST_RCON_TO_OPS=false' >> .env
-        echo '' >> .env
-        echo '# ============================================================================' >> .env
-        echo '# SHARED DEFAULTS' >> .env
-        echo '# ============================================================================' >> .env
-        echo 'TZ=UTC' >> .env
-        echo 'ENABLE_ROLLING_LOGS=true' >> .env
-        echo 'USE_AIKAR_FLAGS=true' >> .env
-        echo 'ONLINE_MODE=false' >> .env
-        echo 'ALLOW_FLIGHT=true' >> .env
+        printf '# CI Environment - Auto-generated\n' > .env
+        printf 'EULA=%s\n' "${EULA:-TRUE}" >> .env
+        printf 'NETWORK_NAME=%s\n' "${NETWORK_NAME:-minecraft-network}" >> .env
+        printf 'BASE_PORT=%s\n' "${BASE_PORT:-25565}" >> .env
+        printf 'COMPOSE_PROJECT_NAME=%s\n' "${COMPOSE_PROJECT_NAME:-minecraft-servers}" >> .env
+        printf 'CF_API_KEY=%s\n' "${CF_API_KEY:-dummy_key}" >> .env
+        printf 'ENABLE_RCON=%s\n' "${ENABLE_RCON:-true}" >> .env
+        printf 'RCON_PASSWORD=%s\n' "${RCON_PASSWORD:-minecraft}" >> .env
+        printf 'RCON_PORT=%s\n' "${RCON_PORT:-25575}" >> .env
+        printf 'BROADCAST_RCON_TO_OPS=%s\n' "${BROADCAST_RCON_TO_OPS:-false}" >> .env
+        printf 'TZ=%s\n' "${TZ:-UTC}" >> .env
+        printf 'ENABLE_ROLLING_LOGS=%s\n' "${ENABLE_ROLLING_LOGS:-true}" >> .env
+        printf 'USE_AIKAR_FLAGS=%s\n' "${USE_AIKAR_FLAGS:-true}" >> .env
+        printf 'ONLINE_MODE=%s\n' "${ONLINE_MODE:-false}" >> .env
+        printf 'ALLOW_FLIGHT=%s\n' "${ALLOW_FLIGHT:-true}" >> .env
 
-        echo "✅ .env file created successfully"
-        echo "📄 .env contents (sensitive data masked):"
-        grep -v "CF_API_KEY\|RCON_PASSWORD" .env
+        echo "✅ .env file created"
 
     - name: Filter modpacks for this runner
       shell: bash
