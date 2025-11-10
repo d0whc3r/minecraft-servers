@@ -9,14 +9,7 @@ pnpm-lock.yaml
 *.pid.lock
 
 # Minecraft server files
-servers/*/world/
-servers/*/world_nether/
-servers/*/world_the_end/
-servers/*/logs/
-servers/*/crash-reports/
-servers/*/plugins/
-servers/*/mods/
-servers/*/config/
+servers/
 
 # Backups
 backups/
@@ -31,10 +24,15 @@ Thumbs.db
 # IDE files
 .vscode/
 .idea/
+.cursor/
 
 # Git
 .git/
 .gitignore
+.mailmap
+
+# Git hooks
+.husky/
 
 # CI/CD
 .github/
@@ -57,3 +55,9 @@ Thumbs.db
 
 # Test files (BATS framework has special syntax)
 *.bats
+
+# Configuration files (keep original formatting)
+.prettierrc
+.editorconfig
+.dockerignore
+renovate.json
