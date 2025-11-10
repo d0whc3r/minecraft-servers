@@ -19,26 +19,35 @@
     "pnpm": ">=8.0.0"
   },
   "scripts": {
-    "test": "./node_modules/.bin/bats tests/bats/",
-    "test:verbose": "./node_modules/.bin/bats --verbose tests/bats/",
-    "test:quick": "./node_modules/.bin/bats --filter 'US1-TC00[1-6]:' tests/bats/",
+    "test": "bats tests/bats/",
+    "test:verbose": "bats --verbose tests/bats/",
+    "test:quick": "bats --filter 'US1-TC00[1-6]:' tests/bats/",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "format:sh": "prettier --write '**/*.sh'",
     "format:md": "prettier --write '**/*.md'",
     "format:config": "prettier --write 'config/**/*.env' 'config/**/*.yml' 'config/**/*.yaml'",
     "lint": "echo 'Linting scripts...' && shellcheck scripts/*.sh",
+    "lint:fix": "echo 'Auto-fixing scripts...' && shellcheck --fix scripts/*.sh",
     "validate": "pnpm run format:check && pnpm run lint && pnpm run test:quick",
+    "validate:all": "pnpm run format:check && pnpm run lint && pnpm run test",
     "prepare": "husky",
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:clean": "docker-compose down -v --remove-orphans",
     "server:start": "./scripts/start-server.sh",
     "server:stop": "./scripts/stop-server.sh",
     "server:restart": "./scripts/restart-server.sh",
+    "server:list": "./scripts/list-servers.sh",
+    "server:health": "./scripts/health-check.sh --all",
     "backup": "./scripts/backup.sh",
+    "backup:all": "./scripts/backup.sh --all",
     "restore": "./scripts/restore.sh",
-    "health-check": "./scripts/health-check.sh"
+    "dev:setup": "pnpm install && pnpm run prepare",
+    "dev:clean": "rm -rf node_modules pnpm-lock.yaml && pnpm install",
+    "ci": "pnpm run validate:all"
   },
   "keywords": [
     "minecraft",
@@ -65,6 +74,8 @@
     "useTabs": false,
     "printWidth": 100,
     "endOfLine": "lf",
-    "plugins": ["prettier-plugin-sh"]
+    "plugins": [
+      "prettier-plugin-sh"
+    ]
   }
 }

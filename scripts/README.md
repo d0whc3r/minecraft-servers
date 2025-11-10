@@ -188,3 +188,93 @@ else
   info "Cancelled"
 fi
 ```
+
+## Package.json Scripts
+
+The project includes npm/pnpm scripts for development, testing, and deployment. These scripts provide convenient shortcuts for common operations.
+
+### Testing Scripts
+
+- `pnpm test` - Run all BATS tests
+- `pnpm run test:verbose` - Run all tests with verbose output
+- `pnpm run test:quick` - Run lightweight tests 1-6 (used in pre-push hook)
+
+### Code Quality Scripts
+
+- `pnpm run format` - Format all files with Prettier
+- `pnpm run format:check` - Check if files are properly formatted
+- `pnpm run format:sh` - Format only shell scripts
+- `pnpm run format:md` - Format only markdown files
+- `pnpm run format:config` - Format configuration files (.env, .yml, .yaml)
+- `pnpm run lint` - Lint shell scripts with shellcheck
+- `pnpm run lint:fix` - Auto-fix shell script issues
+- `pnpm run validate` - Run format check, lint, and quick tests
+- `pnpm run validate:all` - Run format check, lint, and all tests
+
+### Docker Scripts
+
+- `pnpm run docker:build` - Build Docker images
+- `pnpm run docker:up` - Start all services in detached mode
+- `pnpm run docker:down` - Stop all services
+- `pnpm run docker:logs` - Follow logs from all services
+- `pnpm run docker:clean` - Stop services and remove volumes/orphaned containers
+
+### Server Management Scripts
+
+- `pnpm run server:start` - Start a specific server (requires SERVER_NAME argument)
+- `pnpm run server:stop` - Stop a specific server
+- `pnpm run server:restart` - Restart a specific server
+- `pnpm run server:list` - List all servers and their status
+- `pnpm run server:health` - Check health of all servers
+
+### Backup Scripts
+
+- `pnpm run backup` - Create backup of a specific server
+- `pnpm run backup:all` - Create backups of all servers
+- `pnpm run restore` - Restore server from backup
+
+### Development Scripts
+
+- `pnpm run dev:setup` - Install dependencies and setup husky hooks
+- `pnpm run dev:clean` - Clean node_modules and reinstall
+- `pnpm run ci` - Run full validation (equivalent to validate:all)
+
+### Git Hooks
+
+The project uses Husky for git hooks:
+
+- **pre-commit**: Runs `pnpm run format` to auto-format code
+- **pre-push**: Runs `pnpm run test:quick` for lightweight testing
+
+### Usage Examples
+
+```bash
+# Development setup
+pnpm run dev:setup
+
+# Quick validation before committing
+pnpm run validate
+
+# Start development environment
+pnpm run docker:up
+
+# Check server status
+pnpm run server:list
+
+# Create backups
+pnpm run backup:all
+
+# Full CI validation
+pnpm run ci
+```
+
+### Script Categories
+
+Scripts are organized by purpose:
+
+1. **Testing** (`test:*`) - Quality assurance and validation
+2. **Code Quality** (`format:*`, `lint:*`, `validate`) - Code formatting and linting
+3. **Docker** (`docker:*`) - Container management
+4. **Server** (`server:*`) - Individual server operations
+5. **Backup** (`backup*`) - Data protection
+6. **Development** (`dev:*`, `ci`) - Development workflow

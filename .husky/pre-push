@@ -1,2 +1,2 @@
-# Run tests 1-6 before pushing (excluding expensive test 7)
-pnpm exec bats --filter "US1-TC00[1-6]:" tests/bats/
+# Run quick tests (1-6) before pushing (excluding expensive test 7)
+pnpm run test:quick
