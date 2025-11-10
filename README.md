@@ -213,8 +213,7 @@ The project includes comprehensive CI/CD workflows using GitHub Actions:
 ### Available Workflows
 
 - **Code Quality** (`code-quality.yml`) - Unified validation pipeline
-  - `validate` - Quick validation (format, lint, lightweight tests)
-  - `validate:all` - Full validation with Docker (manual trigger only)
+  - `validate` - Code quality validation (formatting check)
 
 - **BATS Test Suite** (`bats-tests.yml`) - Comprehensive testing
   - Parallel test execution across modpacks
@@ -226,17 +225,16 @@ The project includes comprehensive CI/CD workflows using GitHub Actions:
 Use these commands for local development and validation:
 
 ```bash
-# Quick validation (recommended for development and CI)
-pnpm run validate
+# Code quality validation (recommended for development and CI)
+pnpm run lint
 
 # Full validation (requires Docker, comprehensive testing)
 pnpm run validate:all
 
 # Individual checks
-pnpm run format:check # Check code formatting
-pnpm run lint         # Lint shell scripts
-pnpm run test         # Run all tests
-pnpm run test:quick   # Run lightweight tests
+pnpm run lint       # Check code formatting
+pnpm run test       # Run all tests
+pnpm run test:quick # Run lightweight tests
 ```
 
 ### Pipeline Integration
@@ -245,7 +243,6 @@ The CI/CD pipeline automatically runs on:
 
 - **Push to master** - Quick validation suite
 - **Pull requests** - Quick validation suite
-- **Manual trigger** - Full validation with Docker
 - **Pre-commit** - Code formatting (via Husky)
 - **Pre-push** - Quick tests (via Husky)
 

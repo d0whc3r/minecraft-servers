@@ -1,2 +1,2 @@
 # Format code with prettier and stage changes
-pnpm run format
+pnpm run lint:fix

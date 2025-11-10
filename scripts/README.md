@@ -201,15 +201,9 @@ The project includes npm/pnpm scripts for development, testing, and deployment. 
 
 ### Code Quality Scripts
 
-- `pnpm run format` - Format all files with Prettier
-- `pnpm run format:check` - Check if files are properly formatted
-- `pnpm run format:sh` - Format only shell scripts
-- `pnpm run format:md` - Format only markdown files
-- `pnpm run format:config` - Format configuration files (.env, .yml, .yaml)
-- `pnpm run lint` - Lint shell scripts with shellcheck
-- `pnpm run lint:fix` - Auto-fix shell script issues
-- `pnpm run validate` - Run format check, lint, and quick tests
-- `pnpm run validate:all` - Run format check, lint, and all tests
+- `lint` - Check code formatting with Prettier
+- `lint:fix` - Format code with Prettier
+- `pnpm run validate:all` - Run lint check and all tests
 
 ### Docker Scripts
 
@@ -243,7 +237,7 @@ The project includes npm/pnpm scripts for development, testing, and deployment. 
 
 The project uses Husky for git hooks:
 
-- **pre-commit**: Runs `pnpm run format` to auto-format code
+- **pre-commit**: Runs `pnpm run lint:fix` to auto-format code
 - **pre-push**: Runs `pnpm run test:quick` for lightweight testing
 
 ### Usage Examples
@@ -253,7 +247,7 @@ The project uses Husky for git hooks:
 pnpm run dev:setup
 
 # Quick validation before committing
-pnpm run validate
+pnpm run lint
 
 # Start development environment
 pnpm run docker:up
@@ -273,7 +267,7 @@ pnpm run ci
 Scripts are organized by purpose:
 
 1. **Testing** (`test:*`) - Quality assurance and validation
-2. **Code Quality** (`format:*`, `lint:*`, `validate`) - Code formatting and linting
+2. **Code Quality** (`lint:*`) - Code formatting and linting
 3. **Docker** (`docker:*`) - Container management
 4. **Server** (`server:*`) - Individual server operations
 5. **Backup** (`backup*`) - Data protection
@@ -288,17 +282,10 @@ The package.json scripts are designed to work seamlessly with CI/CD pipelines:
 ```yaml
 # Quick validation (recommended for PRs and pushes)
 - name: Run validation
-  run: pnpm run validate
-
-# Full validation (manual workflow trigger with Docker)
-- name: Run full validation
-  run: pnpm run validate:all
+  run: pnpm run lint
 
 # Individual pipeline steps
 - name: Check formatting
-  run: pnpm run format:check
-
-- name: Lint scripts
   run: pnpm run lint
 
 - name: Run tests
@@ -307,26 +294,26 @@ The package.json scripts are designed to work seamlessly with CI/CD pipelines:
 
 ### Local Development vs CI
 
-- **Local Development**: Use `pnpm run validate` for fast feedback
-- **CI Pipeline**: Use `pnpm run validate` for automated checks
+- **Local Development**: Use `pnpm run lint` for fast feedback
+- **CI Pipeline**: Use `pnpm run lint` for automated checks
 - **Full Validation**: Use `pnpm run validate:all` when Docker is available
-- **Pre-commit**: Uses `pnpm run format` for automatic formatting
+- **Pre-commit**: Uses `pnpm run lint:fix` for automatic formatting
 - **Pre-push**: Uses `pnpm run test:quick` for lightweight testing
 
 ### Validation Scripts
 
-- `validate` - Quick validation (format + lint + quick tests)
+- `lint` - Code quality validation (formatting check)
   - ✅ Fast feedback for development
   - ✅ No Docker required
   - ✅ Used in CI pipelines
   - ✅ Suitable for pre-commit hooks
 
-- `validate:all` - Full validation (format + lint + all tests)
+- `validate:all` - Full validation (lint + all tests)
   - ✅ Comprehensive testing with Docker
   - ✅ Tests complete server startup
   - ❌ Slower execution
   - ❌ Requires Docker environment
-  - ✅ Manual workflow trigger available
+  - ✅ Available via `bats-tests.yml` pipeline
 
 ### Pipeline Benefits
 

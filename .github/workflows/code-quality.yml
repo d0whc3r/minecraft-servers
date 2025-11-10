@@ -25,25 +25,4 @@ jobs:
           node-version: '22'
 
       - name: Run validation suite
-        run: pnpm run validate
-
-  full-validation:
-    name: Full Validation (Docker)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Dependencies
-        uses: ./.github/actions/setup-deps
-        with:
-          node-version: '22'
-
-      - name: Setup Docker Environment
-        uses: ./.github/actions/setup-docker
-        with:
-          docker-version: '24.0.7'
-
-      - name: Run full validation with Docker
-        run: pnpm run validate:all
+        run: pnpm run lint

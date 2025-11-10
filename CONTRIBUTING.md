@@ -133,15 +133,10 @@ This project uses **Prettier** for consistent code formatting across all file ty
 
 ```bash
 # Check formatting
-pnpm run format:check
+pnpm run lint
 
 # Auto-format all files
-pnpm run format
-
-# Format specific file types
-pnpm run format:sh     # Bash scripts
-pnpm run format:md     # Markdown files
-pnpm run format:config # Config files (.env, .yml, .yaml)
+pnpm run lint:fix
 ```
 
 **Prettier configuration:**
