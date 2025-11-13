@@ -103,7 +103,14 @@ get_modpack_name() {
         fi
 
         # Validate required environment variables
-        local required_vars=("SERVER_NAME" "VERSION" "MEMORY")
+        local required_vars=()
+        local type
+        type=$(grep "^TYPE=" "$config_file" | cut -d'=' -f2)
+        if [ "$type" = "AUTO_CURSEFORGE" ]; then
+            required_vars=("SERVER_NAME" "MEMORY")
+        else
+            required_vars=("SERVER_NAME" "VERSION" "MEMORY")
+        fi
         local missing_vars=()
 
         for var in "${required_vars[@]}"; do
@@ -119,7 +126,7 @@ get_modpack_name() {
         # Validate VERSION format (basic check)
         local version
         version=$(grep "^VERSION=" "$config_file" | cut -d'=' -f2)
-        if [ -n "$version" ] && ! [[ "$version" =~ ^[0-9]+\.[0-9]+ ]]; then
+        if [ -n "$version" ] && ! [[ "$version" =~ ^[0-9]+(\.[0-9]+)+ ]]; then
             invalid_configs+=("$modpack_name:invalid_version($version)")
         fi
 
