@@ -25,7 +25,7 @@ docker logs -f mc-unofficial-dragon-block-c
 
 | Setting         | Value                            |
 | --------------- | -------------------------------- |
-| **Port**        | 25574                            |
+| **Port**        | 25572                            |
 | **Memory**      | 4GB                              |
 | **Type**        | CurseForge                       |
 | **Max Players** | 20 (supports epic group battles) |
@@ -36,7 +36,7 @@ docker logs -f mc-unofficial-dragon-block-c
 
 ## Connection
 
-- **Address**: `your-server-ip:25574`
+- **Address**: `your-server-ip:25572`
 - **Version**: 1.12.2
 - **Client**: Install Unofficial Dragon Block C from CurseForge Launcher
 
@@ -224,7 +224,7 @@ WHITELIST=player1,player2,player3
 docker logs mc-unofficial-dragon-block-c
 
 # Common issues:
-# - Port 25574 already in use
+# - Port 25572 already in use
 # - Insufficient memory (need 4GB+)
 # - CurseForge API issues
 ```
@@ -241,7 +241,7 @@ MEMORY=6G
 ### Clients can't connect
 
 1. Ensure client has Unofficial Dragon Block C modpack installed
-2. Check firewall allows port 25574
+2. Check firewall allows port 25572
 3. Verify server is running: `docker ps | grep unofficial-dragon-block-c`
 4. Check server logs for errors
 

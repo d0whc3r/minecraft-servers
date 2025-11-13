@@ -33,10 +33,10 @@ Location: `config/modpacks/skyfactory4.env`
 ```env
 TYPE=AUTO_CURSEFORGE
 VERSION=1.12.2
-MEMORY=4G
+MEMORY=6G
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/skyfactory-4
-SERVER_NAME=SkyFactory 4
-SERVER_PORT=25566
+SERVER_NAME=skyfactory4
+SERVER_PORT=25565
 MAX_PLAYERS=10
 DIFFICULTY=normal
 VIEW_DISTANCE=10
@@ -61,7 +61,7 @@ docker logs -f mc-skyfactory4
 
 ## Connecting
 
-- **Address**: `your-server-ip:25566`
+- **Address**: `your-server-ip:25565`
 - **Client**: Install SkyFactory 4 from CurseForge
 - **Version**: Must match server (1.12.2)
 

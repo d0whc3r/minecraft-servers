@@ -25,7 +25,7 @@ docker logs -f mc-my-hero-adventure
 
 | Setting         | Value                            |
 | --------------- | -------------------------------- |
-| **Port**        | 25578                            |
+| **Port**        | 25576                            |
 | **Memory**      | 4GB                              |
 | **Type**        | CurseForge                       |
 | **Max Players** | 20 (hero training grounds)       |
@@ -36,7 +36,7 @@ docker logs -f mc-my-hero-adventure
 
 ## Connection
 
-- **Address**: `your-server-ip:25578`
+- **Address**: `your-server-ip:25576`
 - **Version**: 1.12.2
 - **Client**: Install My Hero Adventure from CurseForge Launcher
 
@@ -221,7 +221,7 @@ VIEW_DISTANCE=12 # Increase for better exploration
 docker logs mc-my-hero-adventure
 
 # Common issues:
-# - Port 25578 already in use
+# - Port 25576 already in use
 # - Insufficient memory (need 4GB+)
 # - CurseForge API issues
 ```
@@ -238,7 +238,7 @@ MEMORY=6G
 ### Clients can't connect
 
 1. Ensure client has My Hero Adventure modpack installed
-2. Check firewall allows port 25578
+2. Check firewall allows port 25576
 3. Verify server is running: `docker ps | grep my-hero-adventure`
 4. Check server logs for errors
 

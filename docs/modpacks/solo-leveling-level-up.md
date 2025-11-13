@@ -25,7 +25,7 @@ docker logs -f mc-solo-leveling-level-up
 
 | Setting         | Value                             |
 | --------------- | --------------------------------- |
-| **Port**        | 25577                             |
+| **Port**        | 25575                             |
 | **Memory**      | 4GB                               |
 | **Type**        | CurseForge                        |
 | **Max Players** | 20 (good for small-medium groups) |
@@ -36,7 +36,7 @@ docker logs -f mc-solo-leveling-level-up
 
 ## Connection
 
-- **Address**: `your-server-ip:25577`
+- **Address**: `your-server-ip:25575`
 - **Version**: 1.20.1
 - **Client**: Install Solo Leveling - Level Up from CurseForge Launcher
 
@@ -218,7 +218,7 @@ VIEW_DISTANCE=14 # Increase for better visuals
 docker logs mc-solo-leveling-level-up
 
 # Common issues:
-# - Port 25577 already in use
+# - Port 25575 already in use
 # - Insufficient memory (need 4GB+)
 # - CurseForge API issues
 ```
@@ -235,7 +235,7 @@ MEMORY=6G
 ### Clients can't connect
 
 1. Ensure client has Solo Leveling - Level Up modpack installed
-2. Check firewall allows port 25577
+2. Check firewall allows port 25575
 3. Verify server is running: `docker ps | grep solo-leveling-level-up`
 4. Check server logs for errors
 

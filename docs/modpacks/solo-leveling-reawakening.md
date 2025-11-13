@@ -25,7 +25,7 @@ docker logs -f mc-solo-leveling-reawakening
 
 | Setting         | Value                             |
 | --------------- | --------------------------------- |
-| **Port**        | 25573                             |
+| **Port**        | 25571                             |
 | **Memory**      | 4GB                               |
 | **Type**        | CurseForge                        |
 | **Max Players** | 20 (supports small-medium groups) |
@@ -36,7 +36,7 @@ docker logs -f mc-solo-leveling-reawakening
 
 ## Connection
 
-- **Address**: `your-server-ip:25573`
+- **Address**: `your-server-ip:25571`
 - **Version**: 1.20.1
 - **Client**: Install Solo Leveling - Reawakening from CurseForge Launcher
 
@@ -224,7 +224,7 @@ WHITELIST=player1,player2,player3
 docker logs mc-solo-leveling-reawakening
 
 # Common issues:
-# - Port 25573 already in use
+# - Port 25571 already in use
 # - Insufficient memory (need 4GB+)
 # - CurseForge API issues
 ```
@@ -241,7 +241,7 @@ MEMORY=6G
 ### Clients can't connect
 
 1. Ensure client has Solo Leveling - Reawakening modpack installed
-2. Check firewall allows port 25573
+2. Check firewall allows port 25571
 3. Verify server is running: `docker ps | grep solo-leveling`
 4. Check server logs for errors
 

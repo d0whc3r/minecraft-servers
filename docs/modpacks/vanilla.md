@@ -34,7 +34,7 @@ TYPE=PAPER
 VERSION=1.20.4
 MEMORY=2G
 SERVER_NAME=Vanilla Server
-SERVER_PORT=25569
+SERVER_PORT=25567
 MAX_PLAYERS=20
 DIFFICULTY=normal
 VIEW_DISTANCE=10
@@ -59,7 +59,7 @@ docker logs -f mc-vanilla
 
 ## Connecting
 
-- **Address**: `your-server-ip:25569`
+- **Address**: `your-server-ip:25567`
 - **Client**: Vanilla Minecraft Java Edition 1.20.4
 - **No mods required**: Pure vanilla experience
 
@@ -82,7 +82,7 @@ Edit `servers/vanilla/data/server.properties`:
 ```properties
 # Server Info
 motd="Vanilla Survival Server"
-server-port=25569
+server-port=25567
 max-players=20
 
 # Gameplay
@@ -268,7 +268,7 @@ docker exec -it mc-vanilla rcon-cli timings paste
 
 - Check server is running: `docker ps`
 - Verify version matches (1.20.4)
-- Check firewall: `sudo ufw allow 25569/tcp`
+- Check firewall: `sudo ufw allow 25567/tcp`
 - Confirm port forwarding if behind router
 
 ### Corrupted Chunks

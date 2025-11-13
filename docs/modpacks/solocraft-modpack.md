@@ -25,7 +25,7 @@ docker logs -f mc-solocraft-modpack
 
 | Setting         | Value                           |
 | --------------- | ------------------------------- |
-| **Port**        | 25572                           |
+| **Port**        | 25570                           |
 | **Memory**      | 3GB                             |
 | **Type**        | Modrinth                        |
 | **Max Players** | 10 (optimized for small groups) |
@@ -35,7 +35,7 @@ docker logs -f mc-solocraft-modpack
 
 ## Connection
 
-- **Address**: `your-server-ip:25572`
+- **Address**: `your-server-ip:25570`
 - **Version**: Check modpack page for exact version
 - **Client**: Install SoloCraft modpack from Modrinth Launcher
 
@@ -68,7 +68,7 @@ Configuration file: `config/modpacks/solocraft-modpack.env`
 # Modpack settings
 TYPE=MODRINTH
 MODRINTH_MODPACK=solocraft-modpack
-VERSION=LATEST
+VERSION=1.20.1
 
 # Performance
 MEMORY=3G
@@ -178,7 +178,7 @@ MAX_MEMORY=4G
 docker logs mc-solocraft-modpack
 
 # Common issues:
-# - Port 25572 already in use
+# - Port 25570 already in use
 # - Insufficient memory
 # - Network issues downloading modpack
 ```
@@ -195,7 +195,7 @@ MEMORY=4G
 ### Clients can't connect
 
 1. Ensure client has SoloCraft modpack installed
-2. Check firewall allows port 25572
+2. Check firewall allows port 25570
 3. Verify server is running: `docker ps | grep solocraft`
 4. Check server logs for errors
 

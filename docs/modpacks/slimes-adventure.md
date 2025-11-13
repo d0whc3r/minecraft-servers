@@ -25,7 +25,7 @@ docker logs -f mc-slimes-adventure
 
 | Setting         | Value    |
 | --------------- | -------- |
-| **Port**        | 25571    |
+| **Port**        | 25569    |
 | **Memory**      | 4GB      |
 | **Type**        | Modrinth |
 | **Max Players** | 20       |
@@ -34,7 +34,7 @@ docker logs -f mc-slimes-adventure
 
 ## Connection
 
-- **Address**: `your-server-ip:25571`
+- **Address**: `your-server-ip:25569`
 - **Version**: Check modpack page for exact version
 - **Client**: Install Slimes Adventure modpack from Modrinth Launcher
 
@@ -66,7 +66,7 @@ Configuration file: `config/modpacks/slimes-adventure.env`
 # Modpack settings
 TYPE=MODRINTH
 MODRINTH_MODPACK=slimes-adventure
-VERSION=LATEST
+VERSION=1.19.2
 
 # Performance
 MEMORY=4G
@@ -162,7 +162,7 @@ MAX_MEMORY=6G
 docker logs mc-slimes-adventure
 
 # Common issues:
-# - Port 25571 already in use
+# - Port 25569 already in use
 # - Insufficient memory
 # - Network issues downloading modpack
 ```
@@ -181,7 +181,7 @@ VIEW_DISTANCE=8
 ### Clients can't connect
 
 1. Ensure client has Slimes Adventure modpack installed
-2. Check firewall allows port 25571
+2. Check firewall allows port 25569
 3. Verify server is running: `docker ps | grep slimes-adventure`
 4. Check server logs for errors
 

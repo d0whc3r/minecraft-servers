@@ -25,7 +25,7 @@ docker logs -f mc-solo-leveling-shadows
 
 | Setting         | Value                        |
 | --------------- | ---------------------------- |
-| **Port**        | 25576                        |
+| **Port**        | 25574                        |
 | **Memory**      | 6GB                          |
 | **Type**        | CurseForge                   |
 | **Max Players** | 30 (large community support) |
@@ -36,7 +36,7 @@ docker logs -f mc-solo-leveling-shadows
 
 ## Connection
 
-- **Address**: `your-server-ip:25576`
+- **Address**: `your-server-ip:25574`
 - **Version**: 1.20.1
 - **Client**: Install Solo Leveling - Shadows from CurseForge Launcher
 
@@ -229,7 +229,7 @@ Unlock powerful monarch classes later:
 docker logs mc-solo-leveling-shadows
 
 # Common issues:
-# - Port 25576 already in use
+# - Port 25574 already in use
 # - Insufficient memory (need 6GB+)
 # - CurseForge API issues
 ```
@@ -246,7 +246,7 @@ MEMORY=8G
 ### Clients can't connect
 
 1. Ensure client has Solo Leveling - Shadows modpack installed
-2. Check firewall allows port 25576
+2. Check firewall allows port 25574
 3. Verify server is running: `docker ps | grep solo-leveling-shadows`
 4. Check server logs for errors
 
