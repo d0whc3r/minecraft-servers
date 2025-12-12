@@ -150,7 +150,7 @@ jobs:
           docker-version: ${{ steps.config.outputs.DOCKER_VERSION || '28.5.2' }}
 
       - name: Cache Docker temporary files
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             /tmp/docker-images
@@ -250,7 +250,7 @@ jobs:
           fi
 
       - name: Cache pnpm dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.pnpm-store
@@ -262,7 +262,7 @@ jobs:
             pnpm-${{ runner.os }}-
 
       - name: Cache Docker temporary files
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             /tmp/docker-images
@@ -273,7 +273,7 @@ jobs:
             docker-images-${{ runner.os }}-
 
       - name: Cache test artifacts and logs
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             test-results/
