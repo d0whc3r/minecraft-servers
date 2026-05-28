@@ -13,7 +13,7 @@
   },
   "author": "d0whc3r",
   "license": "ISC",
-  "packageManager": "pnpm@10.22.0",
+  "packageManager": "pnpm@10.34.1",
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"
