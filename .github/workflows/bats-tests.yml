@@ -23,6 +23,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Load configuration
+        id: config
+        run: |
+          # Load configuration from .github/workflows/config
+          if [ -f ".github/workflows/config" ]; then
+            echo "Loading configuration from .github/workflows/config"
+            while IFS='=' read -r key value; do
+              # Skip comments and empty lines
+              [[ $key =~ ^[[:space:]]*# ]] && continue
+              [[ -z "$key" ]] && continue
+              # Remove whitespace
+              key=$(echo "$key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+              value=$(echo "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+              echo "$key=$value" >> $GITHUB_OUTPUT
+            done < .github/workflows/config
+          else
+            echo "Configuration file not found, using defaults"
+          fi
+
       - name: Generate test matrix
         id: generate-matrix
         run: |
@@ -36,9 +55,17 @@ jobs:
           echo "Found $TOTAL_MODPACKS modpacks: ${MODPACK_ARRAY[*]}"
           echo "total-modpacks=$TOTAL_MODPACKS" >> $GITHUB_OUTPUT
 
-          # Optimized chunking strategy: max 2 mods per chunk, max 2 parallel jobs
-          CHUNK_SIZE=2  # Maximum 2 modpacks per job to avoid timeouts
-          echo "Using chunk size: $CHUNK_SIZE (max 2 mods per job)"
+          # Chunk size from CHUNK_STRATEGY (.github/workflows/config):
+          #   small -> 1, medium -> 2, large -> 3 modpacks per job.
+          # Smaller chunks = more, faster jobs; larger chunks = fewer, slower jobs.
+          CHUNK_STRATEGY="${{ steps.config.outputs.CHUNK_STRATEGY || 'medium' }}"
+          case "$CHUNK_STRATEGY" in
+            small) CHUNK_SIZE=1 ;;
+            medium) CHUNK_SIZE=2 ;;
+            large) CHUNK_SIZE=3 ;;
+            *) echo "Unknown CHUNK_STRATEGY '$CHUNK_STRATEGY', defaulting to medium (2)"; CHUNK_SIZE=2 ;;
+          esac
+          echo "Chunk strategy: $CHUNK_STRATEGY -> chunk size: $CHUNK_SIZE"
 
           # Create matrix JSON with Java version analysis
           MATRIX_JSON="{\"include\":["
@@ -50,12 +77,6 @@ jobs:
           CHUNK_INDEX=0
           i=0
           while [ $i -lt $TOTAL_MODPACKS ]; do
-            # Calculate end index for this chunk
-            end=$((i + CHUNK_SIZE))
-            if [ $end -gt $TOTAL_MODPACKS ]; then
-              end=$TOTAL_MODPACKS
-            fi
-
             # Extract chunk modpacks
             CHUNK_MODPACKS=("${MODPACK_ARRAY[@]:i:CHUNK_SIZE}")
             CHUNK_COUNT=${#CHUNK_MODPACKS[@]}
@@ -96,9 +117,8 @@ jobs:
             # Escape special characters for JSON
             MODPACK_LIST=$(echo "$MODPACK_LIST" | sed 's/\\/\\\\/g; s/"/\\"/g')
             MODPACK_PATTERN=$(echo "$MODPACK_PATTERN" | sed 's/\\/\\\\/g; s/"/\\"/g')
-            CHUNK_JAVA_VERSIONS=$(echo "$CHUNK_JAVA_VERSIONS" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
-            MATRIX_JSON="${MATRIX_JSON}{\"chunk\":$CHUNK_INDEX,\"modpacks\":\"$MODPACK_LIST\",\"pattern\":\"$MODPACK_PATTERN\",\"count\":$CHUNK_COUNT,\"java_versions\":\"$CHUNK_JAVA_VERSIONS\"},"
+            MATRIX_JSON="${MATRIX_JSON}{\"chunk\":$CHUNK_INDEX,\"modpacks\":\"$MODPACK_LIST\",\"pattern\":\"$MODPACK_PATTERN\",\"count\":$CHUNK_COUNT},"
 
             i=$((i + CHUNK_SIZE))
             CHUNK_INDEX=$((CHUNK_INDEX + 1))
