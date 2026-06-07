@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@wasm-fmt/shfmt':
+        specifier: ^0.2.7
+        version: 0.2.7
       bats:
         specifier: ^1.13.0
         version: 1.13.0
@@ -17,12 +20,6 @@ importers:
       oxfmt:
         specifier: ^0.53.0
         version: 0.53.0
-      prettier:
-        specifier: ^3.8.3
-        version: 3.8.3
-      prettier-plugin-sh:
-        specifier: ^0.18.1
-        version: 0.18.1(prettier@3.8.3)
 
 packages:
 
@@ -148,9 +145,9 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@reteps/dockerfmt@0.5.2':
-    resolution: {integrity: sha512-Hbr7yen4fP5TxGM54ucXa4o5NwWXatJ6Bd9I8gp0PValYbI4Rug2Gu+rVv7K7o/efQc3F5ctqWJz47rYaa8zBw==}
-    engines: {node: ^v12.20.0 || ^14.13.0 || >=16.0.0}
+  '@wasm-fmt/shfmt@0.2.7':
+    resolution: {integrity: sha512-bxmf5pXBHe3ujjc2iEoXqRXKgrQmR44jHLZ9G5BsKsb5moDWsuqsISs+88Ov9/SAI88caXYIsP02U4c4YDQpIQ==}
+    engines: {node: '>=16.17.0'}
 
   bats@1.13.0:
     resolution: {integrity: sha512-giSYKGTOcPZyJDbfbTtzAedLcNWdjCLbXYU3/MwPnjyvDXzu6Dgw8d2M+8jHhZXSmsCMSQqCp+YBsJ603UO4vQ==}
@@ -174,27 +171,9 @@ packages:
       vite-plus:
         optional: true
 
-  prettier-plugin-sh@0.18.1:
-    resolution: {integrity: sha512-uZmU22wBMevjh3rmCatNQqiEer2+5KLa0xYCBX6zQQUQkcNzVL+s6FbPKK6ZSUNUbQk6jMAcQHrYPvuL2W6ihQ==}
-    engines: {node: '>=16.0.0'}
-    peerDependencies:
-      prettier: ^3.6.0
-
-  prettier@3.8.3:
-    resolution: {integrity: sha512-7igPTM53cGHMW8xWuVTydi2KO233VFiTNyF5hLJqpilHfmn8C8gPf+PS7dUT64YcXFbiMGZxS9pCSxL/Dxm/Jw==}
-    engines: {node: '>=14'}
-    hasBin: true
-
-  sh-syntax@0.5.8:
-    resolution: {integrity: sha512-JfVoxf4FxQI5qpsPbkHhZo+n6N9YMJobyl4oGEUBb/31oQYlgTjkXQD8PBiafS2UbWoxrTO0Z5PJUBXEPAG1Zw==}
-    engines: {node: '>=16.0.0'}
-
   tinypool@2.1.0:
     resolution: {integrity: sha512-Pugqs6M0m7Lv1I7FtxN4aoyToKg1C4tu+/381vH35y8oENM/Ai7f7C4StcoK4/+BSw9ebcS8jRiVrORFKCALLw==}
     engines: {node: ^20.0.0 || >=22.0.0}
-
-  tslib@2.8.1:
-    resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
 snapshots:
 
@@ -255,7 +234,7 @@ snapshots:
   '@oxfmt/binding-win32-x64-msvc@0.53.0':
     optional: true
 
-  '@reteps/dockerfmt@0.5.2': {}
+  '@wasm-fmt/shfmt@0.2.7': {}
 
   bats@1.13.0: {}
 
@@ -285,18 +264,4 @@ snapshots:
       '@oxfmt/binding-win32-ia32-msvc': 0.53.0
       '@oxfmt/binding-win32-x64-msvc': 0.53.0
 
-  prettier-plugin-sh@0.18.1(prettier@3.8.3):
-    dependencies:
-      '@reteps/dockerfmt': 0.5.2
-      prettier: 3.8.3
-      sh-syntax: 0.5.8
-
-  prettier@3.8.3: {}
-
-  sh-syntax@0.5.8:
-    dependencies:
-      tslib: 2.8.1
-
   tinypool@2.1.0: {}
-
-  tslib@2.8.1: {}

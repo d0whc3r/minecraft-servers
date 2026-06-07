@@ -23,9 +23,13 @@ if (!name) {
 // Pick a PowerShell executable: prefer PowerShell 7 (pwsh), fall back to
 // Windows PowerShell (powershell), which ships with every Windows install.
 function pickPowerShell() {
-  const probe = spawnSync('pwsh', ['-NoProfile', '-Command', '$PSVersionTable.PSVersion.Major'], {
-    stdio: 'ignore',
-  });
+  const probe = spawnSync(
+    'pwsh',
+    ['-NoProfile', '-Command', '$PSVersionTable.PSVersion.Major'],
+    {
+      stdio: 'ignore',
+    }
+  );
   return !probe.error && probe.status === 0 ? 'pwsh' : 'powershell';
 }
 

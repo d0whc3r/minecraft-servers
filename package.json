@@ -29,8 +29,8 @@
     "test": "bats tests/bats/",
     "test:verbose": "bats --verbose tests/bats/",
     "test:quick": "bats --filter 'US1-TC00[1-6]:' tests/bats/",
-    "lint": "prettier --check .",
-    "lint:fix": "prettier --write .",
+    "lint": "oxfmt --check . && node scripts/format-shell.mjs --check",
+    "lint:fix": "oxfmt . && node scripts/format-shell.mjs",
     "validate:all": "pnpm run lint && pnpm run test",
     "prepare": "husky",
     "docker:build": "docker-compose build",
@@ -51,22 +51,10 @@
     "ci": "pnpm run lint && pnpm run test"
   },
   "devDependencies": {
+    "@wasm-fmt/shfmt": "^0.2.7",
     "bats": "^1.13.0",
     "husky": "^9.1.7",
-    "oxfmt": "^0.53.0",
-    "prettier": "^3.8.3",
-    "prettier-plugin-sh": "^0.18.1"
-  },
-  "prettier": {
-    "endOfLine": "lf",
-    "plugins": [
-      "prettier-plugin-sh"
-    ],
-    "printWidth": 100,
-    "semi": true,
-    "singleQuote": true,
-    "tabWidth": 2,
-    "useTabs": false
+    "oxfmt": "^0.53.0"
   },
   "engines": {
     "node": ">=18.0.0",

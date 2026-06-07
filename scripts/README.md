@@ -239,8 +239,8 @@ The project includes npm/pnpm scripts for development, testing, and deployment. 
 
 ### Code Quality Scripts
 
-- `lint` - Check code formatting with Prettier
-- `lint:fix` - Format code with Prettier
+- `lint` - Check code formatting with oxfmt (+ shfmt for Bash)
+- `lint:fix` - Format code with oxfmt (+ shfmt for Bash)
 - `pnpm run validate:all` - Run lint check and all tests
 
 ### Docker Scripts

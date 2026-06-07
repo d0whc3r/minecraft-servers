@@ -28,7 +28,7 @@ Run the validation script to check your setup:
    ```bash
    # Linux
    sudo systemctl start docker
-   
+
    # macOS
    # Start Docker Desktop application
    ```
@@ -71,7 +71,7 @@ Run the validation script to check your setup:
    # Linux/macOS
    lsof -i :25565
    netstat -tulpn | grep :25565
-   
+
    # Windows
    netstat -ano | findstr :25565
    ```
@@ -141,7 +141,7 @@ Run the validation script to check your setup:
    ```bash
    # Linux
    free -h
-   
+
    # macOS
    vm_stat
    ```
@@ -163,7 +163,7 @@ Run the validation script to check your setup:
   ./scripts/add-modpack.sh my-server
   ./scripts/add-modpack.sh server-01
   ./scripts/add-modpack.sh testserver
-  
+
   # Invalid names
   ./scripts/add-modpack.sh MyServer  # uppercase not allowed
   ./scripts/add-modpack.sh server_01 # underscores not allowed
@@ -261,7 +261,7 @@ Run the validation script to check your setup:
    ```bash
    # Check if checksum file exists
    cat backups/server-name/backup-2024-01-01.tar.gz.sha256
-   
+
    # Verify against actual file
    sha256sum backups/server-name/backup-2024-01-01.tar.gz
    ```
@@ -401,10 +401,10 @@ Run the validation script to check your setup:
    ```bash
    # CPU usage
    top
-   
+
    # Memory usage
    free -h
-   
+
    # Disk I/O
    iostat -x 1
    ```
@@ -453,7 +453,7 @@ Run the validation script to check your setup:
    # Linux
    sudo ufw status
    sudo iptables -L
-   
+
    # macOS
    sudo pfctl -s rules
    ```
@@ -506,7 +506,7 @@ Run the validation script to check your setup:
    ```bash
    # List backups by size
    find backups/ -name "*.tar.gz" -exec ls -lh {} \; | sort -k5 -hr
-   
+
    # Remove old backups (keep last 3)
    ls -t backups/server-name/*.tar.gz | tail -n +4 | xargs rm
    ```

@@ -18,9 +18,9 @@ services:
     ports:
       # Map external port (SERVER_PORT) to internal port 25565
       # Minecraft server ALWAYS listens on 25565 inside the container
-      - '${SERVER_PORT:-25565}:25565'
+      - "${SERVER_PORT:-25565}:25565"
       # Map RCON port if enabled (RCON_PORT external to internal RCON port)
-      - '${RCON_PORT:-25575}:${RCON_PORT:-25575}'
+      - "${RCON_PORT:-25575}:${RCON_PORT:-25575}"
     environment:
       # Override SERVER_PORT to always be 25565 internally
       # The external port mapping handles the actual port exposure

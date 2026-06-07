@@ -203,7 +203,7 @@ For vanilla servers with plugins:
    ```bash
    # Create plugins directory
    mkdir servers/plugins-server/data/plugins
-   
+
    # Copy plugin JARs
    cp *.jar servers/plugins-server/data/plugins/
    ```
