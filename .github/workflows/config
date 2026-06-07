@@ -7,7 +7,7 @@
 # Usage:
 # - Modify values here to change pipeline behavior
 # - Workflows will use these values with fallbacks to defaults
-# - Changes here affect: bats-tests.yml, code-quality.yml
+# - Changes here affect: bats-tests.yml
 #
 # This file contains configuration overrides for the BATS test pipeline
 # Values here will override defaults in the workflow
@@ -20,7 +20,7 @@ PARALLEL_JOBS=1
 DOCKER_VERSION=28.5.2
 
 # Dependency versions
-NODE_VERSION=22
+# NODE_VERSION is now taken from .nvmrc
 # PNPM_VERSION is now taken from package.json packageManager field
 
 # Chunking strategy

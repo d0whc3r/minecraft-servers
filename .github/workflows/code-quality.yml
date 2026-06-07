@@ -17,31 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Load configuration
-        id: config
-        run: |
-          # Load configuration from .github/workflows/config
-          if [ -f ".github/workflows/config" ]; then
-            echo "Loading configuration from .github/workflows/config"
-            while IFS='=' read -r key value; do
-              # Skip comments and empty lines
-              [[ $key =~ ^[[:space:]]*# ]] && continue
-              [[ -z "$key" ]] && continue
-              # Remove whitespace
-              key=$(echo "$key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-              value=$(echo "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-              echo "$key=$value" >> $GITHUB_OUTPUT
-            done < .github/workflows/config
-          else
-            echo "Configuration file not found, using defaults"
-          fi
+        uses: actions/checkout@v6
 
       - name: Setup Dependencies
         uses: ./.github/actions/setup-deps
-        with:
-          node-version: ${{ steps.config.outputs.NODE_VERSION || '22' }}
 
       - name: Run validation suite
         run: pnpm run lint
