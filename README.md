@@ -158,6 +158,9 @@ docker logs -f mc-vanilla
 # Add custom server
 ./scripts/add-modpack.sh my-custom --modpack=vanilla --port=25570
 
+# Add a CurseForge server pinned to a specific version (won't auto-update)
+./scripts/add-modpack.sh atm --modpack=atm8 --cf-file-id=4962718
+
 # Stop all servers
 ./scripts/stop-all.sh
 ```

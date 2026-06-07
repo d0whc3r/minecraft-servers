@@ -71,6 +71,8 @@ Configuration file: `config/modpacks/amazing-fps-booster.env`
 # Modpack settings
 TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/amazing-fps-booster
+# Pinned version — locks to this file so the modpack does NOT auto-update (remove CF_FILE_ID to track latest)
+CF_FILE_ID=5358267
 VERSION=1.20.6
 
 # Performance (optimized for low resource usage)

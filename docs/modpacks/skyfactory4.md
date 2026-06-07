@@ -35,6 +35,8 @@ TYPE=AUTO_CURSEFORGE
 VERSION=1.12.2
 MEMORY=6G
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/skyfactory-4
+# Pinned version — locks to this file so the modpack does NOT auto-update (remove CF_FILE_ID to track latest)
+CF_FILE_ID=3565683
 SERVER_NAME=skyfactory4
 SERVER_PORT=25565
 MAX_PLAYERS=10

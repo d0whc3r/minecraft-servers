@@ -68,6 +68,8 @@ Configuration file: `config/modpacks/solocraft-modpack.env`
 # Modpack settings
 TYPE=MODRINTH
 MODRINTH_MODPACK=solocraft-modpack
+# Pinned version — locks to this release so the modpack does NOT auto-update (remove MODRINTH_VERSION to track latest)
+MODRINTH_VERSION=wFus3bEF
 VERSION=1.20.1
 
 # Performance

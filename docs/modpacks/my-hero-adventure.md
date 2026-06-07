@@ -71,6 +71,8 @@ Configuration file: `config/modpacks/my-hero-adventure.env`
 # Modpack settings
 TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/my-hero-adventure
+# Pinned version — locks to this file so the modpack does NOT auto-update (remove CF_FILE_ID to track latest)
+CF_FILE_ID=4408959
 VERSION=1.16.5
 
 # Performance

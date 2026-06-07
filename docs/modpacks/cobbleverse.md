@@ -66,6 +66,8 @@ Configuration file: `config/modpacks/cobbleverse.env`
 # Modpack settings
 TYPE=MODRINTH
 MODRINTH_MODPACK=cobbleverse
+# Pinned version — locks to this release so the modpack does NOT auto-update (remove MODRINTH_VERSION to track latest)
+MODRINTH_VERSION=DN77rBht
 VERSION=LATEST
 
 # Performance

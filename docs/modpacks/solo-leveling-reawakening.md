@@ -72,6 +72,8 @@ Configuration file: `config/modpacks/solo-leveling-reawakening.env`
 # Modpack settings
 TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/solo-leveling-reawakening
+# Pinned version — locks to this file so the modpack does NOT auto-update (remove CF_FILE_ID to track latest)
+CF_FILE_ID=8195039
 VERSION=1.20.1
 
 # Performance

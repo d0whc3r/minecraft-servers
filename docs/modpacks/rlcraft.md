@@ -37,6 +37,8 @@ TYPE=AUTO_CURSEFORGE
 VERSION=1.12.2
 MEMORY=6G
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/rlcraft
+# Pinned version — locks to this file so the modpack does NOT auto-update (remove CF_FILE_ID to track latest)
+CF_FILE_ID=4612979
 SERVER_NAME=rlcraft
 SERVER_PORT=25566
 MAX_PLAYERS=15

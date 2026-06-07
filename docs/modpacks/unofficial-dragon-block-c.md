@@ -72,6 +72,8 @@ Configuration file: `config/modpacks/unofficial-dragon-block-c.env`
 # Modpack settings
 TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/unofficial-dragon-block-c
+# Pinned version — locks to this file so the modpack does NOT auto-update (remove CF_FILE_ID to track latest)
+CF_FILE_ID=6139361
 VERSION=1.7.10
 
 # Performance

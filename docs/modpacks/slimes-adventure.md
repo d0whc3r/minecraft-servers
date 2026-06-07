@@ -66,6 +66,8 @@ Configuration file: `config/modpacks/slimes-adventure.env`
 # Modpack settings
 TYPE=MODRINTH
 MODRINTH_MODPACK=slimes-adventure
+# Pinned version — locks to this release so the modpack does NOT auto-update (remove MODRINTH_VERSION to track latest)
+MODRINTH_VERSION=3p1TMyom
 VERSION=1.21.1
 MODRINTH_LOADER=fabric
 

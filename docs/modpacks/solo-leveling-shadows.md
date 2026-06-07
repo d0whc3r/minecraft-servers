@@ -72,6 +72,8 @@ Configuration file: `config/modpacks/solo-leveling-shadows.env`
 # Modpack settings
 TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/solo-leveling-shadows
+# Pinned version — locks to this file so the modpack does NOT auto-update (remove CF_FILE_ID to track latest)
+CF_FILE_ID=7784343
 VERSION=1.20.1
 
 # Performance (high requirements for 400+ mods)
