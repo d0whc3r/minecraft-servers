@@ -28,9 +28,9 @@ fi
 
 # Locate a suitable Python interpreter (python3, then python).
 _python=""
-if command -v python3 >/dev/null 2>&1; then
+if command -v python3 > /dev/null 2>&1; then
   _python="python3"
-elif command -v python >/dev/null 2>&1 && python --version 2>&1 | grep -q "^Python 3"; then
+elif command -v python > /dev/null 2>&1 && python --version 2>&1 | grep -q "^Python 3"; then
   _python="python"
 fi
 
@@ -41,7 +41,8 @@ fi
 
 # Parse extension config once; emit three newline-separated fields:
 # context_file, context_markers.start, context_markers.end
-if ! _raw_opts="$("$_python" - "$EXT_CONFIG" <<'PY'
+if ! _raw_opts="$(
+  "$_python" - "$EXT_CONFIG" << 'PY'
 import sys
 try:
     import yaml
@@ -86,7 +87,7 @@ _opts_lines=()
 while IFS= read -r _line || [[ -n "$_line" ]]; do
   _opts_lines+=("$_line")
 done < <(printf '%s\n' "$_raw_opts")
-if (( ${#_opts_lines[@]} < 3 )); then
+if ((${#_opts_lines[@]} < 3)); then
   echo "agent-context: malformed config parser output; expected 3 lines (context_file, marker_start, marker_end), got ${#_opts_lines[@]}; skipping update." >&2
   exit 0
 fi
@@ -118,14 +119,15 @@ done
 unset _cf_parts _seg
 
 [[ -z "$MARKER_START" ]] && MARKER_START="$DEFAULT_START"
-[[ -z "$MARKER_END"   ]] && MARKER_END="$DEFAULT_END"
+[[ -z "$MARKER_END" ]] && MARKER_END="$DEFAULT_END"
 
 PLAN_PATH="${1:-}"
 if [[ -z "$PLAN_PATH" ]]; then
   # Pick the most recently modified plan.md one level deep (specs/<feature>/plan.md).
   # Use find + sort by modification time to avoid ls/head fragility with
   # spaces in paths or SIGPIPE from pipefail.
-  _plan_abs="$("$_python" - "$PROJECT_ROOT" <<'PY'
+  _plan_abs="$(
+    "$_python" - "$PROJECT_ROOT" << 'PY'
 import sys, os
 from pathlib import Path
 specs = Path(sys.argv[1]) / "specs"
@@ -136,7 +138,7 @@ plans = sorted(
 )
 print(plans[0] if plans else "")
 PY
-)"
+  )"
   if [[ -n "$_plan_abs" ]]; then
     PLAN_PATH="${_plan_abs#"$PROJECT_ROOT/"}"
   fi
@@ -158,7 +160,7 @@ trap 'rm -f "$TMP_SECTION"' EXIT
   echo "$MARKER_END"
 } > "$TMP_SECTION"
 
-"$_python" - "$CTX_PATH" "$MARKER_START" "$MARKER_END" "$TMP_SECTION" <<'PY'
+"$_python" - "$CTX_PATH" "$MARKER_START" "$MARKER_END" "$TMP_SECTION" << 'PY'
 import sys, os
 ctx_path, start, end, section_path = sys.argv[1:5]
 with open(section_path, "r", encoding="utf-8") as fh:
