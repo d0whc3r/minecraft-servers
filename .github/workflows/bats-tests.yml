@@ -170,6 +170,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Load configuration
+        id: config
+        run: ./.github/scripts/load-pipeline-config.sh >> "$GITHUB_OUTPUT"
+
       - name: Download test artifacts
         uses: actions/download-artifact@v8
         with:
@@ -177,67 +181,12 @@ jobs:
         continue-on-error: true
 
       - name: Generate summary report
-        run: |
-          echo "## 🧪 BATS Test Suite Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          # Overall status
-          if [ "${{ needs.test.result }}" == "success" ]; then
-            echo "✅ **All tests passed!**" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ needs.test.result }}" == "failure" ]; then
-            echo "❌ **Some tests failed**" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ **Tests completed with issues**" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📊 Execution Statistics" >> $GITHUB_STEP_SUMMARY
-          echo "- **Total Modpacks:** ${{ needs.prepare-matrix.outputs.total-modpacks }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Parallel Jobs:** Max 2 concurrent jobs" >> $GITHUB_STEP_SUMMARY
-          echo "- **Chunk Size:** Max 2 modpacks per job" >> $GITHUB_STEP_SUMMARY
-          echo "- **Required Java Versions:** ${{ needs.prepare-matrix.outputs.java-versions }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Test Duration:** Check individual job timings" >> $GITHUB_STEP_SUMMARY
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ⚡ Performance Optimizations" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Parallel test execution: max 2 concurrent jobs for GitHub free runners" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Smart Docker image caching (only required Java versions: ${{ needs.prepare-matrix.outputs.java-versions }})" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Pre-download images in dedicated job to avoid duplication" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Server data caching for faster test startup" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ pnpm dependencies caching with node_modules" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Docker temporary files caching" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Test artifacts and logs caching" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Network and volume cleanup between tests" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Reusable GitHub Actions for maintainability" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Optimized chunking: max 2 modpacks per job to avoid timeouts" >> $GITHUB_STEP_SUMMARY
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔧 Technical Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **Docker Version:** ${{ steps.config.outputs.DOCKER_VERSION || '28.5.2' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Node.js Version:** $(cat .nvmrc) (from .nvmrc)" >> $GITHUB_STEP_SUMMARY
-          echo "- **pnpm Version:** $(grep -oE 'pnpm@[0-9.]+' package.json | cut -d@ -f2) (from packageManager)" >> $GITHUB_STEP_SUMMARY
-          echo "- **BATS Version:** 1.13.0 (from package.json devDependencies)" >> $GITHUB_STEP_SUMMARY
-
-          # Show matrix details
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📋 Test Matrix" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ needs.prepare-matrix.outputs.matrix }}" != "" ]; then
-            MATRIX_DATA='${{ needs.prepare-matrix.outputs.matrix }}'
-            if command -v jq >/dev/null 2>&1; then
-              echo "$MATRIX_DATA" | jq -r '.include[] | "- Chunk \(.chunk): \(.modpacks) (\(.count) modpacks)"' >> $GITHUB_STEP_SUMMARY
-            else
-              echo "Matrix data available (jq not installed for formatting)" >> $GITHUB_STEP_SUMMARY
-            fi
-          fi
-
-          # List artifacts if any
-          if [ -d "test-artifacts" ] && [ "$(ls -A test-artifacts)" ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 📁 Test Artifacts" >> $GITHUB_STEP_SUMMARY
-            find test-artifacts -type f | head -10 | while read -r file; do
-              echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
-            done
-            if [ "$(find test-artifacts -type f | wc -l)" -gt 10 ]; then
-              echo "- ... and $(($(find test-artifacts -type f | wc -l) - 10)) more files" >> $GITHUB_STEP_SUMMARY
-            fi
-          fi
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+          TOTAL_MODPACKS: ${{ needs.prepare-matrix.outputs.total-modpacks }}
+          JAVA_VERSIONS: ${{ needs.prepare-matrix.outputs.java-versions }}
+          MATRIX_JSON: ${{ needs.prepare-matrix.outputs.matrix }}
+          DOCKER_VERSION: ${{ steps.config.outputs.DOCKER_VERSION || '28.5.2' }}
+          CHUNK_STRATEGY: ${{ steps.config.outputs.CHUNK_STRATEGY || 'medium' }}
+          MAX_PARALLEL: '2'
+        run: ./.github/scripts/generate-summary.sh >> "$GITHUB_STEP_SUMMARY"
