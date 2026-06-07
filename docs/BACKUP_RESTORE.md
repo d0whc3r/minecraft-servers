@@ -514,7 +514,7 @@ docker start mc-atm8
 
 ## Related Documentation
 
-- [QUICKSTART.md](../docs/QUICKSTART.md) - Getting started guide
-- [TROUBLESHOOTING.md](../docs/TROUBLESHOOTING.md) - Common issues
-- [ARCHITECTURE.md](../docs/ARCHITECTURE.md) - System design
+- [QUICKSTART.md](QUICKSTART.md) - Getting started guide
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Common issues
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System design
 - [contracts/management-api.md](../specs/001-docker-multi-server/contracts/management-api.md) - API specifications

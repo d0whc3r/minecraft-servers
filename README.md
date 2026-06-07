@@ -115,6 +115,8 @@ rcon-cli --host your-server-ip --port 25575 --password yourpassword
 
 ## Documentation
 
+> 📚 **Prefer the [Project Wiki](https://github.com/d0whc3r/minecraft-servers/wiki)** — the same guides below, with built-in search and easier navigation. The wiki is auto-generated from the `docs/` folder, so both stay in sync.
+
 - 📖 [**Quick Start Guide**](docs/QUICKSTART.md) - Detailed setup instructions
 - 🏗️ [**Architecture**](docs/ARCHITECTURE.md) - Template-based orchestration design
 - ➕ [**Adding Modpacks**](docs/ADDING_MODPACKS.md) - How to add custom configurations

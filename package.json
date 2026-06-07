@@ -48,7 +48,9 @@
     "restore": "node scripts/run.mjs restore",
     "dev:setup": "pnpm install && pnpm run prepare",
     "dev:clean": "rm -rf node_modules pnpm-lock.yaml && pnpm install",
-    "ci": "pnpm run lint && pnpm run test"
+    "ci": "pnpm run lint && pnpm run test",
+    "wiki:build": "node scripts/build-wiki.mjs",
+    "wiki:check": "node scripts/build-wiki.mjs --check"
   },
   "devDependencies": {
     "@wasm-fmt/shfmt": "^0.2.7",

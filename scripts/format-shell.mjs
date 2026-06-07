@@ -6,8 +6,8 @@
 //   node scripts/format-shell.mjs            format *.sh in place
 //   node scripts/format-shell.mjs --check    report unformatted files, exit 1 if any
 //
-// shfmt options reproduce the style the scripts were already written in
-// (the prettier-plugin-sh defaults). indent=2 matches .editorconfig.
+// shfmt options reproduce the style the scripts are already written in, so
+// formatting is a no-op on the existing files. indent=2 matches .editorconfig.
 
 import { format } from '@wasm-fmt/shfmt';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';

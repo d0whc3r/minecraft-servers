@@ -217,8 +217,8 @@ docker logs mc-your-modpack
 
 - [Docker Minecraft Server Documentation](https://docker-minecraft-server.readthedocs.io/)
 - [Complete Variables List](https://docker-minecraft-server.readthedocs.io/en/latest/variables/)
-- [Detailed Modpacks Guide](../docs/ADDING_MODPACKS.md)
-- [Troubleshooting Guide](../docs/TROUBLESHOOTING.md)
+- [Detailed Modpacks Guide](ADDING_MODPACKS.md)
+- [Troubleshooting Guide](TROUBLESHOOTING.md)
 
 ## 🎯 Complete Examples
 
