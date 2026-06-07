@@ -25,118 +25,13 @@ jobs:
 
       - name: Load configuration
         id: config
-        run: |
-          # Load configuration from .github/workflows/config
-          if [ -f ".github/workflows/config" ]; then
-            echo "Loading configuration from .github/workflows/config"
-            while IFS='=' read -r key value; do
-              # Skip comments and empty lines
-              [[ $key =~ ^[[:space:]]*# ]] && continue
-              [[ -z "$key" ]] && continue
-              # Remove whitespace
-              key=$(echo "$key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-              value=$(echo "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-              echo "$key=$value" >> $GITHUB_OUTPUT
-            done < .github/workflows/config
-          else
-            echo "Configuration file not found, using defaults"
-          fi
+        run: ./.github/scripts/load-pipeline-config.sh >> "$GITHUB_OUTPUT"
 
       - name: Generate test matrix
         id: generate-matrix
-        run: |
-          set -euo pipefail
-
-          # Get all modpack configurations
-          MODPACKS=$(find config/modpacks -name "*.env" -type f | sed 's|config/modpacks/||' | sed 's|\.env$||' | sort | tr '\n' ' ')
-          MODPACK_ARRAY=($MODPACKS)
-          TOTAL_MODPACKS=${#MODPACK_ARRAY[@]}
-
-          echo "Found $TOTAL_MODPACKS modpacks: ${MODPACK_ARRAY[*]}"
-          echo "total-modpacks=$TOTAL_MODPACKS" >> $GITHUB_OUTPUT
-
-          # Chunk size from CHUNK_STRATEGY (.github/workflows/config):
-          #   small -> 1, medium -> 2, large -> 3 modpacks per job.
-          # Smaller chunks = more, faster jobs; larger chunks = fewer, slower jobs.
-          CHUNK_STRATEGY="${{ steps.config.outputs.CHUNK_STRATEGY || 'medium' }}"
-          case "$CHUNK_STRATEGY" in
-            small) CHUNK_SIZE=1 ;;
-            medium) CHUNK_SIZE=2 ;;
-            large) CHUNK_SIZE=3 ;;
-            *) echo "Unknown CHUNK_STRATEGY '$CHUNK_STRATEGY', defaulting to medium (2)"; CHUNK_SIZE=2 ;;
-          esac
-          echo "Chunk strategy: $CHUNK_STRATEGY -> chunk size: $CHUNK_SIZE"
-
-          # Create matrix JSON with Java version analysis
-          MATRIX_JSON="{\"include\":["
-
-          # Track all required Java versions across all chunks
-          ALL_JAVA_VERSIONS=""
-
-          # Create chunks
-          CHUNK_INDEX=0
-          i=0
-          while [ $i -lt $TOTAL_MODPACKS ]; do
-            # Extract chunk modpacks
-            CHUNK_MODPACKS=("${MODPACK_ARRAY[@]:i:CHUNK_SIZE}")
-            CHUNK_COUNT=${#CHUNK_MODPACKS[@]}
-
-            echo "Chunk $CHUNK_INDEX: ${CHUNK_MODPACKS[*]} (count: $CHUNK_COUNT)"
-
-            # Create comma-separated list for modpacks field
-            MODPACK_LIST=""
-            for modpack in "${CHUNK_MODPACKS[@]}"; do
-              if [ -n "$MODPACK_LIST" ]; then
-                MODPACK_LIST="$MODPACK_LIST,$modpack"
-              else
-                MODPACK_LIST="$modpack"
-              fi
-            done
-
-            # Create regex pattern for this chunk (escape special regex chars)
-            MODPACK_PATTERN=""
-            for modpack in "${CHUNK_MODPACKS[@]}"; do
-              if [ -n "$MODPACK_PATTERN" ]; then
-                MODPACK_PATTERN="$MODPACK_PATTERN|$modpack"
-              else
-                MODPACK_PATTERN="$modpack"
-              fi
-            done
-
-            # Analyze Java versions needed for this chunk
-            CHUNK_JAVA_VERSIONS=$(./scripts/analyze-java-versions.sh "${CHUNK_MODPACKS[@]}")
-            echo "Chunk $CHUNK_INDEX Java versions: $CHUNK_JAVA_VERSIONS"
-
-            # Add to global Java versions
-            for version in $CHUNK_JAVA_VERSIONS; do
-              if [[ "$ALL_JAVA_VERSIONS" != *"$version"* ]]; then
-                ALL_JAVA_VERSIONS="${ALL_JAVA_VERSIONS:+$ALL_JAVA_VERSIONS }$version"
-              fi
-            done
-
-            # Escape special characters for JSON
-            MODPACK_LIST=$(echo "$MODPACK_LIST" | sed 's/\\/\\\\/g; s/"/\\"/g')
-            MODPACK_PATTERN=$(echo "$MODPACK_PATTERN" | sed 's/\\/\\\\/g; s/"/\\"/g')
-
-            MATRIX_JSON="${MATRIX_JSON}{\"chunk\":$CHUNK_INDEX,\"modpacks\":\"$MODPACK_LIST\",\"pattern\":\"$MODPACK_PATTERN\",\"count\":$CHUNK_COUNT},"
-
-            i=$((i + CHUNK_SIZE))
-            CHUNK_INDEX=$((CHUNK_INDEX + 1))
-          done
-
-          # Remove trailing comma and close JSON
-          MATRIX_JSON=${MATRIX_JSON%,}
-          MATRIX_JSON="${MATRIX_JSON}]}"
-
-          echo "Generated matrix: $MATRIX_JSON"
-
-          # Validate JSON syntax
-          if command -v jq >/dev/null 2>&1; then
-            echo "$MATRIX_JSON" | jq . >/dev/null || (echo "Invalid JSON generated"; exit 1)
-          fi
-
-          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
-          echo "java-versions=$ALL_JAVA_VERSIONS" >> $GITHUB_OUTPUT
+        env:
+          CHUNK_STRATEGY: ${{ steps.config.outputs.CHUNK_STRATEGY }}
+        run: ./.github/scripts/generate-test-matrix.sh >> "$GITHUB_OUTPUT"
 
   # Job to pre-download required Docker images
   prepare-images:
@@ -149,22 +44,7 @@ jobs:
 
       - name: Load configuration
         id: config
-        run: |
-          # Load configuration from .github/workflows/config
-          if [ -f ".github/workflows/config" ]; then
-            echo "Loading configuration from .github/workflows/config"
-            while IFS='=' read -r key value; do
-              # Skip comments and empty lines
-              [[ $key =~ ^[[:space:]]*# ]] && continue
-              [[ -z "$key" ]] && continue
-              # Remove whitespace
-              key=$(echo "$key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-              value=$(echo "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-              echo "$key=$value" >> $GITHUB_OUTPUT
-            done < .github/workflows/config
-          else
-            echo "Configuration file not found, using defaults"
-          fi
+        run: ./.github/scripts/load-pipeline-config.sh >> "$GITHUB_OUTPUT"
 
       - name: Setup Docker Environment
         uses: ./.github/actions/setup-docker
@@ -183,48 +63,7 @@ jobs:
             docker-images-${{ runner.os }}-
 
       - name: Pre-download Required Minecraft Images
-        run: |
-          set -e
-
-          # Create cache directory
-          mkdir -p /tmp/docker-images
-
-          # Parse required Java versions from prepare-matrix output
-          REQUIRED_VERSIONS="${{ needs.prepare-matrix.outputs.java-versions }}"
-          echo "🔍 Required Java versions: $REQUIRED_VERSIONS"
-
-          # Map versions to Docker image tags
-          declare -A VERSION_MAP=(
-              ["latest"]="itzg/minecraft-server:latest"
-              ["java8"]="itzg/minecraft-server:java8"
-              ["java11"]="itzg/minecraft-server:java11"
-              ["java17"]="itzg/minecraft-server:java17"
-              ["java21"]="itzg/minecraft-server:java21"
-          )
-
-          echo "📥 Pre-downloading required Minecraft server images..."
-
-          for version in $REQUIRED_VERSIONS; do
-            if [[ -n "${VERSION_MAP[$version]}" ]]; then
-              image="${VERSION_MAP[$version]}"
-              echo "📦 Downloading $image..."
-
-              if docker pull "$image"; then
-                echo "✅ Successfully downloaded $image"
-
-                # Save image to cache directory
-                image_name=$(echo "$image" | tr '/' '_' | tr ':' '_')
-                docker save "$image" -o "/tmp/docker-images/${image_name}.tar"
-                echo "💾 Saved $image to cache"
-              else
-                echo "⚠️  Failed to download $image, continuing..."
-              fi
-            else
-              echo "⚠️  Unknown version '$version', skipping..."
-            fi
-          done
-
-          echo "🎯 Pre-download complete. Images cached for test jobs."
+        run: ./.github/scripts/predownload-images.sh ${{ needs.prepare-matrix.outputs.java-versions }}
   test:
     needs: [prepare-matrix, prepare-images]
     runs-on: ubuntu-latest
@@ -255,22 +94,7 @@ jobs:
 
       - name: Load configuration
         id: config
-        run: |
-          # Load configuration from .github/workflows/config
-          if [ -f ".github/workflows/config" ]; then
-            echo "Loading configuration from .github/workflows/config"
-            while IFS='=' read -r key value; do
-              # Skip comments and empty lines
-              [[ $key =~ ^[[:space:]]*# ]] && continue
-              [[ -z "$key" ]] && continue
-              # Remove whitespace
-              key=$(echo "$key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-              value=$(echo "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-              echo "$key=$value" >> $GITHUB_OUTPUT
-            done < .github/workflows/config
-          else
-            echo "Configuration file not found, using defaults"
-          fi
+        run: ./.github/scripts/load-pipeline-config.sh >> "$GITHUB_OUTPUT"
 
       - name: Cache pnpm dependencies
         uses: actions/cache@v5

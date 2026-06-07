@@ -92,20 +92,14 @@ runs:
       shell: bash
       id: filter-modpacks
       run: |
-        # Get all modpack configs and filter based on input pattern
-        if [ -n "${{ inputs.modpack-filter }}" ] && [ "${{ inputs.modpack-filter }}" != ".*" ]; then
-          # Filter modpacks using the provided pattern
-          MODPACKS=$(find config/modpacks -name "*.env" -type f | grep -E "${{ inputs.modpack-filter }}" | sed 's|config/modpacks/||' | sed 's|\.env$||' | tr '\n' ' ')
-        else
-          # Use all modpacks if no filter
-          MODPACKS=$(find config/modpacks -name "*.env" -type f | sed 's|config/modpacks/||' | sed 's|\.env$||' | tr '\n' ' ')
-        fi
+        # Shared modpack listing/filtering primitive (.github/scripts/list-modpacks.sh)
+        MODPACKS=$(.github/scripts/list-modpacks.sh "${{ inputs.modpack-filter }}" | tr '\n' ' ')
 
-        echo "modpacks=$MODPACKS" >> $GITHUB_OUTPUT
-        echo "count=$(echo $MODPACKS | wc -w)" >> $GITHUB_OUTPUT
+        echo "modpacks=$MODPACKS" >> "$GITHUB_OUTPUT"
+        echo "count=$(echo $MODPACKS | wc -w)" >> "$GITHUB_OUTPUT"
 
         # Set environment variable for BATS tests
-        echo "TEST_MODPACKS=$MODPACKS" >> $GITHUB_ENV
+        echo "TEST_MODPACKS=$MODPACKS" >> "$GITHUB_ENV"
 
     - name: Display test configuration
       shell: bash
