@@ -1,8 +1,8 @@
 # Slimes Adventure Modpack Server
 
 **Modrinth**: https://modrinth.com/modpack/slimes-adventure  
-**Type**: Adventure and exploration modpack  
-**Minecraft Version**: Auto-detected from modpack  
+**Type**: Adventure and exploration modpack (Fabric)  
+**Minecraft Version**: 1.21.1  
 **Memory**: 4GB recommended
 
 ## Overview
@@ -66,7 +66,8 @@ Configuration file: `config/modpacks/slimes-adventure.env`
 # Modpack settings
 TYPE=MODRINTH
 MODRINTH_MODPACK=slimes-adventure
-VERSION=1.19.2
+VERSION=1.21.1
+MODRINTH_LOADER=fabric
 
 # Performance
 MEMORY=4G

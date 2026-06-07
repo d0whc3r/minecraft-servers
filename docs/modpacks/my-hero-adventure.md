@@ -2,7 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/my-hero-adventure
 **Type**: My Hero Academia themed modpack with quirks and hero battles
-**Minecraft Version**: 1.12.2
+**Minecraft Version**: 1.16.5
 **Memory**: 4GB recommended
 
 ## Overview
@@ -37,7 +37,7 @@ docker logs -f mc-my-hero-adventure
 ## Connection
 
 - **Address**: `your-server-ip:25576`
-- **Version**: 1.12.2
+- **Version**: 1.16.5
 - **Client**: Install My Hero Adventure from CurseForge Launcher
 
 ## Features
@@ -71,7 +71,7 @@ Configuration file: `config/modpacks/my-hero-adventure.env`
 # Modpack settings
 TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/my-hero-adventure
-VERSION=1.12.2
+VERSION=1.16.5
 
 # Performance
 MEMORY=4G

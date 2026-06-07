@@ -2,22 +2,29 @@
   "name": "minecraft-servers",
   "version": "1.0.0",
   "description": "Minecraft server management system with automated testing suite",
-  "main": "index.js",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/d0whc3r/minecraft-servers.git"
-  },
+  "keywords": [
+    "automation",
+    "bash",
+    "bats",
+    "docker",
+    "docker-compose",
+    "game-server",
+    "minecraft",
+    "modpacks",
+    "server",
+    "testing"
+  ],
   "homepage": "https://github.com/d0whc3r/minecraft-servers#readme",
   "bugs": {
     "url": "https://github.com/d0whc3r/minecraft-servers/issues"
   },
-  "author": "d0whc3r",
   "license": "ISC",
-  "packageManager": "pnpm@11.5.2",
-  "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
+  "author": "d0whc3r",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/d0whc3r/minecraft-servers.git"
   },
+  "main": "index.js",
   "scripts": {
     "test": "bats tests/bats/",
     "test:verbose": "bats --verbose tests/bats/",
@@ -43,33 +50,27 @@
     "dev:clean": "rm -rf node_modules pnpm-lock.yaml && pnpm install",
     "ci": "pnpm run lint && pnpm run test"
   },
-  "keywords": [
-    "minecraft",
-    "server",
-    "docker",
-    "docker-compose",
-    "testing",
-    "bats",
-    "bash",
-    "automation",
-    "modpacks",
-    "game-server"
-  ],
   "devDependencies": {
     "bats": "^1.13.0",
     "husky": "^9.1.7",
+    "oxfmt": "^0.53.0",
     "prettier": "^3.8.3",
     "prettier-plugin-sh": "^0.18.1"
   },
   "prettier": {
-    "semi": true,
-    "singleQuote": true,
-    "tabWidth": 2,
-    "useTabs": false,
-    "printWidth": 100,
     "endOfLine": "lf",
     "plugins": [
       "prettier-plugin-sh"
-    ]
-  }
+    ],
+    "printWidth": 100,
+    "semi": true,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "useTabs": false
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@11.5.2"
 }
