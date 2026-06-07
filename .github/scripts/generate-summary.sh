@@ -49,6 +49,7 @@ echo ""
 case "$TEST_RESULT" in
   success) echo "✅ **All tests passed!**" ;;
   failure) echo "❌ **Some tests failed**" ;;
+  skipped) echo "⏭️ **No modpacks changed — test suite skipped**" ;;
   *) echo "⚠️ **Tests completed with issues**" ;;
 esac
 

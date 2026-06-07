@@ -10,7 +10,14 @@
 # All progress/diagnostics go to stderr so stdout stays clean for $GITHUB_OUTPUT.
 #
 # Env:
-#   CHUNK_STRATEGY  small|medium|large  (default medium) -> 1|2|3 modpacks per chunk
+#   CHUNK_STRATEGY    small|medium|large  (default medium) -> 1|2|3 modpacks per chunk
+#   SELECTED_MODPACKS space-separated names to test, or the "__ALL__" sentinel for
+#                     every modpack. UNSET (local/manual runs) defaults to __ALL__;
+#                     an explicitly EMPTY value means "nothing to test". Names not
+#                     present in config/modpacks are dropped, so a stale/deleted
+#                     selection can't break the matrix. When the resulting set is
+#                     empty the matrix is "{\"include\":[]}" and has-tests=false,
+#                     signalling the caller to skip the test job.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,9 +37,36 @@ esac
 echo "Chunk strategy: $CHUNK_STRATEGY -> chunk size: $CHUNK_SIZE" >&2
 
 # All modpack names, sorted (names contain no spaces/globs, so word-splitting is safe).
-MODPACK_ARRAY=($("$SCRIPT_DIR/list-modpacks.sh"))
+ALL_MODPACKS=($("$SCRIPT_DIR/list-modpacks.sh"))
+echo "Available modpacks: ${ALL_MODPACKS[*]:-(none)}" >&2
+
+# Narrow to the requested selection. The no-colon default makes an UNSET var
+# (local/manual runs) mean "every modpack", while an explicitly EMPTY value (CI
+# found no relevant change) means "nothing to test". Word-splitting absorbs any
+# stray spaces/newlines from the caller (e.g. a trailing space from `tr`).
+read -ra REQUESTED <<< "${SELECTED_MODPACKS-__ALL__}"
+
+if [ ${#REQUESTED[@]} -eq 0 ]; then
+  MODPACK_ARRAY=()
+  echo "Selection: none (no relevant change)" >&2
+elif printf '%s\n' "${REQUESTED[@]}" | grep -qx '__ALL__'; then
+  MODPACK_ARRAY=("${ALL_MODPACKS[@]}")
+  echo "Selection: all modpacks" >&2
+else
+  MODPACK_ARRAY=()
+  for name in "${REQUESTED[@]}"; do
+    for existing in "${ALL_MODPACKS[@]}"; do
+      if [ "$name" = "$existing" ]; then
+        MODPACK_ARRAY+=("$name")
+        break
+      fi
+    done
+  done
+  echo "Selection: changed modpacks -> ${MODPACK_ARRAY[*]:-(none)}" >&2
+fi
+
 TOTAL_MODPACKS=${#MODPACK_ARRAY[@]}
-echo "Found $TOTAL_MODPACKS modpacks: ${MODPACK_ARRAY[*]:-}" >&2
+echo "Testing $TOTAL_MODPACKS modpack(s): ${MODPACK_ARRAY[*]:-(none)}" >&2
 
 MATRIX_JSON='{"include":['
 ALL_JAVA_VERSIONS=""
@@ -83,6 +117,11 @@ if command -v jq > /dev/null 2>&1; then
   }
 fi
 
+# has-tests lets the workflow gate prepare-images/test off when nothing changed.
+HAS_TESTS=true
+[ "$TOTAL_MODPACKS" -eq 0 ] && HAS_TESTS=false
+
 echo "matrix=$MATRIX_JSON"
 echo "total-modpacks=$TOTAL_MODPACKS"
 echo "java-versions=$ALL_JAVA_VERSIONS"
+echo "has-tests=$HAS_TESTS"

@@ -19,13 +19,30 @@ jobs:
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
       total-modpacks: ${{ steps.generate-matrix.outputs.total-modpacks }}
       java-versions: ${{ steps.generate-matrix.outputs.java-versions }}
+      has-tests: ${{ steps.generate-matrix.outputs.has-tests }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          # Full history so changed-modpacks.sh can diff against the base.
+          fetch-depth: 0
 
       - name: Load configuration
         id: config
         run: ./.github/scripts/load-pipeline-config.sh >> "$GITHUB_OUTPUT"
+
+      - name: Determine changed modpacks
+        id: changed
+        env:
+          # PR: diff the PR head against its base. Push: diff against the previous
+          # tip. changed-modpacks.sh falls back to the full suite when the base is
+          # missing (all-zeros / first push) or the diff fails.
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          SELECTED="$(./.github/scripts/changed-modpacks.sh | tr '\n' ' ')"
+          echo "Selected modpacks: ${SELECTED:-(none)}"
+          echo "SELECTED_MODPACKS=$SELECTED" >> "$GITHUB_ENV"
 
       - name: Generate test matrix
         id: generate-matrix
@@ -36,6 +53,7 @@ jobs:
   # Job to pre-download required Docker images
   prepare-images:
     needs: prepare-matrix
+    if: needs.prepare-matrix.outputs.has-tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -66,6 +84,7 @@ jobs:
         run: ./.github/scripts/predownload-images.sh ${{ needs.prepare-matrix.outputs.java-versions }}
   test:
     needs: [prepare-matrix, prepare-images]
+    if: needs.prepare-matrix.outputs.has-tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
