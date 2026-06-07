@@ -355,7 +355,10 @@ get_modpack_name() {
             fi
 
             # Check for fatal errors
-            if echo "$current_logs" | grep -q -i "java.lang.OutOfMemoryError\|Server crashed\|Failed to start\|Could not reserve enough space\|Exception in thread"; then
+            # NOTE: do NOT match "Exception in thread" / "uncaughtException" here — modded
+            # startups routinely log benign background-thread exceptions (e.g. version checks)
+            # while the server keeps loading. Only treat unambiguously fatal markers as failures.
+            if echo "$current_logs" | grep -q -i "java.lang.OutOfMemoryError\|Server crashed\|Failed to start\|Could not reserve enough space"; then
                 echo "  ❌ Fatal error detected in '$modpack_name' logs"
                 echo "  📄 Last 20 log lines:"
                 echo "$current_logs" | tail -20 | sed 's/^/     /'

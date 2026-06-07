@@ -14,6 +14,7 @@ jobs:
   # Job to determine test matrix based on available modpacks
   prepare-matrix:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       matrix: ${{ steps.generate-matrix.outputs.matrix }}
       total-modpacks: ${{ steps.generate-matrix.outputs.total-modpacks }}
@@ -121,6 +122,7 @@ jobs:
   prepare-images:
     needs: prepare-matrix
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -206,6 +208,7 @@ jobs:
   test:
     needs: [prepare-matrix, prepare-images]
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -317,6 +320,7 @@ jobs:
   summarize:
     needs: [prepare-matrix, prepare-images, test]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: always()
     steps:
       - name: Checkout code

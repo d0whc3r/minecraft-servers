@@ -13,7 +13,9 @@
 # Values here will override defaults in the workflow
 
 # Test execution settings
-TEST_TIMEOUT_MINUTES=45
+# Internal bats timeout (minutes). Kept below the job-level timeout-minutes (test: 25)
+# so the bats step is killed gracefully and artifacts still upload before the hard job cap.
+TEST_TIMEOUT_MINUTES=20
 PARALLEL_JOBS=1
 
 # Docker settings
