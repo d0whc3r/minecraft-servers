@@ -170,3 +170,8 @@ Use acknowledgments only when they confirm genuine understanding and add clarity
 - These directives prioritize safety, reproducibility, and high-information communication to support autonomous engineering at scale.
 
 <!-- MANUAL ADDITIONS END -->
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->

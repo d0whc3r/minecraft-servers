@@ -13,7 +13,7 @@
   },
   "author": "d0whc3r",
   "license": "ISC",
-  "packageManager": "pnpm@10.22.0",
+  "packageManager": "pnpm@11.5.2",
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"
@@ -31,14 +31,14 @@
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "docker:clean": "docker-compose down -v --remove-orphans",
-    "server:start": "./scripts/start-server.sh",
-    "server:stop": "./scripts/stop-server.sh",
-    "server:restart": "./scripts/restart-server.sh",
-    "server:list": "./scripts/list-servers.sh",
-    "server:health": "./scripts/health-check.sh --all",
-    "backup": "./scripts/backup.sh",
-    "backup:all": "./scripts/backup.sh --all",
-    "restore": "./scripts/restore.sh",
+    "server:start": "node scripts/run.mjs start-server",
+    "server:stop": "node scripts/run.mjs stop-server",
+    "server:restart": "node scripts/run.mjs restart-server",
+    "server:list": "node scripts/run.mjs list-servers",
+    "server:health": "node scripts/run.mjs health-check --all",
+    "backup": "node scripts/run.mjs backup",
+    "backup:all": "node scripts/run.mjs backup --all",
+    "restore": "node scripts/run.mjs restore",
     "dev:setup": "pnpm install && pnpm run prepare",
     "dev:clean": "rm -rf node_modules pnpm-lock.yaml && pnpm install",
     "ci": "pnpm run lint && pnpm run test"
@@ -58,8 +58,8 @@
   "devDependencies": {
     "bats": "^1.13.0",
     "husky": "^9.1.7",
-    "prettier": "^3.6.2",
-    "prettier-plugin-sh": "^0.18.0"
+    "prettier": "^3.8.3",
+    "prettier-plugin-sh": "^0.18.1"
   },
   "prettier": {
     "semi": true,
