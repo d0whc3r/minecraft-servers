@@ -121,7 +121,7 @@ Players need to install the My Hero Adventure modpack to connect:
 1. **Install CurseForge App**: https://www.curseforge.com/download/app
 2. **Search for "My Hero Adventure"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25578`
+4. **Launch and connect** to `your-server-ip:25576`
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 

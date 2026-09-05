@@ -21,13 +21,20 @@ Environment variables are defined in `config/modpacks/<server-name>.env` files. 
 
 These must be defined in every server configuration:
 
-| Variable      | Description                                                                  | Example                                           |
-| ------------- | ---------------------------------------------------------------------------- | ------------------------------------------------- |
-| `TYPE`        | Server type                                                                  | `VANILLA`, `PAPER`, `FORGE`, `FABRIC`, `MODRINTH` |
-| `VERSION`     | Minecraft version **CRITICAL for MODRINTH: Must match modpack's MC version** | `1.20.4`, `1.19.2`, `1.21.1`, `LATEST`            |
-| `MEMORY`      | Java heap memory                                                             | `2G`, `4G`, `8G`                                  |
-| `SERVER_PORT` | External port (must be unique)                                               | `25565`, `25566`, etc.                            |
-| `SERVER_NAME` | Display name                                                                 | `My Server`                                       |
+| Variable      | Description                                                                  | Example                                                              |
+| ------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `TYPE`        | Server type                                                                  | `VANILLA`, `PAPER`, `FORGE`, `FABRIC`, `AUTO_CURSEFORGE`, `MODRINTH` |
+| `VERSION`     | Minecraft version **CRITICAL for MODRINTH: Must match modpack's MC version** | `1.20.4`, `1.19.2`, `1.21.1`, `LATEST`                               |
+| `MEMORY`      | Java heap memory                                                             | `2G`, `4G`, `8G`                                                     |
+| `SERVER_PORT` | External port (must be unique)                                               | `25565`, `25566`, etc.                                               |
+| `SERVER_NAME` | Display name                                                                 | `My Server`                                                          |
+
+### RCON Ports
+
+Each server needs a unique `RCON_PORT` (the Docker port mapping uses it directly). The
+project convention is **`SERVER_PORT + 1000`** — e.g. the `vanilla` server uses game port
+`25567` and RCON port `26567`. `ENABLE_RCON` and `RCON_PASSWORD` are shared defaults from
+`.env`.
 
 ### CRITICAL: VERSION for Modrinth Modpacks
 
@@ -179,7 +186,7 @@ Example:
 
 ```bash
 TYPE=AUTO_CURSEFORGE
-CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/all-the-mods-8
+CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/all-the-mods-10
 ```
 
 ### Modrinth
@@ -266,11 +273,11 @@ USE_AIKAR_FLAGS=true
 
 ```bash
 TYPE=AUTO_CURSEFORGE
-CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/all-the-mods-8
-VERSION=1.19.2
+CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/all-the-mods-10
+VERSION=1.21.1
 MEMORY=8G
 SERVER_PORT=25566
-SERVER_NAME=ATM8 Server
+SERVER_NAME=all-the-mods-10
 MAX_PLAYERS=10
 ```
 
@@ -310,38 +317,39 @@ ONLINE_MODE=false
 
 ### Java Version Selection
 
-The `JAVA_VERSION` variable controls which Java version the Docker container uses. Different Minecraft versions and modpacks require specific Java versions:
+The `JAVA_VERSION` variable selects the Docker image tag (`itzg/minecraft-server:<value>`), so it can also be any tag supported by that image. Different Minecraft versions and modpacks require specific Java versions:
 
-- **Java 8**: Required for Minecraft 1.16.5 and older, Forge versions < 1.18
-- **Java 11**: Compatible with most Minecraft versions
+- **Java 8**: Required for Minecraft 1.12.x modpacks (RLCraft, SkyFactory 4, Dragon Block C)
+- **Java 11**: Required by some 1.12.2 CurseForge packs (My Hero Adventure)
 - **Java 17**: Required for Minecraft 1.18+ and many modern modpacks
-- **Java 21**: Latest version, required for Minecraft 1.20.5+ and some modpacks
-- **Java 25**: Experimental/latest features
+- **Java 21**: Required for Minecraft 1.20.5+ and most 1.21.x packs
+- **Java 25**: Required by newest releases (e.g. Plants vs. Zombies+ on MC 26.1.2)
 
-If not specified, defaults to `latest` (currently Java 21).
+If not specified, defaults to `latest`.
 
 **Examples:**
 
 ```bash
-# Use Java 17 for better compatibility with modern modpacks
-JAVA_VERSION=java17
-
-# Use Java 8 for older Forge versions
+# Java 8 for classic 1.12.2 modpacks
 JAVA_VERSION=java8
 
-# Use latest Java version (default)
-# JAVA_VERSION not set or JAVA_VERSION=latest
+# Java 25 for the newest Minecraft releases
+JAVA_VERSION=java25
+
+# Default
+# JAVA_VERSION not set → image tag "latest"
 ```
 
-**Example server configuration:**
+**Real example from this repo:**
 
 ```bash
-# config/modpacks/my-server.env
+# config/modpacks/rlcraft.env
+JAVA_VERSION=java8
 TYPE=AUTO_CURSEFORGE
-CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/all-the-mods-8
-VERSION=1.19.2
-MEMORY=8G
+CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/rlcraft
+VERSION=1.12.2
+MEMORY=6G
 SERVER_PORT=25566
-SERVER_NAME=ATM8 Server
-JAVA_VERSION=java17 # Use Java 17 for this modpack
+SERVER_NAME=rlcraft
+RCON_PORT=26566
 ```

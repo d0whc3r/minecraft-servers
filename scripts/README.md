@@ -106,9 +106,9 @@ DEBUG=true ./scripts/start-server.sh vanilla
 - Error messages are sent to stderr
 - Exit codes follow standard conventions (documented in each script)
 
-## Refactored Scripts
+## Scripts Using the Common Library
 
-The following scripts have been refactored to use `common.sh`:
+All management scripts source `common.sh`:
 
 - `start-server.sh` - Server startup with shared validation and output
 - `stop-server.sh` - Server shutdown with granular cleanup options
@@ -116,6 +116,15 @@ The following scripts have been refactored to use `common.sh`:
 - `list-servers.sh` - Server status display with shared helpers
 - `start-all.sh` - Bulk server startup
 - `stop-all.sh` - Bulk server shutdown
+- `health-check.sh` - Health report (text or JSON output)
+- `auto-restart.sh` - Auto-restart daemon
+- `backup.sh` - Atomic backup with checksum
+- `restore.sh` - Verified restore operations
+- `add-modpack.sh` - Server configuration generator
+- `validate-config.sh` - Configuration validation suite
+
+Standalone utilities (`diagnose-failed-servers.sh`, `analyze-java-versions.sh`) do not
+source the library.
 
 ## Benefits
 
@@ -294,7 +303,7 @@ The package.json scripts are designed to work seamlessly with CI/CD pipelines:
 
 ### Environment Variables in CI
 
-The BATS test suite automatically injects environment variables from `.env.template`:
+The BATS test suite defines its environment variables directly in the workflow's `env` block (`.github/workflows/bats-tests.yml`):
 
 - `EULA=TRUE` - Minecraft EULA acceptance
 - `CF_API_KEY` - From GitHub secrets for CurseForge API access

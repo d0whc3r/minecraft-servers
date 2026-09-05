@@ -1,12 +1,12 @@
 # Quick Start Guide
 
-Get your first Minecraft server running in ~5 minutes.
+Get your first Minecraft server running in ~5 minutes. For how the system works internally, see [Architecture](ARCHITECTURE.md).
 
 ## Prerequisites
 
 - **Docker** 20.10+ and **Docker Compose** v2+ installed
 - **Linux** server (Ubuntu 20.04+, Debian 11+, or compatible)
-- **4GB RAM** minimum (2GB for vanilla server)
+- **4GB RAM** minimum (2GB for the vanilla server)
 - **20GB disk space** minimum
 
 ### Verify Docker Installation
@@ -22,27 +22,28 @@ docker ps              # Should run without errors
 ### 1. Configure Environment
 
 ```bash
-# Copy template
-cp .env.template .env
+# Copy the shared template
+cp .env.example .env
 
-# Content (defaults are fine):
-EULA=TRUE
-NETWORK_NAME=minecraft-network
-BASE_PORT=25565
+# Defaults work out of the box; typically you only set:
+#   CF_API_KEY      – required for CurseForge modpacks (vanilla works without it)
+#   RCON_PASSWORD   – change it in production
+nano .env
 ```
 
-⚠️ **Important**: Setting `EULA=TRUE` indicates you accept the [Minecraft EULA](https://www.minecraft.net/en-us/eula).
+⚠️ **Important**: `EULA=TRUE` (already set in the template) indicates you accept the
+[Minecraft EULA](https://www.minecraft.net/en-us/eula).
 
 ### 2. Start Vanilla Server
 
 ```bash
-# Start the vanilla server (Paper 1.20.4)
+# Start the vanilla server (Paper 1.20.4, port 25567)
 ./scripts/start-server.sh vanilla
 
 # Monitor startup (takes ~2 minutes first time)
 docker logs -f mc-vanilla
 
-# Look for: "Done! For help, type 'help'"
+# Look for: "Done (…)! For help, type 'help'"
 # Press Ctrl+C to exit logs (server keeps running)
 ```
 
@@ -52,7 +53,7 @@ docker logs -f mc-vanilla
 2. Click **Multiplayer** → **Add Server**
 3. Enter:
    - **Server Name**: My Vanilla Server
-   - **Server Address**: `your-server-ip:25569`
+   - **Server Address**: `your-server-ip:25567`
 4. Click **Done** and **Join Server**
 
 🎉 **You're in!** Your first server is running.
@@ -72,8 +73,8 @@ World data persists in `./servers/vanilla/data/` on your host.
 
 ```
 minecraft-servers/
-├── docker-compose.yml       # Server definitions
-├── .env                     # Global settings
+├── docker-compose.yml       # Single template service
+├── .env                     # Shared settings
 ├── config/modpacks/
 │   └── vanilla.env          # Vanilla config
 ├── servers/
@@ -110,28 +111,34 @@ docker logs -f mc-vanilla
 ### Pre-Configured Modpacks
 
 ```bash
-# Start All The Mods 8 (takes 5-10 min first time)
-./scripts/start-server.sh atm8
+# Start RLCraft (first start takes 5-10 min: downloads the modpack)
+./scripts/start-server.sh rlcraft
 
 # Start all configured servers
 ./scripts/start-all.sh
 ```
 
-Available modpacks:
+Available servers (full table in the [README](../README.md#pre-configured-modpacks)):
 
-| Server      | Version | Memory | Port  |
-| ----------- | ------- | ------ | ----- |
-| vanilla     | 1.20.4  | 2G     | 25569 |
-| atm8        | 1.20.1  | 8G     | 25565 |
-| skyfactory4 | 1.12.2  | 4G     | 25566 |
-| prominence2 | 1.20.1  | 6G     | 25567 |
-| rlcraft     | 1.12.2  | 6G     | 25568 |
+| Server Name         | Version | Memory | Port  | Notes                          |
+| ------------------- | ------- | ------ | ----- | ------------------------------ |
+| `vanilla`           | 1.20.4  | 2G     | 25567 | Paper, light — good first test |
+| `skyfactory4`       | 1.12.2  | 6G     | 25565 | Skyblock, needs Java 8 image   |
+| `rlcraft`           | 1.12.2  | 6G     | 25566 | Hardcore survival              |
+| `cobbleverse`       | 1.21.1  | 6G     | 25568 | Pokémon-style adventure        |
+| `slimes-adventure`  | 1.19.2  | 4G     | 25569 | Exploration                    |
+| `solocraft-modpack` | 1.20.1  | 3G     | 25570 | Solo-leveling-style survival   |
+| `all-the-mods-10`   | 1.21.1  | 8G     | 25578 | Heavy kitchen-sink pack        |
+| …                   |         |        |       | 15 total — see README          |
+
+> CurseForge modpacks require `CF_API_KEY` in `.env`. First start downloads the whole
+> modpack — give it 5–10 minutes and watch `docker logs -f mc-<name>`.
 
 ### Custom Servers
 
 ```bash
-# Add new server using template
-./scripts/add-modpack.sh my-custom --modpack=vanilla --port=25570
+# Add a new server from a template (auto-assigns a free port)
+./scripts/add-modpack.sh my-custom --modpack=vanilla --port=25580
 
 # Customize configuration
 nano config/modpacks/my-custom.env
@@ -140,10 +147,12 @@ nano config/modpacks/my-custom.env
 ./scripts/start-server.sh my-custom
 ```
 
+Details and all options: [Adding Modpacks](ADDING_MODPACKS.md).
+
 ## Backup & Restore
 
 ```bash
-# Create backup (includes world + configs)
+# Create backup (world + configs)
 ./scripts/backup.sh vanilla
 
 # List backups (keeps 3 most recent)
@@ -163,6 +172,8 @@ crontab -e
 0 3 * * * /path/to/minecraft-servers/scripts/backup.sh vanilla
 ```
 
+Full guide: [Backup & Restore](BACKUP_RESTORE.md).
+
 ## Configuration
 
 ### Memory Allocation
@@ -172,23 +183,25 @@ crontab -e
 nano config/modpacks/vanilla.env
 
 # Change memory:
-MEMORY=4G # 4 gigabytes
+MEMORY=4G
 
-# Restart server
+# Restart server to apply
 ./scripts/restart-server.sh vanilla
 ```
+
+All per-server variables: [Environment Variables](ENVIRONMENT_VARIABLES.md).
 
 ### Server Settings
 
 ```bash
-# Edit server.properties
+# Edit server.properties directly
 nano servers/vanilla/data/server.properties
 
 # Common settings:
-max-players=20
-difficulty=normal
-pvp=true
-view-distance=10
+# max-players=20
+# difficulty=normal
+# pvp=true
+# view-distance=10
 
 # Restart to apply
 ./scripts/restart-server.sh vanilla
@@ -197,7 +210,7 @@ view-distance=10
 ### Make Yourself Admin
 
 ```bash
-# Grant operator permissions
+# Grant operator permissions (uses the server's RCON port: SERVER_PORT + 1000)
 docker exec mc-vanilla rcon-cli op YourMinecraftUsername
 ```
 
@@ -210,9 +223,10 @@ docker exec mc-vanilla rcon-cli op YourMinecraftUsername
 docker logs mc-vanilla
 
 # Common issues:
-# - EULA not accepted: Set EULA=TRUE in .env
-# - Port in use: Change SERVER_PORT in config
-# - Out of memory: Increase MEMORY in config
+# - EULA not accepted: set EULA=TRUE in .env
+# - Port in use: change SERVER_PORT in config/modpacks/vanilla.env
+# - Out of memory: increase MEMORY in config/modpacks/vanilla.env
+# - CurseForge download failing: check CF_API_KEY in .env
 ```
 
 ### Can't Connect
@@ -222,10 +236,10 @@ docker logs mc-vanilla
 docker ps --filter "name=mc-vanilla"
 
 # Check port is open
-sudo ss -tulnp | grep 25569
+sudo ss -tulnp | grep 25567
 
 # Open firewall (if needed)
-sudo ufw allow 25569/tcp
+sudo ufw allow 25567/tcp
 ```
 
 ### Performance Issues
@@ -235,12 +249,14 @@ sudo ufw allow 25569/tcp
 docker stats mc-vanilla
 
 # Increase memory
-nano config/modpacks/vanilla.env # Increase MEMORY
+nano config/modpacks/vanilla.env # increase MEMORY
 
 # Check TPS (ticks per second)
 docker exec mc-vanilla rcon-cli tps
-# Healthy: 20 TPS, Laggy: <18 TPS
+# Healthy: 20 TPS, laggy: <18 TPS
 ```
+
+More: [Troubleshooting Guide](TROUBLESHOOTING.md).
 
 ## Essential Commands
 
@@ -248,6 +264,7 @@ docker exec mc-vanilla rcon-cli tps
 # Server Management
 ./scripts/start-server.sh <name>    # Start specific server
 ./scripts/start-all.sh              # Start all servers
+./scripts/stop-server.sh <name>     # Stop specific server
 ./scripts/stop-all.sh               # Stop all servers
 ./scripts/restart-server.sh <name>  # Restart server
 ./scripts/list-servers.sh           # Show status
@@ -269,29 +286,17 @@ docker logs --tail=100 mc-<name>    # Last 100 lines
 ## File Locations
 
 ```
-Worlds:         ./servers/{name}/data/
-Backups:        ./backups/{name}/
-Configs:        ./config/modpacks/{name}.env
-Logs:           docker logs mc-{name}
+Worlds:         ./servers/<name>/data/
+Backups:        ./backups/<name>/
+Configs:        ./config/modpacks/<name>.env
+Logs:           docker logs mc-<name>
 ```
 
 ## Next Steps
 
-- 📖 Read full [Architecture Documentation](ARCHITECTURE.md)
-- ➕ Learn about [Adding Modpacks](ADDING_MODPACKS.md)
-- 🏥 Set up [Health Monitoring](MONITORING.md)
-- 💾 Configure [Automated Backups](BACKUP_RESTORE.md)
-- 🔧 See [Troubleshooting Guide](TROUBLESHOOTING.md)
-
-## Success! 🎉
-
-You now have:
-
-- ✅ A working Minecraft server
-- ✅ Persistent world data
-- ✅ Backup capabilities
-- ✅ Knowledge to add more servers
-
-**Time to completion**: ~5 minutes for experienced users, ~30 minutes for first-timers
-
-**Enjoy your server!** 🎮
+- 🏗️ Understand [the Architecture](ARCHITECTURE.md)
+- ➕ Add your own modpacks: [Adding Modpacks](ADDING_MODPACKS.md)
+- 🏥 Set up [Health Monitoring & Auto-Restart](MONITORING.md)
+- 💾 Automate [Backups](BACKUP_RESTORE.md)
+- 🎛️ Tune servers: [Environment Variables](ENVIRONMENT_VARIABLES.md)
+- 🔧 Fix problems: [Troubleshooting](TROUBLESHOOTING.md)

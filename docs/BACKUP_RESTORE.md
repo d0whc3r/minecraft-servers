@@ -47,13 +47,13 @@ The backup system provides:
 
 ```
 {server-name}-{YYYYMMDD}-{HHMMSS}.tar.gz
-Example: atm8-20251108-143022.tar.gz
+Example: all-the-mods-10-20251108-143022.tar.gz
 ```
 
 **Archive Structure**:
 
 ```
-atm8-20251108-143022.tar.gz
+all-the-mods-10-20251108-143022.tar.gz
 ├── data/
 │   ├── world/
 │   ├── world_nether/
@@ -61,7 +61,7 @@ atm8-20251108-143022.tar.gz
 │   ├── server.properties
 │   ├── ops.json
 │   └── ...
-└── atm8-20251108-143022.tar.gz.sha256 (checksum)
+└── all-the-mods-10-20251108-143022.tar.gz.sha256 (checksum)
 ```
 
 ## Creating Backups
@@ -73,7 +73,7 @@ atm8-20251108-143022.tar.gz
 ./scripts/backup.sh <server-name>
 
 # Examples
-./scripts/backup.sh atm8
+./scripts/backup.sh all-the-mods-10
 ./scripts/backup.sh vanilla
 ./scripts/backup.sh rlcraft
 ```
@@ -90,24 +90,24 @@ atm8-20251108-143022.tar.gz
 **Sample Output**:
 
 ```
-[INFO] Starting backup for server: atm8
-[INFO] Backup file: atm8-20251108-143022.tar.gz
+[INFO] Starting backup for server: all-the-mods-10
+[INFO] Backup file: all-the-mods-10-20251108-143022.tar.gz
 [INFO] Stopping server temporarily for backup...
 [INFO] Creating backup archive...
 [INFO] Calculating checksum...
 [INFO] Restarting server...
 [SUCCESS] Backup completed successfully!
-Server: atm8
-Backup: ./backups/atm8/atm8-20251108-143022.tar.gz
+Server: all-the-mods-10
+Backup: ./backups/all-the-mods-10/all-the-mods-10-20251108-143022.tar.gz
 Size: 780MB
 Compression: 65%
 Checksum: abc123def456...
 Duration: 45s
 
-Current backups for atm8:
-  atm8-20251108-143022.tar.gz (780MB)
-  atm8-20251107-230015.tar.gz (775MB)
-  atm8-20251106-230010.tar.gz (770MB)
+Current backups for all-the-mods-10:
+  all-the-mods-10-20251108-143022.tar.gz (780MB)
+  all-the-mods-10-20251107-230015.tar.gz (775MB)
+  all-the-mods-10-20251106-230010.tar.gz (770MB)
 ```
 
 ### Automated Backups
@@ -119,7 +119,7 @@ Set up cron jobs for regular backups:
 crontab -e
 
 # Add these lines for daily backups at 3 AM
-0 3 * * * /path/to/minecraft-servers/scripts/backup.sh atm8
+0 3 * * * /path/to/minecraft-servers/scripts/backup.sh all-the-mods-10
 0 3 * * * /path/to/minecraft-servers/scripts/backup.sh vanilla
 
 # For more frequent backups (every 6 hours)
@@ -128,12 +128,12 @@ crontab -e
 
 **Backup Schedule Recommendations**:
 
-| Server Type                | Frequency     | Rationale                               |
-| -------------------------- | ------------- | --------------------------------------- |
-| **Heavy modded** (ATM8)    | Daily         | Complex worlds, expensive to rebuild    |
-| **Light modded** (Vanilla) | Weekly        | Simple worlds, easy to rebuild          |
-| **Hardcore** (RLCraft)     | Every 6 hours | High death rate, frequent progress loss |
-| **Creative**               | As needed     | Manual backups before major builds      |
+| Server Type                        | Frequency     | Rationale                               |
+| ---------------------------------- | ------------- | --------------------------------------- |
+| **Heavy modded** (All The Mods 10) | Daily         | Complex worlds, expensive to rebuild    |
+| **Light modded** (Vanilla)         | Weekly        | Simple worlds, easy to rebuild          |
+| **Hardcore** (RLCraft)             | Every 6 hours | High death rate, frequent progress loss |
+| **Creative**                       | As needed     | Manual backups before major builds      |
 
 ## Restoring from Backups
 
@@ -144,7 +144,7 @@ crontab -e
 ./scripts/restore.sh <server-name> <backup-file>
 
 # Examples
-./scripts/restore.sh atm8 atm8-20251108-143022.tar.gz
+./scripts/restore.sh all-the-mods-10 all-the-mods-10-20251108-143022.tar.gz
 ./scripts/restore.sh vanilla vanilla-20251107-120000.tar.gz
 ```
 
@@ -161,22 +161,22 @@ crontab -e
 **Sample Output**:
 
 ```
-[WARNING] WARNING: This will replace all world data for server: atm8
-Backup: atm8-20251108-143022.tar.gz (780MB)
+[WARNING] WARNING: This will replace all world data for server: all-the-mods-10
+Backup: all-the-mods-10-20251108-143022.tar.gz (780MB)
 Server will be stopped during restore.
 
 Proceed? [y/N]: y
 
-[INFO] Starting restore for server: atm8
-[INFO] Backup file: atm8-20251108-143022.tar.gz (780MB)
+[INFO] Starting restore for server: all-the-mods-10
+[INFO] Backup file: all-the-mods-10-20251108-143022.tar.gz (780MB)
 [INFO] Stopping running server...
 [INFO] Clearing existing world data...
 [INFO] Extracting backup archive...
 [INFO] Setting file permissions...
 [INFO] Restarting server...
 [SUCCESS] Restore completed successfully!
-Server: atm8
-Backup: atm8-20251108-143022.tar.gz
+Server: all-the-mods-10
+Backup: all-the-mods-10-20251108-143022.tar.gz
 Data restored: 780MB
 Duration: 25s
 Server status: Restarted
@@ -186,7 +186,7 @@ Server status: Restarted
 
 ```bash
 # Skip confirmation prompt
-./scripts/restore.sh atm8 atm8-20251108-143022.tar.gz --force
+./scripts/restore.sh all-the-mods-10 all-the-mods-10-20251108-143022.tar.gz --force
 ```
 
 ### Emergency Restore
@@ -195,13 +195,13 @@ If server won't start after corruption:
 
 ```bash
 # Stop the broken server
-docker stop mc-atm8
+docker stop mc-all-the-mods-10
 
 # Restore backup
-./scripts/restore.sh atm8 atm8-20251108-143022.tar.gz --force
+./scripts/restore.sh all-the-mods-10 all-the-mods-10-20251108-143022.tar.gz --force
 
 # Start manually if needed
-docker start mc-atm8
+docker start mc-all-the-mods-10
 ```
 
 ## Backup Management
@@ -213,12 +213,12 @@ docker start mc-atm8
 ls -la backups/ < server-name > /
 
 # Example output:
-# -rw-r--r--  1 user  staff  816889856 Nov  8 14:30 atm8-20251108-143022.tar.gz
-# -rw-r--r--  1 user  staff         90 Nov  8 14:30 atm8-20251108-143022.tar.gz.sha256
-# -rw-r--r--  1 user  staff  812345678 Nov  7 23:00 atm8-20251107-230015.tar.gz
-# -rw-r--r--  1 user  staff         90 Nov  7 23:00 atm8-20251107-230015.tar.gz.sha256
-# -rw-r--r--  1 user  staff  807891234 Nov  6 23:00 atm8-20251106-230010.tar.gz
-# -rw-r--r--  1 user  staff         90 Nov  6 23:00 atm8-20251106-230010.tar.gz.sha256
+# -rw-r--r--  1 user  staff  816889856 Nov  8 14:30 all-the-mods-10-20251108-143022.tar.gz
+# -rw-r--r--  1 user  staff         90 Nov  8 14:30 all-the-mods-10-20251108-143022.tar.gz.sha256
+# -rw-r--r--  1 user  staff  812345678 Nov  7 23:00 all-the-mods-10-20251107-230015.tar.gz
+# -rw-r--r--  1 user  staff         90 Nov  7 23:00 all-the-mods-10-20251107-230015.tar.gz.sha256
+# -rw-r--r--  1 user  staff  807891234 Nov  6 23:00 all-the-mods-10-20251106-230010.tar.gz
+# -rw-r--r--  1 user  staff         90 Nov  6 23:00 all-the-mods-10-20251106-230010.tar.gz.sha256
 ```
 
 ### Backup Retention Policy
@@ -229,18 +229,18 @@ ls -la backups/ < server-name > /
 
 ```bash
 # Manual cleanup (dangerous - deletes backups!)
-rm backups/atm8/atm8-20251105-120000.tar.gz
-rm backups/atm8/atm8-20251105-120000.tar.gz.sha256
+rm backups/all-the-mods-10/all-the-mods-10-20251105-120000.tar.gz
+rm backups/all-the-mods-10/all-the-mods-10-20251105-120000.tar.gz.sha256
 ```
 
 ### Backup Size Expectations
 
-| Server Type             | Typical Size | Growth Rate               |
-| ----------------------- | ------------ | ------------------------- |
-| **Vanilla**             | 100MB-2GB    | Slow (exploration-based)  |
-| **Light modded**        | 200MB-5GB    | Medium (mods add data)    |
-| **Heavy modded** (ATM8) | 500MB-10GB+  | Fast (complex automation) |
-| **RLCraft**             | 300MB-8GB    | Medium (frequent resets)  |
+| Server Type                        | Typical Size | Growth Rate               |
+| ---------------------------------- | ------------ | ------------------------- |
+| **Vanilla**                        | 100MB-2GB    | Slow (exploration-based)  |
+| **Light modded**                   | 200MB-5GB    | Medium (mods add data)    |
+| **Heavy modded** (All The Mods 10) | 500MB-10GB+  | Fast (complex automation) |
+| **RLCraft**                        | 300MB-8GB    | Medium (frequent resets)  |
 
 ### Disk Space Planning
 
@@ -264,10 +264,10 @@ df -h .
 
 ```bash
 # Identify last good backup
-ls -la backups/atm8/
+ls -la backups/all-the-mods-10/
 
 # Restore to last known good state
-./scripts/restore.sh atm8 atm8-20251107-230015.tar.gz
+./scripts/restore.sh all-the-mods-10 all-the-mods-10-20251107-230015.tar.gz
 ```
 
 ### Scenario 2: Server Won't Start
@@ -278,14 +278,14 @@ ls -la backups/atm8/
 
 ```bash
 # Check logs
-docker logs mc-atm8
+docker logs mc-all-the-mods-10
 
 # If world corruption suspected
-./scripts/restore.sh atm8 atm8-20251107-230015.tar.gz --force
+./scripts/restore.sh all-the-mods-10 all-the-mods-10-20251107-230015.tar.gz --force
 
 # Verify
-docker start mc-atm8
-docker logs -f mc-atm8
+docker start mc-all-the-mods-10
+docker logs -f mc-all-the-mods-10
 ```
 
 ### Scenario 3: Accidental Deletion
@@ -296,10 +296,10 @@ docker logs -f mc-atm8
 
 ```bash
 # Stop server immediately
-docker stop mc-atm8
+docker stop mc-all-the-mods-10
 
 # Restore latest backup
-./scripts/restore.sh atm8 $(ls -t backups/atm8/*.tar.gz | head -1 | xargs basename)
+./scripts/restore.sh all-the-mods-10 $(ls -t backups/all-the-mods-10/*.tar.gz | head -1 | xargs basename)
 ```
 
 ### Scenario 4: Mod Update Breaks World
@@ -310,7 +310,7 @@ docker stop mc-atm8
 
 ```bash
 # Restore pre-update backup
-./scripts/restore.sh atm8 atm8-20251107-before-update.tar.gz
+./scripts/restore.sh all-the-mods-10 all-the-mods-10-20251107-before-update.tar.gz
 
 # Update mods more carefully
 # Test on copy first
@@ -322,14 +322,14 @@ docker stop mc-atm8
 
 ```bash
 # Check backup contents
-tar tzf backups/atm8/atm8-20251108-143022.tar.gz | head -20
+tar tzf backups/all-the-mods-10/all-the-mods-10-20251108-143022.tar.gz | head -20
 
 # Verify checksum
-sha256sum -c backups/atm8/atm8-20251108-143022.tar.gz.sha256
+sha256sum -c backups/all-the-mods-10/all-the-mods-10-20251108-143022.tar.gz.sha256
 
 # Test extraction (dry run)
 mkdir /tmp/backup-test
-tar xzf backups/atm8/atm8-20251108-143022.tar.gz -C /tmp/backup-test
+tar xzf backups/all-the-mods-10/all-the-mods-10-20251108-143022.tar.gz -C /tmp/backup-test
 ls -la /tmp/backup-test/data/
 rm -rf /tmp/backup-test
 ```
@@ -393,10 +393,10 @@ For additional security, encrypt backups:
 
 ```bash
 # Encrypt backup (requires gpg)
-gpg -c backups/atm8/atm8-20251108-143022.tar.gz
+gpg -c backups/all-the-mods-10/all-the-mods-10-20251108-143022.tar.gz
 
 # Decrypt before restore
-gpg backups/atm8/atm8-20251108-143022.tar.gz.gpg
+gpg backups/all-the-mods-10/all-the-mods-10-20251108-143022.tar.gz.gpg
 ```
 
 ## Monitoring & Alerting
@@ -405,10 +405,10 @@ gpg backups/atm8/atm8-20251108-143022.tar.gz.gpg
 
 ```bash
 # Check last backup age
-find backups/atm8/ -name "*.tar.gz" -mtime +1 | wc -l
+find backups/all-the-mods-10/ -name "*.tar.gz" -mtime +1 | wc -l
 
 # Alert if no recent backup
-if [[ $(find backups/atm8/ -name "*.tar.gz" -mtime +1 | wc -l) -gt 0 ]]; then
+if [[ $(find backups/all-the-mods-10/ -name "*.tar.gz" -mtime +1 | wc -l) -gt 0 ]]; then
   echo "WARNING: No backup in last 24 hours"
 fi
 ```
@@ -430,8 +430,8 @@ fi
 
 ```bash
 # Start server first
-./scripts/start-server.sh atm8
-./scripts/backup.sh atm8
+./scripts/start-server.sh all-the-mods-10
+./scripts/backup.sh all-the-mods-10
 ```
 
 **Error**: "Insufficient disk space"
@@ -472,10 +472,10 @@ sudo chown -R $USER:$USER servers/
 
 ```bash
 # Check logs
-docker logs mc-atm8
+docker logs mc-all-the-mods-10
 
 # Manual start
-docker start mc-atm8
+docker start mc-all-the-mods-10
 ```
 
 ### Performance Issues
@@ -514,7 +514,7 @@ docker start mc-atm8
 
 ## Related Documentation
 
-- [QUICKSTART.md](../docs/QUICKSTART.md) - Getting started guide
-- [TROUBLESHOOTING.md](../docs/TROUBLESHOOTING.md) - Common issues
-- [ARCHITECTURE.md](../docs/ARCHITECTURE.md) - System design
-- [contracts/management-api.md](../specs/001-docker-multi-server/contracts/management-api.md) - API specifications
+- [QUICKSTART.md](QUICKSTART.md) - Getting started guide
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Common issues
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System design
+- [Monitoring](MONITORING.md) - Health checks and auto-restart

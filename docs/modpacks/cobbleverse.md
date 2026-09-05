@@ -2,7 +2,7 @@
 
 **Modrinth**: https://modrinth.com/modpack/cobbleverse  
 **Type**: Fabric-based Pokemon adventure modpack with Cobblemon  
-**Minecraft Version**: 1.20.1 (auto-detected)  
+**Minecraft Version**: 1.21.1 (auto-detected)  
 **Memory**: 6GB recommended
 
 ## Overview
@@ -25,7 +25,7 @@ docker logs -f mc-cobbleverse
 
 | Setting         | Value             |
 | --------------- | ----------------- |
-| **Port**        | 25570             |
+| **Port**        | 25568             |
 | **Memory**      | 6GB               |
 | **Type**        | Modrinth (Fabric) |
 | **Max Players** | 20                |
@@ -34,8 +34,8 @@ docker logs -f mc-cobbleverse
 
 ## Connection
 
-- **Address**: `your-server-ip:25570`
-- **Version**: 1.20.1 (check modpack page for exact version)
+- **Address**: `your-server-ip:25568`
+- **Version**: 1.21.1 (check modpack page for exact version)
 - **Client**: Install Cobbleverse modpack from Modrinth Launcher
 
 ## Features
@@ -101,7 +101,7 @@ Players need to install the Cobbleverse modpack to connect:
 1. **Install Modrinth App**: https://modrinth.com/app
 2. **Search for "Cobbleverse"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25570`
+4. **Launch and connect** to `your-server-ip:25568`
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 
@@ -163,7 +163,7 @@ MAX_MEMORY=8G
 docker logs mc-cobbleverse
 
 # Common issues:
-# - Port 25570 already in use
+# - Port 25568 already in use
 # - Insufficient memory
 # - Network issues downloading modpack
 ```
@@ -182,7 +182,7 @@ VIEW_DISTANCE=8
 ### Clients can't connect
 
 1. Ensure client has Cobbleverse modpack installed
-2. Check firewall allows port 25570
+2. Check firewall allows port 25568
 3. Verify server is running: `docker ps | grep cobbleverse`
 4. Check server logs for errors
 

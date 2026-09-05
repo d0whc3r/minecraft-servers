@@ -20,7 +20,7 @@ The `scripts/health-check.sh` script provides detailed health status for servers
 
 ```bash
 # Check specific server
-./scripts/health-check.sh atm8
+./scripts/health-check.sh rlcraft
 
 # Check all servers
 ./scripts/health-check.sh --all
@@ -126,10 +126,10 @@ Health checks are automatically configured for all servers started via `docker-c
 
 ```bash
 # Check health of specific container
-docker inspect mc-atm8 | jq '.[].State.Health.Status'
+docker inspect mc-rlcraft | jq '.[].State.Health.Status'
 
 # View health check logs
-docker logs mc-atm8 2>&1 | grep -i health
+docker logs mc-rlcraft 2>&1 | grep -i health
 ```
 
 ## Monitoring Best Practices
@@ -203,10 +203,10 @@ fi
 docker ps --format "table {{.Names}}\t{{.Status}}"
 
 # View container health details
-docker inspect mc-atm8 | jq '.[].State.Health'
+docker inspect mc-rlcraft | jq '.[].State.Health'
 
 # Check server logs for errors
-docker logs --tail 100 mc-atm8 | grep -i error
+docker logs --tail 100 mc-rlcraft | grep -i error
 
 # Test port connectivity manually
 telnet localhost 25565

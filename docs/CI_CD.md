@@ -81,7 +81,8 @@ ARTIFACT_RETENTION_DAYS=7 # How long to keep test artifacts
 
 ## Environment Variables in CI
 
-The BATS test suite automatically injects all variables from `.env.template`:
+The BATS test suite defines its test environment directly in the workflow's `env` block
+(`.github/workflows/bats-tests.yml`):
 
 ```bash
 # Minecraft EULA (required)
@@ -108,6 +109,9 @@ USE_AIKAR_FLAGS=true
 ONLINE_MODE=false
 ALLOW_FLIGHT=true
 ```
+
+If you add a variable to `.env.example` that tests depend on, mirror it in the workflow's
+`env` block.
 
 ## Required GitHub Secrets
 
@@ -164,13 +168,13 @@ The tests now provide enhanced output visibility:
 
 ## Local Development vs CI
 
-| Aspect          | Local Development     | CI Pipeline            |
-| --------------- | --------------------- | ---------------------- |
-| **Linting**     | `pnpm run lint`       | `code-quality.yml`     |
-| **Quick Tests** | `pnpm run test:quick` | Pre-push hook          |
-| **Full Tests**  | `pnpm run test`       | `bats-tests.yml`       |
-| **Environment** | Local `.env` file     | Injected from template |
-| **CF_API_KEY**  | Manual `.env` setup   | GitHub secret          |
+| Aspect          | Local Development     | CI Pipeline          |
+| --------------- | --------------------- | -------------------- |
+| **Linting**     | `pnpm run lint`       | `code-quality.yml`   |
+| **Quick Tests** | `pnpm run test:quick` | Pre-push hook        |
+| **Full Tests**  | `pnpm run test`       | `bats-tests.yml`     |
+| **Environment** | Local `.env` file     | Workflow `env` block |
+| **CF_API_KEY**  | Manual `.env` setup   | GitHub secret        |
 
 ## Troubleshooting
 

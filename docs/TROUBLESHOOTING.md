@@ -522,7 +522,7 @@ Run the validation script to check your setup:
 # System info
 uname -a
 docker --version
-docker-compose --version
+docker compose version
 
 # Resource usage
 free -h

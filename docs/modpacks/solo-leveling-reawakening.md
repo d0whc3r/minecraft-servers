@@ -122,7 +122,7 @@ Players need to install the Solo Leveling - Reawakening modpack to connect:
 1. **Install CurseForge App**: https://www.curseforge.com/download/app
 2. **Search for "Solo Leveling - Reawakening"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25573`
+4. **Launch and connect** to `your-server-ip:25571`
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 

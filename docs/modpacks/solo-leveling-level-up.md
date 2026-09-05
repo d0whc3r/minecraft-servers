@@ -121,7 +121,7 @@ Players need to install the Solo Leveling - Level Up modpack to connect:
 1. **Install CurseForge App**: https://www.curseforge.com/download/app
 2. **Search for "Solo Leveling: Level Up"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25577`
+4. **Launch and connect** to `your-server-ip:25575`
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 

@@ -1,406 +1,282 @@
-# Adding Custom Modpacks
+# Adding Modpacks
 
-**Purpose**: Guide for administrators to add new Minecraft server configurations beyond the pre-configured templates, enabling unlimited server customization.
+Guide for adding new Minecraft server configurations, whether from the built-in
+templates or completely custom (CurseForge, Modrinth, Forge, Fabric, Paper).
 
-## Overview
+Two paths:
 
-The `add-modpack.sh` script enables administrators to:
+- **Quick**: `add-modpack.sh` with a built-in template — generates a working config in one command
+- **Manual**: create the `.env` yourself — full control, needed for modpacks not covered by templates
 
-- **Add custom servers** with automatic port assignment
-- **Use pre-configured templates** for popular modpacks
-- **Create custom configurations** for any modpack
-- **Validate configurations** before deployment
-- **Avoid conflicts** through automatic validation
-
-## Quick Start
-
-### Add Server with Template
+## Quick Path: Templates
 
 ```bash
-# Add ATM8 server with auto-assigned port
+# Add a server from a template (port auto-assigned)
 ./scripts/add-modpack.sh my-atm8 --modpack=atm8
 
-# Add SkyFactory 4 server with custom port
-./scripts/add-modpack.sh sf4-creative --modpack=skyfactory4 --port=25571
+# With a specific port and memory
+./scripts/add-modpack.sh sf4-creative --modpack=skyfactory4 --port=25590
 
-# Add vanilla server with custom memory
-./scripts/add-modpack.sh vanilla-large --modpack=vanilla --memory=8G
+# Then customize and start
+nano config/modpacks/my-atm8.env
+./scripts/start-server.sh my-atm8
 ```
 
-### Add Custom Server
+### Command Syntax
 
-```bash
-# Add custom modpack server
-./scripts/add-modpack.sh my-custom-modpack --port=25572 --memory=6G
-
-# This creates a basic PAPER configuration that you can customize
-```
-
-## Available Templates
-
-| Template      | Description       | Type            | Version | Memory | CurseForge |
-| ------------- | ----------------- | --------------- | ------- | ------ | ---------- |
-| `atm8`        | All The Mods 8    | AUTO_CURSEFORGE | 1.20.1  | 8G     | ✅         |
-| `skyfactory4` | SkyFactory 4      | AUTO_CURSEFORGE | 1.12.2  | 4G     | ✅         |
-| `prominence2` | Prominence II RPG | AUTO_CURSEFORGE | 1.20.1  | 6G     | ✅         |
-| `rlcraft`     | RLCraft           | AUTO_CURSEFORGE | 1.12.2  | 6G     | ✅         |
-| `vanilla`     | Vanilla Optimized | PAPER           | 1.20.4  | 2G     | ❌         |
-
-## Command Syntax
-
-```bash
+```text
 ./scripts/add-modpack.sh <server-name> [options]
 
 Required:
-  <server-name>    Unique identifier (lowercase, numbers, hyphens only)
+  <server-name>    Unique identifier (lowercase letters, numbers, hyphens)
 
 Options:
-  --modpack=<name> Use pre-configured template
-  --port=<number>  Specific port (25565-25664, auto-assigned if omitted)
-  --memory=<size>  RAM allocation (e.g., 4G, 8G, 2048M)
+  --modpack=<name> Use a built-in template (see table below)
+  --port=<number>  Specific port (25565-25664; auto-assigned if omitted)
+  --memory=<size>  RAM allocation (e.g. 4G, 8G, 2048M)
 ```
 
-## Examples
+### Built-in Templates
 
-### Example 1: Basic ATM8 Server
+| Template      | Description       | Type            | Version | Memory |
+| ------------- | ----------------- | --------------- | ------- | ------ |
+| `atm8`        | All The Mods 8    | AUTO_CURSEFORGE | 1.20.1  | 8G     |
+| `skyfactory4` | SkyFactory 4      | AUTO_CURSEFORGE | 1.12.2  | 4G     |
+| `prominence2` | Prominence II RPG | AUTO_CURSEFORGE | 1.20.1  | 6G     |
+| `rlcraft`     | RLCraft           | AUTO_CURSEFORGE | 1.12.2  | 6G     |
+| `vanilla`     | Vanilla Optimized | PAPER           | 1.20.4  | 2G     |
+
+> The script's templates are independent from the 15 pre-configured servers already in
+> `config/modpacks/`. The pre-configured servers are started directly with
+> `./scripts/start-server.sh <name>` — no need to "add" them first.
+
+## Manual Path: Step by Step
+
+### Step 1: Create the Configuration File
 
 ```bash
-./scripts/add-modpack.sh my-atm8 --modpack=atm8
+# Copy the documented base template
+cp config/templates/modpack-template.env config/modpacks/your-modpack.env
+nano config/modpacks/your-modpack.env
 ```
 
-**Output**:
-
-```
-[INFO] Adding new server: my-atm8
-[INFO] Using template: All The Mods 8
-[INFO] Auto-assigning port...
-[INFO] Assigned port: 25570
-[SUCCESS] Created config: ./config/modpacks/my-atm8.env
-[SUCCESS] Created directories:
-  - ./servers/my-atm8/data
-  - ./servers/my-atm8/mods
-  - ./backups/my-atm8
-[SUCCESS] New server configuration created successfully!
-
-Configuration Summary:
-  Name: my-atm8
-  Type: AUTO_CURSEFORGE (All The Mods 8)
-  Port: 25570
-  Memory: 8G
-
-To start the server:
-  ./scripts/start-server.sh my-atm8
-```
-
-### Example 2: Custom Configuration
+### Step 2: Configure the Required Variables
 
 ```bash
-./scripts/add-modpack.sh creative-server --port=25575 --memory=12G
-```
+# Server type (see Step 3)
+TYPE=AUTO_CURSEFORGE
 
-**Output**:
-
-```
-[INFO] Adding new server: creative-server
-[INFO] Created basic configuration (no template specified)
-[SUCCESS] Created config: ./config/modpacks/creative-server.env
-[SUCCESS] Created directories:
-  - ./servers/creative-server/data
-  - ./servers/creative-server/mods
-  - ./backups/creative-server
-[SUCCESS] New server configuration created successfully!
-
-Configuration Summary:
-  Name: creative-server
-  Type: PAPER (Vanilla)
-  Version: 1.20.4
-  Port: 25575
-  Memory: 12G
-```
-
-## Custom Modpack Integration
-
-### CurseForge Modpacks
-
-For CurseForge modpacks not in templates:
-
-1. **Find the modpack URL**:
-
-   ```
-   https://www.curseforge.com/minecraft/modpacks/your-modpack-name
-   ```
-
-2. **Add custom server**:
-
-   ```bash
-   ./scripts/add-modpack.sh your-modpack --port=25580 --memory=6G
-   ```
-
-3. **Edit configuration**:
-
-   ```bash
-   nano config/modpacks/your-modpack.env
-   ```
-
-4. **Update settings**:
-   ```env
-   # Custom Modpack Configuration
-   TYPE=AUTO_CURSEFORGE
-   VERSION=1.20.1 # Check modpack requirements
-   MEMORY=6G
-   CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/your-modpack-name
-   SERVER_NAME=Your Modpack Server
-   SERVER_PORT=25580
-   MAX_PLAYERS=20
-   ```
-
-### Forge/Fabric Modpacks
-
-For non-CurseForge modpacks:
-
-1. **Create basic server**:
-
-   ```bash
-   ./scripts/add-modpack.sh forge-server --port=25581 --memory=8G
-   ```
-
-2. **Edit configuration**:
-
-   ```bash
-   nano config/modpacks/forge-server.env
-   ```
-
-3. **Update for Forge**:
-
-   ```env
-   # Forge Modpack Configuration
-   TYPE=FORGE
-   VERSION=1.19.2 # Match modpack version
-   MEMORY=8G
-   SERVER_NAME=Forge Server
-   SERVER_PORT=25581
-   MAX_PLAYERS=20
-   ```
-
-4. **Add mods manually**:
-   ```bash
-   # Copy mod files to server mods directory
-   cp *.jar servers/forge-server/mods/
-   ```
-
-### Vanilla with Plugins
-
-For vanilla servers with plugins:
-
-1. **Create vanilla server**:
-
-   ```bash
-   ./scripts/add-modpack.sh plugins-server --modpack=vanilla --port=25582 --memory=4G
-   ```
-
-2. **Add plugins**:
-
-   ```bash
-   # Create plugins directory
-   mkdir servers/plugins-server/data/plugins
-   
-   # Copy plugin JARs
-   cp *.jar servers/plugins-server/data/plugins/
-   ```
-
-## Configuration File Format
-
-### Basic Structure
-
-```env
-# Server Configuration
-TYPE=PAPER | FORGE | FABRIC | AUTO_CURSEFORGE
+# Minecraft version — MUST match the modpack exactly (critical for MODRINTH)
 VERSION=1.20.1
+
+# RAM allocation (2G-16G depending on the modpack)
 MEMORY=4G
-CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/name # If AUTO_CURSEFORGE
-SERVER_NAME=Display Name
-SERVER_PORT=25565
+
+# Unique port (check existing: grep SERVER_PORT config/modpacks/*.env)
+SERVER_PORT=25580
+
+# Display/identifier name (lowercase, no spaces)
+SERVER_NAME=your-modpack
+
+# RCON port — project convention: SERVER_PORT + 1000, unique per server
+RCON_PORT=26580
+```
+
+### Step 3: Configure According to Modpack Type
+
+#### CurseForge
+
+```bash
+TYPE=AUTO_CURSEFORGE
+CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/modpack-name
+# VERSION is auto-detected for AUTO_CURSEFORGE; set it only to pin
+# Pin an exact release with CF_SLUG + CF_FILE_ID (see plants-vs-zombies.env for an example)
+```
+
+Requires `CF_API_KEY` in the shared `.env`.
+
+#### Modrinth
+
+```bash
+TYPE=MODRINTH
+MODRINTH_MODPACK=cobbleverse # project slug, ID or URL
+VERSION=1.21.1               # CRITICAL: must match the modpack's Minecraft version
+# MODRINTH_VERSION=1.0.0            # optional: pin a specific modpack release
+```
+
+**The `VERSION` is mandatory for Modrinth** — without the exact Minecraft version the
+server installs the wrong MC and fails to load the modpack. Find it with:
+
+```bash
+curl -s "https://api.modrinth.com/v2/project/<slug>" | grep game_versions
+```
+
+#### Forge / Fabric (manual mods)
+
+```bash
+TYPE=FORGE     # or FABRIC
+VERSION=1.19.2 # match your mods
+```
+
+Then place the mod jars in the server's mods dir (create it first):
+
+```bash
+mkdir -p servers/your-modpack/mods
+cp path/to/mods/*.jar servers/your-modpack/mods/
+```
+
+#### Paper (vanilla + plugins)
+
+```bash
+TYPE=PAPER
+VERSION=1.20.4
+```
+
+Plugins go in `servers/your-modpack/data/plugins/` (created after first start).
+
+### Step 4: Create the Directories
+
+```bash
+mkdir -p servers/your-modpack/data servers/your-modpack/mods backups/your-modpack
+```
+
+### Step 5: Validate and Test
+
+```bash
+# Validate the configuration
+./scripts/validate-config.sh your-modpack
+
+# Start and watch the first boot (modpack download takes 5-10 min)
+./scripts/start-server.sh your-modpack
+docker logs -f mc-your-modpack
+
+# Verify, then stop if you were just testing
+docker ps | grep mc-your-modpack
+./scripts/stop-server.sh your-modpack
+```
+
+### Final Checklist
+
+- [ ] `.env` created in `config/modpacks/`
+- [ ] `SERVER_NAME` unique and valid (lowercase, hyphens, no spaces)
+- [ ] `SERVER_PORT` unique (25565-25664)
+- [ ] `RCON_PORT` unique (convention: `SERVER_PORT + 1000`)
+- [ ] `TYPE` correct for the modpack
+- [ ] `VERSION` matches the modpack (mandatory and exact for MODRINTH)
+- [ ] `MEMORY` sufficient for the modpack
+- [ ] `CF_API_KEY` set in shared `.env` (CurseForge only)
+- [ ] Directories created (`servers/`, `backups/`)
+- [ ] `validate-config.sh` passes and the server reaches `Done!` in the logs
+
+## Customization Reference
+
+### Common Gameplay Options
+
+```bash
 MAX_PLAYERS=20
-DIFFICULTY=normal
-VIEW_DISTANCE=10
-```
-
-### Advanced Options
-
-```env
-# Server Settings
-MOTD="Welcome to My Server"
-DIFFICULTY=hard
-GAMEMODE=survival
+DIFFICULTY=normal # peaceful | easy | normal | hard
+MODE=survival     # survival | creative | adventure | spectator
 PVP=true
-ONLINE_MODE=false
-
-# Performance
-VIEW_DISTANCE=12
+MOTD="Welcome to My Server"
+VIEW_DISTANCE=10 # 8-12 recommended for modded
 SIMULATION_DISTANCE=10
-MAX_TICK_TIME=60000
-
-# Resource Limits
-MEMORY=8G
-MAX_PLAYERS=50
-
-# World Settings
-LEVEL_TYPE=minecraft\:normal
-ALLOW_NETHER=true
-ALLOW_FLIGHT=false
 ```
+
+### Memory Recommendations
+
+| Modpack type       | Memory | Notes                                     |
+| ------------------ | ------ | ----------------------------------------- |
+| Vanilla / Paper    | 2-4G   | Basic gameplay                            |
+| Light modded       | 4-6G   | Few mods                                  |
+| Medium modded      | 6-8G   | Most modpacks                             |
+| Heavy (ATM series) | 8-12G  | Complex automation                        |
+| RLCraft / 1.12.2   | 6G     | Needs Java 8 image (`JAVA_VERSION=java8`) |
+
+Enable optimized JVM flags for 4G+:
+
+```bash
+USE_AIKAR_FLAGS=true
+```
+
+Full variable reference: [Environment Variables](ENVIRONMENT_VARIABLES.md).
 
 ## Port Management
 
-### Automatic Assignment
-
-The script automatically finds the next available port:
-
 ```bash
-# Check current ports
+# Check which ports are taken
 grep SERVER_PORT config/modpacks/*.env
 
-# Add new server (auto-assigns next available)
+# Auto-assign (first free in 25565-25664)
 ./scripts/add-modpack.sh new-server
+
+# Or choose explicitly
+./scripts/add-modpack.sh new-server --port=25590
 ```
 
-### Manual Port Assignment
-
-```bash
-# Specify exact port
-./scripts/add-modpack.sh custom-server --port=25590
-```
-
-### Port Range
-
-- **Valid range**: 25565-25664 (100 servers maximum)
-- **Default start**: 25565
-- **Auto-assignment**: Finds first unused port
-
-## Memory Configuration
-
-### Format
-
-- `4G` = 4 gigabytes
-- `2048M` = 2048 megabytes (same as 2G)
-- `8G` = 8 gigabytes
-
-### Recommendations by Modpack
-
-| Modpack Type            | Memory | Notes              |
-| ----------------------- | ------ | ------------------ |
-| **Vanilla**             | 2-4G   | Basic gameplay     |
-| **Light modded**        | 4-6G   | Few mods           |
-| **Medium modded**       | 6-8G   | Popular modpacks   |
-| **Heavy modded** (ATM8) | 8-12G  | Complex automation |
-| **RLCraft**             | 6-8G   | Performance issues |
+Range 25565-25664 allows up to 100 servers. Remember to also keep `RCON_PORT` values
+unique — a duplicate RCON port will make the second container fail to publish it.
 
 ## Validation & Error Handling
 
-### Server Name Validation
+### Server Name
 
-- **Format**: `^[a-z0-9-]+$` (lowercase, numbers, hyphens)
-- **Uniqueness**: Cannot duplicate existing servers
-- **Length**: 3-32 characters recommended
-
-**Invalid examples**:
+- Format `^[a-z0-9-]+$`, unique, 3-32 characters recommended
 
 ```bash
-./scripts/add-modpack.sh MyServer      # ❌ Uppercase
-./scripts/add-modpack.sh server_name   # ❌ Underscore
-./scripts/add-modpack.sh server@domain # ❌ Special chars
+./scripts/add-modpack.sh MyServer      # ❌ uppercase
+./scripts/add-modpack.sh server_name   # ❌ underscore
+./scripts/add-modpack.sh server@domain # ❌ special chars
 ```
 
-### Port Validation
+### Memory
 
-- **Range**: 25565-25664
-- **Uniqueness**: Cannot conflict with existing servers
-- **Availability**: Checked against running services
-
-### Memory Validation
-
-- **Format**: `<number>G` or `<number>M`
-- **Examples**: `4G`, `8G`, `2048M`, `4096M`
+Format `<number>G` or `<number>M`: `4G` ✅, `4096M` ✅, `4GB` ❌.
 
 ## Troubleshooting
 
 ### "Server already exists"
 
-**Problem**: Trying to add server with name that already exists
-
-**Solution**:
-
 ```bash
-# Check existing servers
-ls config/modpacks/
-
-# Use different name
-./scripts/add-modpack.sh different-name --modpack=atm8
+ls config/modpacks/                     # check existing names
+./scripts/add-modpack.sh different-name # pick another
 ```
 
-### "No available ports"
-
-**Problem**: All ports in range 25565-25664 are used
-
-**Solution**:
+### "Port already in use"
 
 ```bash
-# Remove unused servers
-rm config/modpacks/unused-server.env
-rm -rf servers/unused-server backups/unused-server
-
-# Or use manual port assignment
-./scripts/add-modpack.sh new-server --port=25565 # If available
+grep SERVER_PORT config/modpacks/*.env # find the conflict
+SERVER_PORT=25581                      # pick another port in the .env
 ```
 
-### "Invalid memory format"
-
-**Problem**: Memory not in correct format
-
-**Solution**:
+### Modpack won't download
 
 ```bash
-# Use correct format
-./scripts/add-modpack.sh server --memory=4G    # ✅
-./scripts/add-modpack.sh server --memory=4096M # ✅
-./scripts/add-modpack.sh server --memory=4GB   # ❌ (no B)
-```
-
-### Modpack Won't Download
-
-**Problem**: AUTO_CURSEFORGE server fails to start
-
-**Solution**:
-
-```bash
-# Check CurseForge URL
+# Verify the CurseForge URL is reachable
 curl -I "https://www.curseforge.com/minecraft/modpacks/your-modpack"
 
-# Verify version compatibility
-nano config/modpacks/server.env
-# Check VERSION matches modpack requirements
+# Verify the Modrinth slug and its supported versions
+curl -s "https://api.modrinth.com/v2/project/your-modpack" | grep game_versions
+
+# Check container logs for the concrete error
+docker logs mc-your-modpack
 ```
 
-### Permission Errors
+Also confirm `CF_API_KEY` is set in `.env` for CurseForge packs.
 
-**Problem**: Cannot create directories or files
-
-**Solution**:
+### Permission errors
 
 ```bash
-# Fix permissions
 sudo chown -R $USER:$USER .
-
-# Or run with sudo (not recommended)
-sudo ./scripts/add-modpack.sh server-name
+chmod +x scripts/*.sh
 ```
+
+More: [Troubleshooting](TROUBLESHOOTING.md).
 
 ## Advanced Usage
 
-### Bulk Server Creation
+### Bulk Creation
 
 ```bash
-# Create multiple servers
 for i in {1..3}; do
   ./scripts/add-modpack.sh "atm8-test-$i" --modpack=atm8
 done
@@ -408,65 +284,34 @@ done
 
 ### Custom Templates
 
-Create your own templates by editing the script:
+Add your own entries to the `TEMPLATES` map in `scripts/add-modpack.sh`:
 
 ```bash
-# Edit script
-nano scripts/add-modpack.sh
-
-# Add to TEMPLATES array
-TEMPLATES["my-template"]="My Modpack,AUTO_CURSEFORGE,1.20.1,6G,https://curseforge.com/link,My Server"
+TEMPLATES["my-template"]="My Modpack,AUTO_CURSEFORGE,1.20.1,6G,https://www.curseforge.com/link,My Server"
 ```
 
-### Integration with Docker Compose
-
-The script creates configurations that work with the existing docker-compose.yml. No manual editing needed.
-
-### Server Removal
-
-To remove a server:
+### Removing a Server
 
 ```bash
-# Stop if running
-docker stop mc-server-name
+# Stop and remove container + data (keeps config and backups)
+./scripts/stop-server.sh <name> --purge
 
-# Remove configuration
-rm config/modpacks/server-name.env
-
-# Remove data (CAUTION: irreversible)
-rm -rf servers/server-name backups/server-name
+# Or fully manual (CAUTION: irreversible)
+docker stop mc-<name>
+rm config/modpacks/<name>.env
+rm -rf servers/<name> backups/<name>
 ```
 
 ## Best Practices
 
-### Naming Conventions
-
-- **Descriptive**: `atm8-creative`, `vanilla-survival`
-- **Consistent**: Use prefixes for related servers
-- **Short**: Keep under 20 characters
-
-### Resource Planning
-
-- **Start small**: Begin with minimal memory, increase if needed
-- **Monitor usage**: Use `docker stats` to check resource consumption
-- **Plan for growth**: Allocate extra capacity for world expansion
-
-### Backup Strategy
-
-- **Configure backups** after adding servers
-- **Test restores** before going live
-- **Automate** with cron jobs
-
-### Security
-
-- **Limit access** to server files
-- **Use strong passwords** for admin accounts
-- **Keep software updated** (Minecraft, mods, Docker)
+- **Naming**: descriptive and consistent (`atm8-creative`, `vanilla-survival`), under 20 chars
+- **Resources**: start with modest memory, watch `docker stats`, increase as needed
+- **Backups**: configure a cron job after adding the server, and test a restore before going live
+- **Security**: strong `RCON_PASSWORD` in `.env`, limit file access, keep Docker/modpacks updated
 
 ## Related Documentation
 
-- [QUICKSTART.md](../QUICKSTART.md) - Getting started guide
-- [BACKUP_RESTORE.md](../BACKUP_RESTORE.md) - Backup procedures
-- [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) - Common issues
-- [ARCHITECTURE.md](../ARCHITECTURE.md) - System design
-- [contracts/management-api.md](../../specs/001-docker-multi-server/contracts/management-api.md) - API specifications
+- [Quick Start](QUICKSTART.md) — getting started
+- [Environment Variables](ENVIRONMENT_VARIABLES.md) — full configuration reference
+- [Backup & Restore](BACKUP_RESTORE.md) — protecting your new server
+- [Architecture](ARCHITECTURE.md) — how instantiation works internally

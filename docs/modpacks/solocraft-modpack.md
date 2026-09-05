@@ -116,7 +116,7 @@ Players need to install the SoloCraft modpack to connect:
 1. **Install Modrinth App**: https://modrinth.com/app
 2. **Search for "SoloCraft"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25572`
+4. **Launch and connect** to `your-server-ip:25570`
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 

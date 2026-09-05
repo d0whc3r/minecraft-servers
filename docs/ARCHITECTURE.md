@@ -1,35 +1,43 @@
 # Architecture Overview
 
-This document describes the architecture of the minecraft-servers multi-configuration system, focusing on the template-based orchestration pattern that enables unlimited server scalability.
+This document describes how the minecraft-servers system works internally: the
+template-based orchestration pattern, the environment layering, and the lifecycle of a
+server from script call to running container.
 
 ## Core Design Principles
 
 ### 1. Template-Based Orchestration
 
-**Problem**: Traditional Docker Compose multi-server setups require editing the compose file for each new server, leading to:
+**Problem**: Traditional Docker Compose multi-server setups require editing the compose
+file for each new server, leading to configuration drift, duplicated service definitions,
+and manual port management.
 
-- Configuration drift
-- Manual port management conflicts
-- Service definition duplication
-- Scaling limitations
-
-**Solution**: Single service template instantiated per-server using environment variables.
+**Solution**: a **single service template** instantiated once per server. Each server runs
+as its own Compose project (`-p mc-<name>`) created from the same `docker-compose.yml`,
+parameterized entirely by environment variables:
 
 ```yaml
-# docker-compose.yml - Single template service
+# docker-compose.yml — the only service definition in the whole system
 services:
   minecraft-server:
-    image: itzg/minecraft-server:latest
-    container_name: mc-${SERVER_NAME}
-    env_file: config/modpacks/${SERVER_NAME}.env
-    ports: ['${SERVER_PORT}:25565']
+    image: itzg/minecraft-server:${JAVA_VERSION:-latest}
+    container_name: ${CONTAINER_NAME:-mc-server}
+    env_file:
+      - .env # 1) shared defaults
+      - ${SERVER_CONFIG_FILE} # 2) per-server overrides (config/modpacks/<name>.env)
+    ports:
+      - '${SERVER_PORT:-25565}:25565' # game port
+      - '${RCON_PORT:-25575}:${RCON_PORT:-25575}' # RCON port
+    environment:
+      SERVER_PORT: 25565 # inside the container it is always 25565
     volumes:
-      - ./servers/${SERVER_NAME}/data:/data
-      - ./servers/${SERVER_NAME}/mods:/mods
-      - ./backups/${SERVER_NAME}:/backups
+      - ${SERVER_DATA_DIR:-./data}:/data
+      - ${SERVER_MODS_DIR:-./mods}:/mods
+      - ${SERVER_BACKUP_DIR:-./backups}:/backups
     networks:
-      - minecraft-network
-    restart: unless-stopped
+      - minecraft-network # external, shared by all servers
+    stdin_open: true
+    tty: true
     healthcheck:
       test: mc-health
       interval: 30s
@@ -38,62 +46,68 @@ services:
       start_period: 5m
 ```
 
+The substitution variables (`CONTAINER_NAME`, `SERVER_CONFIG_FILE`, `SERVER_PORT`,
+`RCON_PORT`, `JAVA_VERSION`, `SERVER_*_DIR`) are computed by `scripts/common.sh` for each
+server before invoking `docker compose -p mc-<name> up -d`.
+
 **Benefits**:
 
 - ✅ Zero compose file changes when adding servers
-- ✅ Isolated per-server configuration
-- ✅ Automatic port and naming conflict prevention
-- ✅ Unlimited horizontal scaling
-- ✅ Single source of truth for service definition
+- ✅ Isolated per-server configuration and data
+- ✅ Unique container names (`mc-<name>`) and Compose projects (`mc-<name>`) prevent collisions
+- ✅ Per-server Java version via the image tag (`itzg/minecraft-server:java8|java11|java17|java21|java25|latest`)
+- ✅ Unlimited horizontal scaling (bounded only by host resources)
 
 ### 2. Environment-Driven Configuration
 
-**Pattern**: Configuration as code with hierarchical environment variables.
+Configuration is layered. Later sources override earlier ones:
 
 ```
-Global (.env)
-├── Docker Compose variables
-└── Default settings
-
-Per-Server (config/modpacks/{name}.env)
-├── Server-specific variables
-├── Modpack configuration
-└── Resource allocation
+.env.example → copied to .env (shared, git-ignored)
+│   EULA, NETWORK_NAME, BASE_PORT, COMPOSE_PROJECT_NAME,
+│   CF_API_KEY, ENABLE_RCON, RCON_PASSWORD, USE_AIKAR_FLAGS, ...
+│
+config/modpacks/<name>.env (per server, committed)
+    TYPE, VERSION, MEMORY, SERVER_PORT, SERVER_NAME, RCON_PORT,
+    modpack source (CF_PAGE_URL / MODRINTH_MODPACK), gameplay tuning, ...
+│
+docker compose substitution (computed by scripts/common.sh, never edited)
+    CONTAINER_NAME, SERVER_CONFIG_FILE, SERVER_PORT, RCON_PORT*,
+    JAVA_VERSION, SERVER_DATA_DIR, SERVER_MODS_DIR, SERVER_BACKUP_DIR
 ```
 
-**Example**:
+\* `RCON_PORT` is read from the server config file; the project convention is
+`SERVER_PORT + 1000` (e.g. `vanilla`: game `25567`, RCON `26567`).
 
-```bash
-# Global .env
-COMPOSE_PROJECT_NAME=minecraft-servers
-
-# Per-server config/modpacks/atm8.env
-SERVER_NAME=atm8
-SERVER_PORT=25565
-TYPE=AUTO_CURSEFORGE
-VERSION=1.20.1
-MEMORY=8G
-CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/all-the-mods-8
-```
+Note the split: variables consumed by **docker compose itself** (ports, image tag,
+container name, volume paths) are exported into the environment by the scripts, while
+variables consumed by **the container** (Minecraft settings) flow through the two
+`env_file` entries.
 
 ### 3. Contract-Based Scripting
 
-**Pattern**: All management scripts follow `contracts/management-api.md` specifications.
+All management scripts share `scripts/common.sh`, which provides validation, colored
+output, Docker/Compose helpers, and the naming conventions:
 
-**Exit Code Contract**:
+| Concept         | Value                               |
+| --------------- | ----------------------------------- |
+| Server name     | `^[a-z0-9-]+$`                      |
+| Config file     | `config/modpacks/<name>.env`        |
+| Container name  | `mc-<name>`                         |
+| Compose project | `mc-<name>`                         |
+| Data dir        | `servers/<name>/data`               |
+| Mods dir        | `servers/<name>/mods`               |
+| Backups dir     | `backups/<name>`                    |
+| Game port       | `SERVER_PORT` (unique, 25565–25664) |
+| RCON port       | `RCON_PORT` (convention: +1000)     |
+
+**Exit code contract** (consistent across scripts):
 
 - `0`: Success
 - `1`: General error
 - `2`: Invalid arguments
 - `3`: Resource not found
-- `4`: Validation failure
-
-**Benefits**:
-
-- Predictable error handling
-- Consistent user experience
-- Automation-friendly interfaces
-- Debugging standardization
+- `4`: Validation failure (e.g. port conflict, already running)
 
 ## System Components
 
@@ -101,284 +115,143 @@ CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/all-the-mods-8
 
 ```
 minecraft-servers/
-├── docker-compose.yml          # Template service definition
-├── .env                        # Global environment variables
-├── scripts/                    # Management scripts (11 total)
-│   ├── start-server.sh        # Single server startup
-│   ├── start-all.sh           # Bulk server startup
-│   ├── stop-all.sh            # Graceful shutdown all
-│   ├── restart-server.sh      # Server restart with validation
-│   ├── list-servers.sh        # Status display with health
-│   ├── health-check.sh        # Comprehensive health monitoring
-│   ├── auto-restart.sh        # Daemon auto-restart functionality
-│   ├── backup.sh              # Atomic backup creation
-│   ├── restore.sh              # Verified restore operations
-│   ├── add-modpack.sh         # Server configuration addition
-│   └── validate-config.sh     # System validation suite
+├── docker-compose.yml          # Single template service definition
+├── .env                        # Shared configuration (from .env.example, git-ignored)
+├── scripts/                    # Management scripts
+│   ├── common.sh               # Shared library (sourced by all management scripts)
+│   ├── start-server.sh         # Single server startup
+│   ├── stop-server.sh          # Single server stop (--purge and granular removal options)
+│   ├── start-all.sh            # Bulk startup
+│   ├── stop-all.sh             # Graceful bulk shutdown
+│   ├── restart-server.sh       # Restart with validation
+│   ├── list-servers.sh         # Status table (or JSON)
+│   ├── health-check.sh         # Health report (text or JSON)
+│   ├── auto-restart.sh         # Auto-restart daemon
+│   ├── backup.sh               # Atomic backup with checksum
+│   ├── restore.sh              # Verified restore
+│   ├── add-modpack.sh          # New server configuration generator
+│   ├── validate-config.sh      # Configuration validation suite
+│   ├── diagnose-failed-servers.sh  # Log analysis helper for failed starts
+│   └── analyze-java-versions.sh    # Java version report (used by CI)
 ├── config/
-│   ├── modpacks/              # Per-server configurations (5+)
-│   │   ├── atm8.env
-│   │   ├── skyfactory4.env
-│   │   ├── prominence2.env
-│   │   ├── rlcraft.env
-│   │   └── vanilla.env
-│   └── templates/             # Configuration templates
-├── servers/{name}/            # Runtime server data
-│   ├── data/                  # World, configs, logs
-│   └── mods/                  # Additional mod files
-├── backups/{name}/            # Backup archives with checksums
-└── docs/                      # Comprehensive documentation
+│   ├── modpacks/               # Per-server .env files (15 pre-configured)
+│   └── templates/              # Configuration templates
+├── servers/<name>/             # Runtime data (git-ignored)
+│   ├── data/                   # World, configs, logs
+│   └── mods/                   # Additional mods
+├── backups/<name>/             # Backup archives + SHA256 checksums
+└── docs/                       # Documentation (see docs/README.md)
 ```
 
-### Data Flow Architecture
+### Data Flow
 
 ```
-User Request → Script → Validation → Docker Compose → Container → Minecraft Server
-                      ↓
-               Configuration Files (.env)
-                      ↓
-               Volume Mounts (Persistent Data)
+./scripts/start-server.sh <name>
+        │  validate name, config, Docker daemon
+        ▼
+scripts/common.sh::docker_compose_up
+        │  export CONTAINER_NAME, SERVER_PORT, JAVA_VERSION, SERVER_*_DIR, SERVER_CONFIG_FILE
+        ▼
+docker compose -p mc-<name> up -d
+        │  .env + config/modpacks/<name>.env  →  container environment
+        ▼
+itzg/minecraft-server container
+        │  downloads server jar + modpack (first start), applies env to server.properties
+        ▼
+Persistent data in servers/<name>/data  (bind-mounted /data)
 ```
 
-### Component Interactions
+### Component Layers
 
-1. **User Interface Layer**: Bash scripts with colored output and progress indicators
-2. **Validation Layer**: Pre-flight checks prevent misconfigurations
-3. **Orchestration Layer**: Docker Compose template instantiation
-4. **Runtime Layer**: itzg/minecraft-server containers with health checks
-5. **Persistence Layer**: Named volumes with backup integration
+1. **User Interface Layer**: bash scripts with colored output and consistent exit codes
+2. **Validation Layer**: pre-flight checks (name format, config existence, Docker daemon, port conflicts)
+3. **Orchestration Layer**: per-server Docker Compose projects from one template
+4. **Runtime Layer**: `itzg/minecraft-server` containers with `mc-health` checks
+5. **Persistence Layer**: bind-mounted host directories with backup integration
 
-## Template System
+## Adding a Server: Instantiation Flow
 
-### Configuration Templates
+`add-modpack.sh` generates a ready-to-start configuration:
 
-**Purpose**: Pre-configured server setups for common modpacks.
+1. **Name validation**: `^[a-z0-9-]+$`, uniqueness check
+2. **Port assignment**: first free port in 25565–25664 (or `--port=`)
+3. **Template copy**: built-in templates (see [Adding Modpacks](ADDING_MODPACKS.md)) or minimal Paper config
+4. **Variable injection**: `SERVER_NAME`, `SERVER_PORT`, `RCON_PORT` (+1000)
+5. **Directory creation**: `servers/<name>/{data,mods}`, `backups/<name>`
 
-```bash
-# scripts/add-modpack.sh template definitions
-declare -A TEMPLATES=(
-  ["atm8"]="All The Mods 8:AUTO_CURSEFORGE:1.20.1:8G:https://www.curseforge.com/minecraft/modpacks/all-the-mods-8"
-  ["skyfactory4"]="SkyFactory 4:AUTO_CURSEFORGE:1.12.2:4G:https://www.curseforge.com/minecraft/modpacks/skyfactory-4"
-  ["vanilla"]="Vanilla Optimized:PAPER:1.20.4:2G:"
-)
-```
+Modpack types map to `itzg/minecraft-server` server types:
 
-**Benefits**:
-
-- Consistent configurations
-- Tested resource allocations
-- Automatic CurseForge URL management
-- Easy customization starting point
-
-### Template Instantiation Process
-
-1. **Name Validation**: `^[a-z0-9-]+$` format enforcement
-2. **Port Assignment**: Automatic 25565-25664 range scanning
-3. **Template Copy**: Base configuration from templates
-4. **Variable Substitution**: SERVER_NAME, SERVER_PORT injection
-5. **Directory Creation**: servers/{name}/ structure setup
-6. **Permission Setting**: Docker volume ownership correction
+| Type                     | Source          | Extra variables needed              |
+| ------------------------ | --------------- | ----------------------------------- |
+| `AUTO_CURSEFORGE`        | CurseForge      | `CF_PAGE_URL`, `CF_API_KEY`         |
+| `MODRINTH`               | Modrinth        | `MODRINTH_MODPACK`, exact `VERSION` |
+| `PAPER`/`FORGE`/`FABRIC` | Direct download | `VERSION`                           |
 
 ## Health Monitoring Architecture
 
-### Multi-Layer Health Checks
+### Multi-Layer Checks
 
 ```
-Layer 1: Container Status (Docker)
-Layer 2: Network Connectivity (Port)
-Layer 3: Application Health (Minecraft)
-Layer 4: Resource Monitoring (Disk)
-Layer 5: Log Analysis (Errors)
+Layer 1: Container status        (Docker)
+Layer 2: Docker health           (mc-health inside container)
+Layer 3: Port connectivity       (SERVER_PORT reachable)
+Layer 4: Log analysis            (recent errors/crashes)
+Layer 5: Disk space              (usage warnings)
 ```
 
-### Auto-Restart System
+`health-check.sh` aggregates these into `healthy` / `warning` / `unhealthy` statuses and
+can emit JSON (`--json`) for external monitoring. `auto-restart.sh --daemon` polls that
+output on an interval and restarts unhealthy servers. Details: [Monitoring](MONITORING.md).
 
-**Design**: Daemon process with configurable intervals.
+## Backup & Recovery
 
-```bash
-# Auto-restart daemon architecture
-while true; do
-  health-check.sh --all --json | process_results
-  identify_unhealthy_servers
-  restart_failed_servers
-  sleep $INTERVAL
-done
-```
-
-**Safety Features**:
-
-- Configurable timeouts
-- Dry-run capability
-- Force restart option
-- Comprehensive logging
-
-## Backup & Recovery System
-
-### Atomic Backup Process
-
-```
-1. Validate server running
-2. Temporary server stop
-3. Create compressed archive
-4. Generate SHA256 checksum
-5. Restart server
-6. Clean old backups (rolling window)
-```
-
-### Recovery Process
-
-```
-1. Validate backup integrity
-2. User confirmation (unless --force)
-3. Stop server
-4. Clear existing data
-5. Extract backup archive
-6. Set ownership permissions
-7. Restart server
-```
-
-**Integrity Guarantees**:
-
-- SHA256 checksum verification
-- Atomic operations
-- Rollback protection
-- Permission restoration
+Backups are **atomic with downtime**: the script stops the server, tars the world data,
+writes a SHA256 checksum, restarts the server, and prunes old archives (rolling window of
+3). Restore verifies the checksum before replacing data. Details:
+[Backup & Restore](BACKUP_RESTORE.md).
 
 ## Security Considerations
 
-### Container Isolation
+- **Network**: dedicated external bridge `minecraft-network`; only game + RCON ports published
+- **Volumes**: per-server isolated data directories (no shared writable state)
+- **Secrets**: `RCON_PASSWORD` and `CF_API_KEY` live only in `.env` (git-ignored)
+- **Integrity**: SHA256 checksums on every backup
+- **Online mode**: `ONLINE_MODE` is configurable per server; the shared default is `false`
+  (offline/LAN), set `true` to require Mojang authentication
 
-- **Network**: Dedicated minecraft-network bridge
-- **Volumes**: Per-server isolated data directories
-- **Users**: Non-root container execution (1000:1000)
-- **Capabilities**: Minimal required permissions
+## Scalability
 
-### Data Protection
+- **Ports**: 25565–25664 → up to 100 servers (auto-assignment skips used ports)
+- **Host resources**: the real limit — sum of `MEMORY` values, CPU, and disk I/O
+- **Isolation**: one Compose project per server means any server can be
+  started/stopped/rebuilt without touching the others
 
-- **Encryption**: Optional backup encryption support
-- **Access Control**: Script execution permissions
-- **Audit Trail**: Comprehensive logging
-- **Integrity**: Cryptographic checksums
+## Failure Modes & Recovery
 
-## Scalability Design
-
-### Horizontal Scaling
-
-**Pattern**: Add unlimited servers without architecture changes.
-
-```bash
-# Adding server N+1 requires only:
-./scripts/add-modpack.sh server-n-plus-1 --modpack=template
-```
-
-**Scaling Limits**:
-
-- **Host Resources**: CPU, RAM, Disk I/O
-- **Network**: Available ports (25565-25664 range)
-- **Docker**: Container limits, overlay filesystem performance
-
-### Performance Optimizations
-
-1. **Lazy Loading**: Servers start only when requested
-2. **Resource Pooling**: Shared Docker layer caching
-3. **Health Checks**: Efficient polling with smart intervals
-4. **Backup Optimization**: Incremental-like behavior via rolling windows
+| Failure             | Detection                          | Recovery                                   |
+| ------------------- | ---------------------------------- | ------------------------------------------ |
+| Single server crash | `health-check.sh`, `mc-health`     | `auto-restart.sh` daemon or manual restart |
+| Bad config          | `validate-config.sh`               | Fix `<name>.env`, restart                  |
+| Data corruption     | Server won't start / checksum fail | `restore.sh` from last good backup         |
+| Docker daemon down  | All scripts fail fast (`exit 1`)   | Restart Docker; `start-all.sh`             |
+| Port conflict       | Pre-flight validation (`exit 4`)   | Change `SERVER_PORT`, restart              |
 
 ## Operational Patterns
 
 ### Deployment Workflow
 
 ```
-1. System Validation (validate-config.sh --all)
-2. Server Addition (add-modpack.sh)
-3. Configuration Testing (start-server.sh)
-4. Health Verification (health-check.sh)
-5. Production Deployment (start-all.sh)
-6. Monitoring Setup (auto-restart.sh --daemon)
+1. Validate setup          ./scripts/validate-config.sh --all
+2. Add server              ./scripts/add-modpack.sh <name> [--modpack=…]
+3. Test start              ./scripts/start-server.sh <name>
+4. Verify health           ./scripts/health-check.sh <name>
+5. Production start        ./scripts/start-all.sh
+6. Monitoring              ./scripts/auto-restart.sh --daemon
+7. Scheduled backups       cron: ./scripts/backup.sh <name>
 ```
 
 ### Maintenance Workflow
 
-```
-Daily:
-├── Health checks (automated)
-├── Backup creation (automated)
-└── Log rotation (system)
-
-Weekly:
-├── Backup integrity verification
-├── Configuration validation
-└── Performance monitoring
-
-Monthly:
-├── Full system backup testing
-├── Security updates
-└── Documentation review
-```
-
-## Integration Points
-
-### External Systems
-
-- **Monitoring**: JSON output for external monitoring systems
-- **Backup**: NFS/external storage mount support
-- **Networking**: Reverse proxy integration (nginx, traefik)
-- **CI/CD**: Validation scripts for automated testing
-
-### API Compatibility
-
-- **Docker API**: Native Docker command integration
-- **Compose API**: Environment variable driven orchestration
-- **Systemd**: Service integration for auto-startup
-- **Cron**: Scheduled backup and maintenance jobs
-
-## Failure Modes & Recovery
-
-### Single Server Failure
-
-**Detection**: Health check failure
-**Recovery**: Automatic restart via auto-restart.sh
-**Fallback**: Manual restart-server.sh execution
-
-### System-wide Failure
-
-**Detection**: validate-config.sh --system failure
-**Recovery**: System administrator intervention
-**Prevention**: Regular validation and monitoring
-
-### Data Corruption
-
-**Detection**: Backup checksum mismatch
-**Recovery**: Restore from previous backup
-**Prevention**: Multiple backup retention with verification
-
-## Future Extensibility
-
-### Plugin Architecture
-
-**Mod Management**: Additional mod installation scripts
-**Server Types**: Support for Bedrock, custom JARs
-**Cloud Integration**: AWS ECS, Kubernetes deployments
-**Monitoring**: Prometheus/Grafana integration
-
-### Configuration Extensions
-
-**Environment Overrides**: Multi-environment support
-**Secret Management**: External credential storage
-**Network Policies**: Advanced container networking
-**Resource Limits**: Per-server resource constraints
-
-## Constitution Compliance
-
-The architecture follows the project constitution principles:
-
-1. **Modular Design**: Independent, replaceable components
-2. **Separated Configuration**: Environment-driven settings
-3. **Persistent Volumes**: Docker volume data isolation
-4. **Comprehensive Documentation**: Inline and external docs
-5. **Extensible Architecture**: Template-based addition pattern
-6. **Environment-Driven**: No hardcoded values
-7. **Observable Systems**: Health checks and monitoring
-8. **Resilient Operations**: Auto-restart and backup systems
-
-This architecture enables reliable, scalable Minecraft server management while maintaining simplicity and operational safety.
+- **Daily** (automated): health checks, backups, log rotation
+- **Weekly**: backup integrity verification, config validation, disk usage review
+- **Monthly**: restore drill (test a backup), Docker/modpack updates

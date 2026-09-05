@@ -122,7 +122,7 @@ Players need to install the Unofficial Dragon Block C modpack to connect:
 1. **Install CurseForge App**: https://www.curseforge.com/download/app
 2. **Search for "Unofficial Dragon Block C"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25574`
+4. **Launch and connect** to `your-server-ip:25572`
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 

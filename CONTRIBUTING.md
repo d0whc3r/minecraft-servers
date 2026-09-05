@@ -98,14 +98,14 @@ This project follows a code of conduct to ensure a welcoming environment for all
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run all BATS tests
 pnpm test
 
-# Run BATS tests only
-pnpm test:bats
+# Run with verbose output
+pnpm run test:verbose
 
-# Run with coverage
-pnpm test:coverage
+# Run lightweight tests only (no Docker startup)
+pnpm run test:quick
 ```
 
 ### Test Guidelines
@@ -247,13 +247,17 @@ For feature requests, please include:
 
 ```
 docs/
-├── QUICKSTART.md          # Getting started guide
-├── ARCHITECTURE.md        # System design
-├── ADDING_MODPACKS.md     # Adding custom modpacks
-├── BACKUP_RESTORE.md      # Backup procedures
-├── MONITORING.md          # Health monitoring
-├── TROUBLESHOOTING.md     # Common issues
-└── modpacks/             # Individual modpack guides
+├── README.md                 # Documentation index
+├── QUICKSTART.md             # Getting started guide
+├── ARCHITECTURE.md           # System design
+├── ENVIRONMENT_VARIABLES.md  # Configuration reference
+├── ADDING_MODPACKS.md        # Adding custom modpacks
+├── BACKUP_RESTORE.md         # Backup procedures
+├── MONITORING.md             # Health monitoring
+├── TROUBLESHOOTING.md        # Common issues
+├── CI_CD.md                  # GitHub Actions pipelines
+├── archive/                  # Historical/point-in-time analyses
+└── modpacks/                 # Individual modpack guides
     └── modpack-name.md
 ```
 
@@ -302,7 +306,7 @@ Contributors will be recognized in:
 
 If you have questions about contributing:
 
-- Check existing [issues](https://github.com/yourusername/minecraft-servers/issues) and [discussions](https://github.com/yourusername/minecraft-servers/discussions)
+- Check existing [issues](https://github.com/d0whc3r/minecraft-servers/issues) and [discussions](https://github.com/d0whc3r/minecraft-servers/discussions)
 - Create a new discussion for questions
 - Join our community chat (if available)
 

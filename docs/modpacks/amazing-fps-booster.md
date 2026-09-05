@@ -2,7 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/amazing-fps-booster
 **Type**: Performance optimization modpack (more powerful than OptiFine)
-**Minecraft Version**: 1.20.1
+**Minecraft Version**: 1.20.6
 **Memory**: 2GB recommended
 
 ## Overview
@@ -25,7 +25,7 @@ docker logs -f mc-amazing-fps-booster
 
 | Setting         | Value                          |
 | --------------- | ------------------------------ |
-| **Port**        | 25575                          |
+| **Port**        | 25573                          |
 | **Memory**      | 2GB                            |
 | **Type**        | CurseForge                     |
 | **Max Players** | 10 (optimized for performance) |
@@ -37,8 +37,8 @@ docker logs -f mc-amazing-fps-booster
 
 ## Connection
 
-- **Address**: `your-server-ip:25575`
-- **Version**: 1.20.1
+- **Address**: `your-server-ip:25573`
+- **Version**: 1.20.6
 - **Client**: Install Amazing FPS Booster from CurseForge Launcher
 
 ## Features
@@ -71,7 +71,7 @@ Configuration file: `config/modpacks/amazing-fps-booster.env`
 # Modpack settings
 TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/amazing-fps-booster
-VERSION=1.20.1
+VERSION=1.20.6
 
 # Performance (optimized for low resource usage)
 MEMORY=2G
@@ -119,7 +119,7 @@ Players need to install the Amazing FPS Booster modpack to connect:
 1. **Install CurseForge App**: https://www.curseforge.com/download/app
 2. **Search for "Amazing FPS Booster"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25575`
+4. **Launch and connect** to `your-server-ip:25573`
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 
@@ -223,7 +223,7 @@ AUTOPAUSE_TIMEOUT_INIT=600
 docker logs mc-amazing-fps-booster
 
 # Common issues:
-# - Port 25575 already in use
+# - Port 25573 already in use
 # - Insufficient memory (need 2GB+)
 # - CurseForge API issues
 ```
@@ -241,7 +241,7 @@ docker logs mc-amazing-fps-booster
 ### Clients can't connect
 
 1. Ensure client has Amazing FPS Booster modpack installed
-2. Check firewall allows port 25575
+2. Check firewall allows port 25573
 3. Verify server is running: `docker ps | grep amazing-fps-booster`
 4. Check server logs for errors
 

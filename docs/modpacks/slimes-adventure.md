@@ -100,7 +100,7 @@ Players need to install the Slimes Adventure modpack to connect:
 1. **Install Modrinth App**: https://modrinth.com/app
 2. **Search for "Slimes Adventure"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25571`
+4. **Launch and connect** to `your-server-ip:25569`
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 
