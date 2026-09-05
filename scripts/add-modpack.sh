@@ -1,9 +1,8 @@
 #!/bin/bash
 
 # add-modpack.sh - Add new Minecraft server configuration
-# Usage: ./scripts/add-modpack.sh <server-name> [--modpack=<template>] [--port=<port>] [--memory=<amount>] [--cf-file-id=<id>]
+# Usage: ./scripts/add-modpack.sh <server-name> [--modpack=<template>] [--port=<port>] [--memory=<amount>]
 # Creates new server configuration with automatic port assignment and validation
-# --cf-file-id pins a CurseForge modpack to a specific file so it does not auto-update
 
 set -euo pipefail
 
@@ -13,14 +12,12 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/common.sh"
 
 # Available templates
-# Fields: display_name,type,version,memory,cf_url,server_name,cf_file_id
-# cf_file_id pins the CurseForge modpack version (empty = track latest).
 declare -A TEMPLATES=(
-  ["atm8"]="All The Mods 8,AUTO_CURSEFORGE,1.20.1,8G,https://www.curseforge.com/minecraft/modpacks/all-the-mods-8,ATM8 Server,"
-  ["skyfactory4"]="SkyFactory 4,AUTO_CURSEFORGE,1.12.2,4G,https://www.curseforge.com/minecraft/modpacks/skyfactory-4,SkyFactory 4,3565683"
-  ["prominence2"]="Prominence II RPG,AUTO_CURSEFORGE,1.20.1,6G,https://www.curseforge.com/minecraft/modpacks/prominence-2-rpg,Prominence II RPG,"
-  ["rlcraft"]="RLCraft,AUTO_CURSEFORGE,1.12.2,6G,https://www.curseforge.com/minecraft/modpacks/rlcraft,RLCraft,4612979"
-  ["vanilla"]="Vanilla Optimized,PAPER,1.20.4,2G,,Vanilla Server,"
+  ["atm8"]="All The Mods 8,AUTO_CURSEFORGE,1.20.1,8G,https://www.curseforge.com/minecraft/modpacks/all-the-mods-8,ATM8 Server"
+  ["skyfactory4"]="SkyFactory 4,AUTO_CURSEFORGE,1.12.2,4G,https://www.curseforge.com/minecraft/modpacks/skyfactory-4,SkyFactory 4"
+  ["prominence2"]="Prominence II RPG,AUTO_CURSEFORGE,1.20.1,6G,https://www.curseforge.com/minecraft/modpacks/prominence-2-rpg,Prominence II RPG"
+  ["rlcraft"]="RLCraft,AUTO_CURSEFORGE,1.12.2,6G,https://www.curseforge.com/minecraft/modpacks/rlcraft,RLCraft"
+  ["vanilla"]="Vanilla Optimized,PAPER,1.20.4,2G,,Vanilla Server"
 )
 
 # Function to find next available port
@@ -45,14 +42,13 @@ create_server_config() {
   local template="$2"
   local port="$3"
   local memory="$4"
-  local cf_file_id="$5"
 
   local config_file="$PROJECT_ROOT/config/modpacks/${name}.env"
 
   # Use template if specified, otherwise create basic config
   if [[ -n "$template" && "${TEMPLATES[$template]+exists}" ]]; then
     # Parse template
-    IFS=',' read -r display_name type version default_memory cf_url server_name template_cf_file_id <<< "${TEMPLATES[$template]}"
+    IFS=',' read -r display_name type version default_memory cf_url server_name <<< "${TEMPLATES[$template]}"
 
     # Override memory if specified
     if [[ -n "$memory" ]]; then
@@ -60,9 +56,6 @@ create_server_config() {
     else
       final_memory="$default_memory"
     fi
-
-    # Effective CF file ID: --cf-file-id flag overrides the template default
-    local effective_cf_file_id="${cf_file_id:-$template_cf_file_id}"
 
     # Create config file
     cat > "$config_file" << EOF
@@ -74,13 +67,6 @@ EOF
 
     if [[ -n "$cf_url" ]]; then
       echo "CF_PAGE_URL=$cf_url" >> "$config_file"
-      if [[ -n "$effective_cf_file_id" ]]; then
-        cat >> "$config_file" << EOF
-# Pinned modpack version — locks to a specific file so it does NOT auto-update.
-# Remove CF_FILE_ID to track the latest version again.
-CF_FILE_ID=$effective_cf_file_id
-EOF
-      fi
     fi
 
     cat >> "$config_file" << EOF
@@ -135,7 +121,6 @@ SERVER_NAME=""
 TEMPLATE=""
 PORT=""
 MEMORY=""
-CF_FILE_ID=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -151,13 +136,9 @@ while [[ $# -gt 0 ]]; do
       MEMORY="${1#*=}"
       shift
       ;;
-    --cf-file-id=*)
-      CF_FILE_ID="${1#*=}"
-      shift
-      ;;
     -*)
       log_error "Unknown option: $1"
-      echo "Usage: $0 <server-name> [--modpack=<template>] [--port=<port>] [--memory=<amount>] [--cf-file-id=<id>]" >&2
+      echo "Usage: $0 <server-name> [--modpack=<template>] [--port=<port>] [--memory=<amount>]" >&2
       echo "Available templates: ${!TEMPLATES[*]}" >&2
       exit 2
       ;;
@@ -176,7 +157,7 @@ done
 # Validate required arguments
 if [[ -z "$SERVER_NAME" ]]; then
   log_error "Server name is required"
-  echo "Usage: $0 <server-name> [--modpack=<template>] [--port=<port>] [--memory=<amount>] [--cf-file-id=<id>]" >&2
+  echo "Usage: $0 <server-name> [--modpack=<template>] [--port=<port>] [--memory=<amount>]" >&2
   exit 2
 fi
 
@@ -200,12 +181,6 @@ fi
 
 # Validate memory if specified
 if [[ -n "$MEMORY" ]] && ! validate_memory "$MEMORY"; then
-  exit 4
-fi
-
-# Validate CF file ID if specified (CurseForge file IDs are numeric)
-if [[ -n "$CF_FILE_ID" && ! "$CF_FILE_ID" =~ ^[0-9]+$ ]]; then
-  log_error "Invalid CurseForge file ID: $CF_FILE_ID (must be numeric)"
   exit 4
 fi
 
@@ -235,7 +210,7 @@ fi
 log_info "Adding new server: $SERVER_NAME"
 
 # Create configuration
-create_server_config "$SERVER_NAME" "$TEMPLATE" "$PORT" "$MEMORY" "$CF_FILE_ID"
+create_server_config "$SERVER_NAME" "$TEMPLATE" "$PORT" "$MEMORY"
 
 # Create directories
 create_directories "$SERVER_NAME"
@@ -245,18 +220,13 @@ log_success "New server configuration created successfully!"
 echo ""
 echo "Configuration Summary:"
 echo "  Name: $SERVER_NAME"
-template_cf_file_id=""
 if [[ -n "$TEMPLATE" ]]; then
-  IFS=',' read -r display_name type version default_memory cf_url server_name template_cf_file_id <<< "${TEMPLATES[$TEMPLATE]}"
+  IFS=',' read -r display_name type version default_memory cf_url server_name <<< "${TEMPLATES[$TEMPLATE]}"
   echo "  Type: $type ($display_name)"
   echo "  Version: $version"
 else
   echo "  Type: PAPER (Vanilla)"
   echo "  Version: 1.20.4"
-fi
-pinned_file_id="${CF_FILE_ID:-$template_cf_file_id}"
-if [[ -n "$pinned_file_id" ]]; then
-  echo "  Pinned file ID: $pinned_file_id (modpack will not auto-update)"
 fi
 echo "  Port: $PORT"
 if [[ -n "$MEMORY" ]]; then

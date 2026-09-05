@@ -203,7 +203,7 @@ For vanilla servers with plugins:
    ```bash
    # Create plugins directory
    mkdir servers/plugins-server/data/plugins
-
+   
    # Copy plugin JARs
    cp *.jar servers/plugins-server/data/plugins/
    ```
@@ -465,8 +465,8 @@ rm -rf servers/server-name backups/server-name
 
 ## Related Documentation
 
-- [QUICKSTART.md](QUICKSTART.md) - Getting started guide
-- [BACKUP_RESTORE.md](BACKUP_RESTORE.md) - Backup procedures
-- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Common issues
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System design
-- [contracts/management-api.md](../specs/001-docker-multi-server/contracts/management-api.md) - API specifications
+- [QUICKSTART.md](../QUICKSTART.md) - Getting started guide
+- [BACKUP_RESTORE.md](../BACKUP_RESTORE.md) - Backup procedures
+- [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) - Common issues
+- [ARCHITECTURE.md](../ARCHITECTURE.md) - System design
+- [contracts/management-api.md](../../specs/001-docker-multi-server/contracts/management-api.md) - API specifications

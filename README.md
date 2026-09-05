@@ -44,7 +44,7 @@ cp .env.template .env
 ### 3. Start Your First Server
 
 ```bash
-# Start vanilla server (Paper 1.21.11)
+# Start vanilla server (Paper 1.20.4)
 ./scripts/start-server.sh vanilla
 
 # Check status
@@ -59,7 +59,7 @@ docker logs -f mc-vanilla
 Open Minecraft Java Edition and connect to:
 
 - **Address**: `your-server-ip:25567`
-- **Version**: 1.21.11
+- **Version**: 1.20.4
 
 ### 5. RCON Access (Optional)
 
@@ -102,20 +102,18 @@ rcon-cli --host your-server-ip --port 25575 --password yourpassword
 | ----------------------------- | ------- | ------ | ----- | ----- | ----------------- | ---------- |
 | **SkyFactory 4**              | 1.12.2  | 4G     | 25565 | 26565 | Skyblock          | CurseForge |
 | **RLCraft**                   | 1.12.2  | 6G     | 25566 | 26566 | Hardcore survival | CurseForge |
-| **Vanilla (Paper)**           | 1.21.11 | 2G     | 25567 | 26567 | Optimized vanilla | Paper      |
+| **Vanilla (Paper)**           | 1.20.4  | 2G     | 25567 | 26567 | Optimized vanilla | Paper      |
 | **Cobbleverse**               | 1.21.1  | 6G     | 25568 | 26568 | Pokemon adventure | Modrinth   |
-| **Slimes Adventure**          | 1.21.1  | 4G     | 25569 | 26569 | Exploration       | Modrinth   |
+| **Slimes Adventure**          | 1.19.2  | 4G     | 25569 | 26569 | Exploration       | Modrinth   |
 | **SoloCraft**                 | 1.20.1  | 3G     | 25570 | 26570 | Survival focused  | Modrinth   |
 | **Solo Leveling Reawakening** | 1.20.1  | 4G     | 25571 | 26571 | Hunter RPG        | CurseForge |
-| **Unofficial Dragon Block C** | 1.7.10  | 4G     | 25572 | 26572 | Dragon Ball RPG   | CurseForge |
-| **Amazing FPS Booster**       | 1.20.6  | 2G     | 25573 | 26573 | Performance opt.  | CurseForge |
+| **Unofficial Dragon Block C** | 1.12.2  | 4G     | 25572 | 26572 | Dragon Ball RPG   | CurseForge |
+| **Amazing FPS Booster**       | 1.20.1  | 2G     | 25573 | 26573 | Performance opt.  | CurseForge |
 | **Solo Leveling Shadows**     | 1.20.1  | 6G     | 25574 | 26574 | Advanced RPG      | CurseForge |
 | **Solo Leveling Level Up**    | 1.20.1  | 4G     | 25575 | 26575 | RPG progression   | CurseForge |
-| **My Hero Adventure**         | 1.16.5  | 4G     | 25576 | 26576 | Hero Academia     | CurseForge |
+| **My Hero Adventure**         | 1.12.2  | 4G     | 25576 | 26576 | Hero Academia     | CurseForge |
 
 ## Documentation
-
-> 📚 **Prefer the [Project Wiki](https://github.com/d0whc3r/minecraft-servers/wiki)** — the same guides below, with built-in search and easier navigation. The wiki is auto-generated from the `docs/` folder, so both stay in sync.
 
 - 📖 [**Quick Start Guide**](docs/QUICKSTART.md) - Detailed setup instructions
 - 🏗️ [**Architecture**](docs/ARCHITECTURE.md) - Template-based orchestration design
@@ -157,9 +155,6 @@ docker logs -f mc-vanilla
 
 # Add custom server
 ./scripts/add-modpack.sh my-custom --modpack=vanilla --port=25570
-
-# Add a CurseForge server pinned to a specific version (won't auto-update)
-./scripts/add-modpack.sh atm --modpack=atm8 --cf-file-id=4962718
 
 # Stop all servers
 ./scripts/stop-all.sh

@@ -30,6 +30,3 @@ logs/
 *~
 
 test-results/
-
-# Generated wiki preview (see scripts/build-wiki.mjs)
-.wiki-build/

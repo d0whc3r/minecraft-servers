@@ -1,2 +1,2 @@
-# Format code (oxfmt + shfmt) and stage changes
+# Format code with prettier and stage changes
 pnpm run lint:fix

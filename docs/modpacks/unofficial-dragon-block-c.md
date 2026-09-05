@@ -2,7 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/unofficial-dragon-block-c
 **Type**: Dragon Ball themed modpack with transformations and Ki battles
-**Minecraft Version**: 1.7.10
+**Minecraft Version**: 1.12.2
 **Memory**: 4GB recommended
 
 ## Overview
@@ -37,7 +37,7 @@ docker logs -f mc-unofficial-dragon-block-c
 ## Connection
 
 - **Address**: `your-server-ip:25572`
-- **Version**: 1.7.10
+- **Version**: 1.12.2
 - **Client**: Install Unofficial Dragon Block C from CurseForge Launcher
 
 ## Features
@@ -72,9 +72,7 @@ Configuration file: `config/modpacks/unofficial-dragon-block-c.env`
 # Modpack settings
 TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/unofficial-dragon-block-c
-# Pinned version — locks to this file so the modpack does NOT auto-update (remove CF_FILE_ID to track latest)
-CF_FILE_ID=6139361
-VERSION=1.7.10
+VERSION=1.12.2
 
 # Performance
 MEMORY=4G

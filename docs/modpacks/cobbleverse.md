@@ -2,7 +2,7 @@
 
 **Modrinth**: https://modrinth.com/modpack/cobbleverse  
 **Type**: Fabric-based Pokemon adventure modpack with Cobblemon  
-**Minecraft Version**: 1.21.1  
+**Minecraft Version**: 1.20.1 (auto-detected)  
 **Memory**: 6GB recommended
 
 ## Overview
@@ -35,7 +35,7 @@ docker logs -f mc-cobbleverse
 ## Connection
 
 - **Address**: `your-server-ip:25570`
-- **Version**: 1.21.1 (check modpack page for exact version)
+- **Version**: 1.20.1 (check modpack page for exact version)
 - **Client**: Install Cobbleverse modpack from Modrinth Launcher
 
 ## Features
@@ -66,8 +66,6 @@ Configuration file: `config/modpacks/cobbleverse.env`
 # Modpack settings
 TYPE=MODRINTH
 MODRINTH_MODPACK=cobbleverse
-# Pinned version — locks to this release so the modpack does NOT auto-update (remove MODRINTH_VERSION to track latest)
-MODRINTH_VERSION=DN77rBht
 VERSION=LATEST
 
 # Performance

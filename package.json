@@ -2,35 +2,28 @@
   "name": "minecraft-servers",
   "version": "1.0.0",
   "description": "Minecraft server management system with automated testing suite",
-  "keywords": [
-    "automation",
-    "bash",
-    "bats",
-    "docker",
-    "docker-compose",
-    "game-server",
-    "minecraft",
-    "modpacks",
-    "server",
-    "testing"
-  ],
-  "homepage": "https://github.com/d0whc3r/minecraft-servers#readme",
-  "bugs": {
-    "url": "https://github.com/d0whc3r/minecraft-servers/issues"
-  },
-  "license": "ISC",
-  "author": "d0whc3r",
+  "main": "index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/d0whc3r/minecraft-servers.git"
   },
-  "main": "index.js",
+  "homepage": "https://github.com/d0whc3r/minecraft-servers#readme",
+  "bugs": {
+    "url": "https://github.com/d0whc3r/minecraft-servers/issues"
+  },
+  "author": "d0whc3r",
+  "license": "ISC",
+  "packageManager": "pnpm@12.3.4",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
   "scripts": {
     "test": "bats tests/bats/",
     "test:verbose": "bats --verbose tests/bats/",
     "test:quick": "bats --filter 'US1-TC00[1-6]:' tests/bats/",
-    "lint": "oxfmt --check . && node scripts/format-shell.mjs --check",
-    "lint:fix": "oxfmt . && node scripts/format-shell.mjs",
+    "lint": "prettier --check .",
+    "lint:fix": "prettier --write .",
     "validate:all": "pnpm run lint && pnpm run test",
     "prepare": "husky",
     "docker:build": "docker-compose build",
@@ -38,29 +31,45 @@
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "docker:clean": "docker-compose down -v --remove-orphans",
-    "server:start": "node scripts/run.mjs start-server",
-    "server:stop": "node scripts/run.mjs stop-server",
-    "server:restart": "node scripts/run.mjs restart-server",
-    "server:list": "node scripts/run.mjs list-servers",
-    "server:health": "node scripts/run.mjs health-check --all",
-    "backup": "node scripts/run.mjs backup",
-    "backup:all": "node scripts/run.mjs backup --all",
-    "restore": "node scripts/run.mjs restore",
+    "server:start": "./scripts/start-server.sh",
+    "server:stop": "./scripts/stop-server.sh",
+    "server:restart": "./scripts/restart-server.sh",
+    "server:list": "./scripts/list-servers.sh",
+    "server:health": "./scripts/health-check.sh --all",
+    "backup": "./scripts/backup.sh",
+    "backup:all": "./scripts/backup.sh --all",
+    "restore": "./scripts/restore.sh",
     "dev:setup": "pnpm install && pnpm run prepare",
     "dev:clean": "rm -rf node_modules pnpm-lock.yaml && pnpm install",
-    "ci": "pnpm run lint && pnpm run test",
-    "wiki:build": "node scripts/build-wiki.mjs",
-    "wiki:check": "node scripts/build-wiki.mjs --check"
+    "ci": "pnpm run lint && pnpm run test"
   },
+  "keywords": [
+    "minecraft",
+    "server",
+    "docker",
+    "docker-compose",
+    "testing",
+    "bats",
+    "bash",
+    "automation",
+    "modpacks",
+    "game-server"
+  ],
   "devDependencies": {
-    "@wasm-fmt/shfmt": "^0.2.7",
     "bats": "^1.13.0",
     "husky": "^9.1.7",
-    "oxfmt": "^0.53.0"
+    "prettier": "^3.9.6",
+    "prettier-plugin-sh": "^0.19.0"
   },
-  "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
-  },
-  "packageManager": "pnpm@11.5.2"
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "useTabs": false,
+    "printWidth": 100,
+    "endOfLine": "lf",
+    "plugins": [
+      "prettier-plugin-sh"
+    ]
+  }
 }

@@ -59,7 +59,7 @@ ARTIFACT_RETENTION_DAYS=7 # How long to keep test artifacts
 
 **What it does:**
 
-- Runs `pnpm run lint` (oxfmt + shfmt code formatting check)
+- Runs `pnpm run lint` (Prettier code formatting check)
 - No Docker required
 - Fast execution (~30 seconds)
 

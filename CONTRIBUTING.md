@@ -127,8 +127,7 @@ The project uses GitHub Actions for continuous integration:
 
 ### Code Formatting
 
-This project uses **oxfmt** (JavaScript, Markdown, YAML, JSON) and **shfmt**
-(Bash scripts) for consistent code formatting:
+This project uses **Prettier** for consistent code formatting across all file types:
 
 **Before committing, ensure your code is properly formatted:**
 
@@ -140,23 +139,21 @@ pnpm run lint
 pnpm run lint:fix
 ```
 
-**Formatting configuration:**
+**Prettier configuration:**
 
-- Shared whitespace rules (charset, line endings, 2-space indentation) live in
-  `.editorconfig`. oxfmt reads it, so they are not duplicated in `.oxfmtrc.json`.
-- **JavaScript**: Single quotes, semicolons, 80-character line width
-- **Bash scripts**: 2-space indentation, formatted with `shfmt`
-- **Markdown**: preserved prose wrapping and trailing whitespace
-- **YAML/JSON**: 2-space indentation, double quotes in YAML
+- **JavaScript/TypeScript**: Single quotes, semicolons, 2-space indentation
+- **Bash scripts**: 2-space indentation, proper line breaks
+- **Markdown**: 80-character line width, preserved prose wrapping
+- **YAML/JSON**: 2-space indentation, consistent formatting
+- **Environment files**: Preserved as-is (excluded from formatting)
 
-**Note:** Test files (`.bats`), `pnpm-lock.yaml`, and `.github/` are excluded
-from automatic formatting.
+**Note:** Test files (`.bats`) are excluded from automatic formatting due to their special syntax.
 
 ### Git Hooks
 
 This project uses **Husky** for automatic code quality enforcement:
 
-- **Pre-commit**: Automatically formats code (oxfmt + shfmt) and stages changes
+- **Pre-commit**: Automatically formats code with Prettier and stages changes
 - **Pre-push**: Runs lightweight tests 1-6 (excluding expensive test 7) before pushing
 
 **Test Details:**

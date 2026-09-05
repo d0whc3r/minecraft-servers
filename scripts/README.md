@@ -2,44 +2,6 @@
 
 This directory contains management scripts for the Minecraft multi-server environment. All scripts share common functionality through `common.sh`.
 
-## Windows (PowerShell) support
-
-Every `*.sh` script has a native PowerShell port `*.ps1` (sharing `common.ps1`), so the project runs on Windows without WSL or Git Bash.
-
-**Prerequisites**
-
-- **PowerShell 7+ (`pwsh`)** recommended (best ANSI color support); Windows PowerShell 5.1 also works.
-- **Docker Desktop** for Windows (provides `docker` / `docker compose`).
-- **`tar`** — used by `backup.ps1` / `restore.ps1`; ships with Windows 10 1803+.
-- **Node.js** — used by the cross-platform dispatcher behind the `pnpm` scripts.
-
-**Running**
-
-The `pnpm` scripts are cross-platform — `scripts/run.mjs` runs the `.ps1` on Windows and the `.sh` elsewhere:
-
-```powershell
-pnpm run server:start vanilla
-pnpm run server:list
-pnpm run backup vanilla
-```
-
-Or call a script directly:
-
-```powershell
-pwsh ./scripts/start-server.ps1 vanilla
-pwsh ./scripts/list-servers.ps1 --format=json
-```
-
-If you hit an execution-policy error running a `.ps1` directly, either use the dispatcher (`pnpm run ...`, which passes `-ExecutionPolicy Bypass`) or run once with:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-server.ps1 vanilla
-```
-
-**PowerShell function names** (in `common.ps1`) follow Verb-Noun convention rather than the bash names — e.g. `Write-Err`/`Write-Success`/`Write-Info`/`Write-Warn`, `Test-ServerName`, `Test-DockerRunning`, `Get-ContainerName`, `Invoke-DockerComposeUp`, `New-DirectoryIfMissing`, `Find-AvailablePort`. Enable debug output with `$env:DEBUG='true'`.
-
-The `.sh` scripts remain the source of truth for macOS/Linux; the `.ps1` ports mirror their behavior and exit codes.
-
 ## Common Library (`common.sh`)
 
 The `common.sh` file provides a reusable foundation for all scripts, including:
@@ -239,8 +201,8 @@ The project includes npm/pnpm scripts for development, testing, and deployment. 
 
 ### Code Quality Scripts
 
-- `lint` - Check code formatting with oxfmt (+ shfmt for Bash)
-- `lint:fix` - Format code with oxfmt (+ shfmt for Bash)
+- `lint` - Check code formatting with Prettier
+- `lint:fix` - Format code with Prettier
 - `pnpm run validate:all` - Run lint check and all tests
 
 ### Docker Scripts

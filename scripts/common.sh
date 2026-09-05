@@ -50,13 +50,6 @@ debug() {
   fi
 }
 
-# log_* aliases — some scripts (add-modpack, health-check, validate-config) call
-# these names; delegate to the canonical output functions above.
-log_info() { info "$1"; }
-log_warn() { warning "$1"; }
-log_error() { error "$1"; }
-log_success() { success "$1"; }
-
 # ============================================================================
 # VALIDATION FUNCTIONS
 # ============================================================================

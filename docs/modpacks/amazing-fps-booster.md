@@ -2,7 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/amazing-fps-booster
 **Type**: Performance optimization modpack (more powerful than OptiFine)
-**Minecraft Version**: 1.20.6
+**Minecraft Version**: 1.20.1
 **Memory**: 2GB recommended
 
 ## Overview
@@ -38,7 +38,7 @@ docker logs -f mc-amazing-fps-booster
 ## Connection
 
 - **Address**: `your-server-ip:25575`
-- **Version**: 1.20.6
+- **Version**: 1.20.1
 - **Client**: Install Amazing FPS Booster from CurseForge Launcher
 
 ## Features
@@ -71,9 +71,7 @@ Configuration file: `config/modpacks/amazing-fps-booster.env`
 # Modpack settings
 TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/amazing-fps-booster
-# Pinned version — locks to this file so the modpack does NOT auto-update (remove CF_FILE_ID to track latest)
-CF_FILE_ID=5358267
-VERSION=1.20.6
+VERSION=1.20.1
 
 # Performance (optimized for low resource usage)
 MEMORY=2G

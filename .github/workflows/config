@@ -7,26 +7,36 @@
 # Usage:
 # - Modify values here to change pipeline behavior
 # - Workflows will use these values with fallbacks to defaults
-# - Changes here affect: bats-tests.yml
+# - Changes here affect: bats-tests.yml, code-quality.yml
 #
 # This file contains configuration overrides for the BATS test pipeline
 # Values here will override defaults in the workflow
 
 # Test execution settings
-# Internal bats timeout (minutes). Kept below the job-level timeout-minutes (test: 25)
-# so the bats step is killed gracefully and artifacts still upload before the hard job cap.
-TEST_TIMEOUT_MINUTES=20
+TEST_TIMEOUT_MINUTES=45
 PARALLEL_JOBS=1
 
 # Docker settings
 DOCKER_VERSION=28.5.2
 
 # Dependency versions
-# NODE_VERSION is now taken from .nvmrc
+NODE_VERSION=22
 # PNPM_VERSION is now taken from package.json packageManager field
 
-# Chunking strategy — modpacks per test job (consumed by prepare-matrix):
-# - small:  1 modpack per chunk  (more, faster jobs)
-# - medium: 2 modpacks per chunk (balanced - CURRENT)
-# - large:  3 modpacks per chunk (fewer, slower jobs)
+# Chunking strategy
+# - small: 1-3 modpacks per chunk (better for many small modpacks)
+# - medium: 2-4 modpacks per chunk (balanced) - CURRENT
+# - large: 3-5 modpacks per chunk (better for fewer large modpacks)
 CHUNK_STRATEGY=medium
+
+# Cache settings
+CACHE_DOCKER_IMAGES=true
+CACHE_PNPM_STORE=true
+CACHE_NODE_MODULES=true
+
+# Artifact settings
+ARTIFACT_RETENTION_DAYS=7
+
+# Debug settings
+ENABLE_DEBUG_LOGS=false
+VERBOSE_TEST_OUTPUT=true

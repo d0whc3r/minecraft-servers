@@ -72,8 +72,6 @@ Configuration file: `config/modpacks/all-the-mods-10.env`
 # Modpack settings
 TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/all-the-mods-10
-# Pinned version — locks to this file so the modpack does NOT auto-update (remove CF_FILE_ID to track latest)
-CF_FILE_ID=8091114
 VERSION=1.21.1
 
 # Performance (high requirements for 400+ mods)

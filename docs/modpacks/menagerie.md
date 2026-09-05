@@ -33,8 +33,6 @@ Location: `config/modpacks/menagerie.env`
 ```env
 TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/menagerie
-# Pinned version — locks to this file so the modpack does NOT auto-update (remove CF_FILE_ID to track latest)
-CF_FILE_ID=7129017
 CF_EXCLUDE_MODS=fog
 MEMORY=6G
 SERVER_NAME=menagerie
