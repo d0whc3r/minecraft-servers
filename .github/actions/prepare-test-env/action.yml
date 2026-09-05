@@ -11,7 +11,7 @@ runs:
   using: 'composite'
   steps:
     - name: Cache Minecraft Server Images
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: |
           /tmp/docker-images
@@ -41,7 +41,7 @@ runs:
         fi
 
     - name: Cache Server Data Directories
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: |
           servers/*/data
