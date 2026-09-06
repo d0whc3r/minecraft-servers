@@ -1,225 +1,193 @@
 #!/usr/bin/env bats
-# Test Suite: Script Execution Validation
-# User Story 1: Validate start-server.sh script execution with real modpack configurations
+# Test Suite: Script and configuration validation
+#
+# US1-TC001..TC006 are fast checks of the management scripts and modpack
+# configs that need no Docker. US1-TC007 is the slow end-to-end startup test
+# and requires a running Docker daemon.
 
-# Simple test setup - no complex mocking needed
 setup() {
-    # Ensure we're in the project root
+    # Scripts and configs are referenced relative to the project root
     cd "$(dirname "$BATS_TEST_DIRNAME")/.."
 }
 
-# Helper function to get all modpack configurations
-get_modpack_configs() {
-    local modpack_dir="config/modpacks"
-    local configs=()
-
-    if [ -d "$modpack_dir" ]; then
-        while IFS= read -r -d '' file; do
-            configs+=("$file")
-        done < <(find "$modpack_dir" -name "*.env" -type f -print0 | sort -z)
-    fi
-
-    echo "${configs[@]}"
+# Read VAR from a modpack .env file (empty if unset; quotes stripped)
+config_value() {
+    grep -m1 "^$2=" "$1" | cut -d= -f2- | tr -d '"' || true
 }
 
-# Helper function to extract modpack name from config file
-get_modpack_name() {
-    local config_file="$1"
-    basename "$config_file" .env
-}
-
-# Test Case: US1-TC001 - Script syntax validation (lightweight)
+# Test Case: US1-TC001 - every management script parses without syntax errors
+# (syntax check only: no script is executed)
 @test "US1-TC001: Script syntax validation" {
-    local modpack_configs=()
-    local failed_modpacks=()
-    local total_modpacks=0
+    local failed=""
+    local error_output
 
-    # Get all real modpack configurations
-    while IFS= read -r -d '' file; do
-        modpack_configs+=("$file")
-    done < <(find config/modpacks -name "*.env" -type f -print0 | sort -z)
-
-    for config_file in "${modpack_configs[@]}"; do
-        total_modpacks=$((total_modpacks + 1))
-        local modpack_name
-        modpack_name=$(basename "$config_file" .env)
-
-        echo "Validating script for modpack: $modpack_name"
-
-        # Test script syntax validation only (no actual execution)
-        # Check if script would run without syntax errors by doing a dry-run check
-        if bash -n ./scripts/start-server.sh 2>/dev/null; then
-            echo "✓ Script syntax is valid for $modpack_name"
+    for script in scripts/*.sh; do
+        if error_output=$(bash -n "$script" 2>&1); then
+            echo "✓ $script"
         else
-            echo "✗ Script syntax error detected"
-            failed_modpacks+=("$modpack_name:syntax_error")
-        fi
-
-        # Verify config file exists and is readable
-        if [ -f "$config_file" ] && [ -r "$config_file" ]; then
-            echo "✓ Config file exists and is readable for $modpack_name"
-        else
-            echo "✗ Config file issue for $modpack_name"
-            failed_modpacks+=("$modpack_name:config_issue")
+            echo "✗ $script"
+            echo "$error_output" | sed 's/^/    /' >&2
+            failed+="$script "
         fi
     done
 
-    # Assert no modpacks failed validation
-    [ ${#failed_modpacks[@]} -eq 0 ]
-
-    echo "Validated $total_modpacks modpacks"
-    if [ ${#failed_modpacks[@]} -gt 0 ]; then
-        echo "Failed: ${failed_modpacks[*]}"
-    fi
+    [ -z "$failed" ] || fail "Syntax errors in: $failed"
 }
 
-# Test Case: US1-TC002 - All modpack configurations are valid
+# Test Case: US1-TC002 - configs satisfy the invariants the runtime depends on:
+# supported TYPE, parseable MEMORY/VERSION, a unique SERVER_PORT inside the
+# managed allocation range (see find_available_port in common.sh), and a
+# SERVER_NAME that agrees with the file name the container will be named after.
 @test "US1-TC002: All modpack configurations are valid" {
-    local modpack_configs=()
-    local invalid_configs=()
-    local total_configs=0
+    local invalid=""
+    local ports=""
+    local names=""
 
-    # Get all modpack configurations
-    while IFS= read -r -d '' file; do
-        modpack_configs+=("$file")
-    done < <(find config/modpacks -name "*.env" -type f -print0 | sort -z)
-
-    for config_file in "${modpack_configs[@]}"; do
-        total_configs=$((total_configs + 1))
-        local modpack_name
-        modpack_name=$(basename "$config_file" .env)
-
-        echo "Validating config: $modpack_name"
-
-        # Check if config file exists and is readable
-        if [ ! -f "$config_file" ]; then
-            invalid_configs+=("$modpack_name:file_not_found")
-            continue
+    for config in config/modpacks/*.env; do
+        if [ ! -f "$config" ]; then
+            skip "No modpack configs found"
         fi
 
-        if [ ! -r "$config_file" ]; then
-            invalid_configs+=("$modpack_name:file_not_readable")
-            continue
+        local name type version memory port server_name
+        name=$(basename "$config" .env)
+        type=$(config_value "$config" TYPE)
+        version=$(config_value "$config" VERSION)
+        memory=$(config_value "$config" MEMORY)
+        port=$(config_value "$config" SERVER_PORT)
+        server_name=$(config_value "$config" SERVER_NAME)
+
+        echo "Validating config: $name"
+
+        # TYPE must be one the itzg/minecraft-server image setup supports
+        case "$type" in
+            VANILLA | PAPER | FORGE | FABRIC | AUTO_CURSEFORGE | MODRINTH) ;;
+            *)
+                invalid+="$name: unsupported TYPE '$type'"
+            ;;
+        esac
+
+        # MEMORY drives the container memory limit; must be like 4G or 4096M
+        if ! [[ "$memory" =~ ^[0-9]+[GgMm]$ ]]; then
+            invalid+="$name: invalid MEMORY '$memory'"
         fi
 
-        # Validate required environment variables
-        local required_vars=()
-        local type
-        type=$(grep "^TYPE=" "$config_file" | cut -d'=' -f2)
-        if [ "$type" = "AUTO_CURSEFORGE" ]; then
-            required_vars=("SERVER_NAME" "MEMORY")
-        else
-            required_vars=("SERVER_NAME" "VERSION" "MEMORY")
+        # VERSION is optional for AUTO_CURSEFORGE (the modpack pins its own
+        # version, e.g. menagerie.env), required otherwise; if present it must
+        # be a real version number
+        if [ "$type" != "AUTO_CURSEFORGE" ] && [ -z "$version" ]; then
+            invalid+="$name: missing VERSION"
         fi
-        local missing_vars=()
+        if [ -n "$version" ] && [ "$version" != "LATEST" ] && ! [[ "$version" =~ ^[0-9]+(\.[0-9]+)+$ ]]; then
+            invalid+="$name: invalid VERSION '$version'"
+        fi
 
-        for var in "${required_vars[@]}"; do
-            if ! grep -q "^${var}=" "$config_file"; then
-                missing_vars+=("$var")
+        # docker compose publishes ${SERVER_PORT}:25565; a missing, out-of-range
+        # or duplicated port breaks startup or steals another server's traffic
+        if ! [[ "$port" =~ ^[0-9]+$ ]]; then
+            invalid+="$name: invalid SERVER_PORT '$port'"
+        elif [ "$port" -lt 25565 ] || [ "$port" -gt 25664 ]; then
+            invalid+="$name: SERVER_PORT $port outside managed range 25565-25664"
+        fi
+        ports+="$port"$'\n'
+
+        # Container name comes from the file name, so SERVER_NAME must agree
+        if [ "$server_name" != "$name" ]; then
+            invalid+="$name: SERVER_NAME '$server_name' does not match file name"
+        fi
+        names+="$server_name"$'\n'
+
+        # Type-specific required variables
+        if [ "$type" = "AUTO_CURSEFORGE" ] && ! grep -q "^CF_PAGE_URL=" "$config"; then
+            invalid+="$name: CF_PAGE_URL required for AUTO_CURSEFORGE"
+        fi
+        if [ "$type" = "MODRINTH" ] && ! grep -q "^MODRINTH_MODPACK=" "$config"; then
+            invalid+="$name: MODRINTH_MODPACK required for MODRINTH"
+        fi
+    done
+
+    local duplicate_ports duplicate_names
+    duplicate_ports=$(printf '%s' "$ports" | sort | uniq -d | tr '\n' ' ')
+    duplicate_names=$(printf '%s' "$names" | sort | uniq -d | tr '\n' ' ')
+    [ -z "$duplicate_ports" ] || invalid+="$'\n'duplicate SERVER_PORT values: $duplicate_ports"
+    [ -z "$duplicate_names" ] || invalid+="$'\n'duplicate SERVER_NAME values: $duplicate_names"
+
+    [ -z "$invalid" ] || fail "Invalid configurations:$'\n'$invalid"
+}
+
+# Test Case: US1-TC003 - invalid inputs fail fast with the exit codes documented
+# in the header of scripts/start-server.sh
+@test "US1-TC003: Invalid inputs are rejected with documented exit codes" {
+    # Malformed server name -> exit 2 (invalid arguments)
+    run ./scripts/start-server.sh 'Invalid_Name'
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"Invalid server name format"* ]]
+
+    # Well-formed name with no config file -> exit 3 (configuration not found)
+    run ./scripts/start-server.sh 'nonexistent-modpack'
+    [ "$status" -eq 3 ]
+    [[ "$output" == *"Configuration not found"* ]]
+
+    # The failure must tell the operator which servers do exist
+    [[ "$output" == *"Available servers"* ]]
+}
+
+# Test Case: US1-TC004 - scripts are executable, and running the entry point
+# without arguments prints usage guidance instead of failing silently
+@test "US1-TC004: Scripts are executable and usage is accessible" {
+    for script in scripts/*.sh; do
+        [ -x "$script" ] || fail "Script is not executable: $script"
+    done
+
+    run ./scripts/start-server.sh
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"Missing server name argument"* ]]
+    [[ "$output" == *"Usage:"* ]]
+    [[ "$output" == *"Available servers"* ]]
+}
+
+# Test Case: US1-TC005 - the project's own server detection (list_available_servers
+# in common.sh) lists exactly the modpacks present on disk
+@test "US1-TC005: Dynamic modpack detection lists every configured modpack" {
+    local detected expected
+    detected=$(bash -c 'source scripts/common.sh && list_available_servers' | sort)
+    expected=$(find config/modpacks -name '*.env' -type f -exec basename {} .env \; | sort)
+
+    [ -n "$detected" ] || fail "list_available_servers returned no servers"
+    [ "$detected" = "$expected" ] || fail "Detection mismatch. Detected: $(echo "$detected" | tr '\n' ' ') Expected: $(echo "$expected" | tr '\n' ' ')"
+
+    echo "Detected $(wc -l <<<"$detected") modpacks"
+}
+
+# Test Case: US1-TC006 - extracted names pass the same validation the scripts
+# apply (validate_server_name) and resolve to an existing config through the
+# same lookup (check_config_exists)
+@test "US1-TC006: Extracted modpack names are valid and resolvable" {
+    run bash -c '
+        source scripts/common.sh
+        failed=0
+        for name in $(list_available_servers); do
+            if validate_server_name "$name" >/dev/null 2>&1 && check_config_exists "$name" >/dev/null 2>&1; then
+                echo "OK $name"
+            else
+                echo "FAILED $name"
+                failed=1
             fi
         done
-
-        if [ ${#missing_vars[@]} -gt 0 ]; then
-            invalid_configs+=("$modpack_name:missing_vars(${missing_vars[*]})")
-        fi
-
-        # Validate VERSION format (basic check)
-        local version
-        version=$(grep "^VERSION=" "$config_file" | cut -d'=' -f2)
-        if [ -n "$version" ] && ! [[ "$version" =~ ^[0-9]+(\.[0-9]+)+ ]]; then
-            invalid_configs+=("$modpack_name:invalid_version($version)")
-        fi
-
-        # Validate MEMORY format (basic check)
-        local memory
-        memory=$(grep "^MEMORY=" "$config_file" | cut -d'=' -f2)
-        if [ -n "$memory" ] && ! [[ "$memory" =~ ^[0-9]+[MG]$ ]]; then
-            invalid_configs+=("$modpack_name:invalid_memory($memory)")
-        fi
-    done
-
-    # Assert no invalid configurations
-    [ ${#invalid_configs[@]} -eq 0 ]
-
-    echo "Validated $total_configs configurations"
-    if [ ${#invalid_configs[@]} -gt 0 ]; then
-        echo "Invalid: ${invalid_configs[*]}"
-    fi
+        exit "$failed"
+    '
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"OK "* ]] || fail "No modpack names were extracted"
 }
 
-# Test Case: US1-TC003 - Script handles non-existent modpack gracefully
-@test "US1-TC003: Script handles non-existent modpack gracefully" {
-    local nonexistent_config="config/modpacks/nonexistent-modpack.env"
-
-    # Act
-    run ./scripts/start-server.sh --config "$nonexistent_config" --name 'test-nonexistent'
-
-    # Assert
-    [ "$status" -ne 0 ]
-
-    # Verify error message
-    [[ "$output" =~ "Configuration file not found" ]] || [[ "$output" =~ "No such file" ]] || [[ "$output" =~ "not found" ]]
-}
-
-# Test Case: US1-TC005 - Dynamic modpack detection works
-@test "US1-TC005: Dynamic modpack detection works" {
-    # Count modpacks using direct file listing
-    local actual_count
-    actual_count=$(find config/modpacks -name "*.env" -type f | wc -l)
-
-    # Assert we have at least some modpacks
-    [ "$actual_count" -gt 0 ]
-
-    echo "Detected $actual_count modpacks"
-}
-
-# Test Case: US1-TC006 - Modpack names are properly extracted
-@test "US1-TC006: Modpack names are properly extracted" {
-    local test_configs=("config/modpacks/vanilla.env" "config/modpacks/atm8.env")
-    local expected_names=("vanilla" "atm8")
-    local extracted_names=()
-
-    for config in "${test_configs[@]}"; do
-        # Skip if file doesn't exist (for CI compatibility)
-        [ -f "$config" ] || continue
-
-        local name
-        name=$(basename "$config" .env)
-        extracted_names+=("$name")
-    done
-
-    # Assert names match expected (only if files exist)
-    if [ -f "config/modpacks/vanilla.env" ]; then
-        [ "${extracted_names[0]}" = "${expected_names[0]}" ]
-    fi
-
-    if [ -f "config/modpacks/atm8.env" ]; then
-        [ "${extracted_names[1]}" = "${expected_names[1]}" ]
-    fi
-
-    echo "Names: ${extracted_names[*]}"
-}
-
-# Test Case: US1-TC004 - Script is executable and accessible
-@test "US1-TC004: Script is executable and accessible" {
-    # Verify script exists and is executable
-    [ -f "./scripts/start-server.sh" ]
-    [ -x "./scripts/start-server.sh" ]
-
-    # Try to run script without arguments
-    run ./scripts/start-server.sh
-
-    # Script should exit with non-zero (since no valid args provided)
-    [ "$status" -ne 0 ]
-
-    # Should show some output
-    [ -n "$output" ]
-}
-
-# Test Case: US1-TC007 - Server fully starts and becomes ready
+# Test Case: US1-TC007 - servers fully start and become ready (end-to-end)
 @test "US1-TC007: All servers fully start and become ready" {
-    local max_wait_time=300  # 5 minutes max per server
-    local check_interval=5   # Check logs every 5 seconds
+    # The end-to-end test needs a Docker daemon; skip cleanly when unavailable
+    if ! docker info > /dev/null 2>&1; then
+        skip "Docker daemon is not running"
+    fi
+
+    local max_wait_time=300 # 5 minutes max per server
+    local check_interval=5  # Check logs every 5 seconds
     local failed_servers=()
     local successful_servers=()
     local total_servers=0
@@ -285,7 +253,7 @@ get_modpack_name() {
         if [ $wait_container -ge 30 ]; then
             echo "  ❌ Container not created after 30s"
             failed_servers+=("$modpack_name:container_not_created")
-            kill $server_pid >/dev/null 2>&1 || true
+            kill $server_pid > /dev/null 2>&1 || true
             continue
         fi
 
@@ -302,12 +270,12 @@ get_modpack_name() {
         while [ $elapsed -lt $max_wait_time ]; do
             # CRITICAL: Check container status FIRST before any operation
             local container_status
-            container_status=$(docker inspect "${container_name}" --format='{{.State.Status}}' 2>/dev/null || echo "not_found")
+            container_status=$(docker inspect "${container_name}" --format='{{.State.Status}}' 2> /dev/null || echo "not_found")
 
             if [ "$container_status" != "running" ]; then
                 # Container is not running - could be exited, dead, or removed
                 local exit_code
-                exit_code=$(docker inspect "${container_name}" --format='{{.State.ExitCode}}' 2>/dev/null || echo "unknown")
+                exit_code=$(docker inspect "${container_name}" --format='{{.State.ExitCode}}' 2> /dev/null || echo "unknown")
 
                 echo "  ❌ Container stopped (status: $container_status, exit code: $exit_code)"
                 echo "  📄 Last 20 log lines:"
@@ -319,8 +287,8 @@ get_modpack_name() {
                     failed_servers+=("$modpack_name:stopped_exit_$exit_code")
                 fi
 
-                kill $server_pid >/dev/null 2>&1 || true
-                docker rm "$container_name" >/dev/null 2>&1 || true
+                kill $server_pid > /dev/null 2>&1 || true
+                docker rm "$container_name" > /dev/null 2>&1 || true
                 break
             fi
 
@@ -360,8 +328,8 @@ get_modpack_name() {
                 echo "  📄 Last 20 log lines:"
                 echo "$current_logs" | tail -20 | sed 's/^/     /'
                 failed_servers+=("$modpack_name:fatal_error")
-                kill $server_pid >/dev/null 2>&1 || true
-                docker rm "$container_name" >/dev/null 2>&1 || true
+                kill $server_pid > /dev/null 2>&1 || true
+                docker rm "$container_name" > /dev/null 2>&1 || true
                 break
             fi
 
@@ -375,14 +343,14 @@ get_modpack_name() {
             successful_servers+=("$modpack_name")
 
             # Clean up
-            ./scripts/stop-server.sh "$modpack_name" >/dev/null 2>&1 || true
-            docker rm "$container_name" >/dev/null 2>&1 || true
+            ./scripts/stop-server.sh "$modpack_name" > /dev/null 2>&1 || true
+            docker rm "$container_name" > /dev/null 2>&1 || true
         else
             # Only add timeout if server wasn't already marked as failed
             if ! echo "${failed_servers[*]}" | grep -q "$modpack_name"; then
                 # Check one last time if container is still running
                 local final_status
-                final_status=$(docker inspect "${container_name}" --format='{{.State.Status}}' 2>/dev/null || echo "not_found")
+                final_status=$(docker inspect "${container_name}" --format='{{.State.Status}}' 2> /dev/null || echo "not_found")
 
                 if [ "$final_status" = "running" ]; then
                     echo "  ⏰ Timeout after ${max_wait_time}s (container still running)"
@@ -391,7 +359,7 @@ get_modpack_name() {
                     failed_servers+=("$modpack_name:timeout")
                 else
                     local final_exit_code
-                    final_exit_code=$(docker inspect "${container_name}" --format='{{.State.ExitCode}}' 2>/dev/null || echo "unknown")
+                    final_exit_code=$(docker inspect "${container_name}" --format='{{.State.ExitCode}}' 2> /dev/null || echo "unknown")
                     echo "  ⏰ Timeout - container stopped (status: $final_status, exit: $final_exit_code)"
                     echo "  Last 20 log lines:"
                     docker logs "$container_name" 2>&1 | tail -20 | sed 's/^/    /'
@@ -399,9 +367,9 @@ get_modpack_name() {
                 fi
 
                 # Clean up
-                kill $server_pid >/dev/null 2>&1 || true
-                ./scripts/stop-server.sh "$modpack_name" >/dev/null 2>&1 || true
-                docker rm "$container_name" >/dev/null 2>&1 || true
+                kill $server_pid > /dev/null 2>&1 || true
+                ./scripts/stop-server.sh "$modpack_name" > /dev/null 2>&1 || true
+                docker rm "$container_name" > /dev/null 2>&1 || true
             fi
         fi
     done
@@ -434,4 +402,3 @@ get_modpack_name() {
     # Assert all servers succeeded
     [ ${#failed_servers[@]} -eq 0 ]
 }
-

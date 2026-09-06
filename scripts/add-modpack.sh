@@ -14,9 +14,14 @@ source "$SCRIPT_DIR/common.sh"
 # Available templates
 declare -A TEMPLATES=(
   ["atm8"]="All The Mods 8,AUTO_CURSEFORGE,1.20.1,8G,https://www.curseforge.com/minecraft/modpacks/all-the-mods-8,ATM8 Server"
+  ["atm10sky"]="All The Mods 10: To the Sky,AUTO_CURSEFORGE,1.21.1,8G,https://www.curseforge.com/minecraft/modpacks/all-the-mods-10-sky,ATM10 Sky"
   ["skyfactory4"]="SkyFactory 4,AUTO_CURSEFORGE,1.12.2,4G,https://www.curseforge.com/minecraft/modpacks/skyfactory-4,SkyFactory 4"
   ["prominence2"]="Prominence II RPG,AUTO_CURSEFORGE,1.20.1,6G,https://www.curseforge.com/minecraft/modpacks/prominence-2-rpg,Prominence II RPG"
   ["rlcraft"]="RLCraft,AUTO_CURSEFORGE,1.12.2,6G,https://www.curseforge.com/minecraft/modpacks/rlcraft,RLCraft"
+  ["bmc4"]="Better MC BMC4,AUTO_CURSEFORGE,1.20.1,6G,https://www.curseforge.com/minecraft/modpacks/better-mc-forge-bmc4,Better MC BMC4"
+  ["pixelmon"]="The Pixelmon Modpack,MODRINTH,1.21.1,6G,the-pixelmon-modpack,Pixelmon"
+  ["deceasedcraft"]="DeceasedCraft,AUTO_CURSEFORGE,1.20.1,6G,https://www.curseforge.com/minecraft/modpacks/deceasedcraft,DeceasedCraft"
+  ["cursed-walking"]="Cursed Walking,AUTO_CURSEFORGE,1.20.1,8G,https://www.curseforge.com/minecraft/modpacks/cursed-walking-a-modern-zombie-apocalypse,Cursed Walking"
   ["vanilla"]="Vanilla Optimized,PAPER,1.20.4,2G,,Vanilla Server"
 )
 
@@ -66,12 +71,18 @@ MEMORY=$final_memory
 EOF
 
     if [[ -n "$cf_url" ]]; then
-      echo "CF_PAGE_URL=$cf_url" >> "$config_file"
+      # MODRINTH templates store the project slug; CurseForge ones the modpack URL
+      if [[ "$type" == "MODRINTH" ]]; then
+        echo "MODRINTH_MODPACK=$cf_url" >> "$config_file"
+      else
+        echo "CF_PAGE_URL=$cf_url" >> "$config_file"
+      fi
     fi
 
     cat >> "$config_file" << EOF
-SERVER_NAME=$display_name
+SERVER_NAME=$name
 SERVER_PORT=$port
+RCON_PORT=$((port + 1000))
 MAX_PLAYERS=20
 DIFFICULTY=normal
 VIEW_DISTANCE=10
@@ -91,6 +102,7 @@ VERSION=1.20.4
 MEMORY=$memory
 SERVER_NAME=$name
 SERVER_PORT=$port
+RCON_PORT=$((port + 1000))
 MAX_PLAYERS=20
 DIFFICULTY=normal
 VIEW_DISTANCE=10

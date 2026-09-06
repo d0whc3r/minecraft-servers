@@ -1,7 +1,7 @@
 # Vanilla Minecraft (Paper)
 
 **Type**: Optimized Vanilla Server  
-**Minecraft Version**: 1.20.4  
+**Minecraft Version**: 26.2  
 **Server Software**: Paper (Spigot/Bukkit fork)
 
 ## Overview
@@ -31,7 +31,7 @@ Location: `config/modpacks/vanilla.env`
 
 ```env
 TYPE=PAPER
-VERSION=1.20.4
+VERSION=26.2
 MEMORY=2G
 SERVER_NAME=Vanilla Server
 SERVER_PORT=25567
@@ -60,7 +60,7 @@ docker logs -f mc-vanilla
 ## Connecting
 
 - **Address**: `your-server-ip:25567`
-- **Client**: Vanilla Minecraft Java Edition 1.20.4
+- **Client**: Vanilla Minecraft Java Edition 26.2
 - **No mods required**: Pure vanilla experience
 
 ## Why Paper?
@@ -267,7 +267,7 @@ docker exec -it mc-vanilla rcon-cli timings paste
 ### Players Can't Connect
 
 - Check server is running: `docker ps`
-- Verify version matches (1.20.4)
+- Verify version matches (26.2)
 - Check firewall: `sudo ufw allow 25567/tcp`
 - Confirm port forwarding if behind router
 

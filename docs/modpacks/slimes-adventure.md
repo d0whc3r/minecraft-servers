@@ -2,7 +2,7 @@
 
 **Modrinth**: https://modrinth.com/modpack/slimes-adventure  
 **Type**: Adventure and exploration modpack  
-**Minecraft Version**: Auto-detected from modpack  
+**Minecraft Version**: 1.21.1 (Fabric)  
 **Memory**: 4GB recommended
 
 ## Overview
@@ -35,7 +35,7 @@ docker logs -f mc-slimes-adventure
 ## Connection
 
 - **Address**: `your-server-ip:25569`
-- **Version**: Check modpack page for exact version
+- **Version**: 1.21.1 (modpack 1.13.x)
 - **Client**: Install Slimes Adventure modpack from Modrinth Launcher
 
 ## Features
@@ -66,7 +66,7 @@ Configuration file: `config/modpacks/slimes-adventure.env`
 # Modpack settings
 TYPE=MODRINTH
 MODRINTH_MODPACK=slimes-adventure
-VERSION=1.19.2
+VERSION=1.21.1
 
 # Performance
 MEMORY=4G

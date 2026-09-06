@@ -259,7 +259,7 @@ curl -s "https://api.modrinth.com/v2/project/cobbleverse" | grep game_versions
 
 ```bash
 TYPE=PAPER
-VERSION=1.20.4
+VERSION=26.2
 MEMORY=4G
 SERVER_PORT=25565
 SERVER_NAME=My Vanilla Server
@@ -300,7 +300,7 @@ ALLOW_FLIGHT=true
 
 ```bash
 TYPE=PAPER
-VERSION=1.20.4
+VERSION=26.2
 MEMORY=4G
 SERVER_PORT=25568
 SERVER_NAME=Private Server
@@ -320,7 +320,7 @@ ONLINE_MODE=false
 The `JAVA_VERSION` variable selects the Docker image tag (`itzg/minecraft-server:<value>`), so it can also be any tag supported by that image. Different Minecraft versions and modpacks require specific Java versions:
 
 - **Java 8**: Required for Minecraft 1.12.x modpacks (RLCraft, SkyFactory 4, Dragon Block C)
-- **Java 11**: Required by some 1.12.2 CurseForge packs (My Hero Adventure)
+- **Java 11**: Required by legacy CurseForge packs (My Hero Adventure, MC 1.16.5)
 - **Java 17**: Required for Minecraft 1.18+ and many modern modpacks
 - **Java 21**: Required for Minecraft 1.20.5+ and most 1.21.x packs
 - **Java 25**: Required by newest releases (e.g. Plants vs. Zombies+ on MC 26.1.2)

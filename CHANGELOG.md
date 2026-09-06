@@ -17,10 +17,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive management scripts
 - GitHub Actions CI/CD pipeline with parallel testing
 - Extensive documentation and guides
+- 6 new top-downloaded servers: `better-mc-bmc4`, `prominence-2`, `pixelmon`,
+  `deceasedcraft`, `cursed-walking` and `all-the-mods-10-sky`
+- New `add-modpack.sh` templates (`bmc4`, `pixelmon`, `atm10sky`, `deceasedcraft`,
+  `cursed-walking`) with Modrinth template support
 
 ### Changed
 
-- N/A (initial release)
+- Verified every server against live CurseForge/Modrinth/Paper/Mojang APIs (2026-09-06)
+- `my-hero-adventure`: corrected MC version 1.12.2 → 1.16.5 (the pack's only
+  release, MHA-1.0.0, targets 1.16.5)
+- `unofficial-dragon-block-c`: corrected MC version 1.12.2 → 1.7.10 (Dragon
+  Block C is a 1.7.10 mod; latest pack 4.1.25)
+- `solo-leveling-reawakening`: MC 1.20.1 → 1.21.1 (SLR 1.7.7 moved to
+  NeoForge 1.21.1)
+- `slimes-adventure`: MC 1.19.2 (Forge) → 1.21.1 (Fabric); modpack 1.13.x
+  dropped Forge
+- `vanilla`: Paper 1.20.4 → 26.2 (latest stable Mojang/Paper release)
+- Modpack files without an explicit pin (`CF_FILE_ID` / `MODRINTH_MODPACK_VERSION`)
+  auto-download the latest release on start; verified pins for
+  `plants-vs-zombies` (3.2.0) and `deceasedcraft` (5.10.17) point at the
+  current latest
 
 ### Deprecated
 
@@ -32,7 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- N/A
+- `start-server.sh` now exports `RCON_PORT` to Docker Compose so each server binds
+  its own RCON port (`SERVER_PORT + 1000`) instead of every server colliding on 25575
+- `add-modpack.sh` writes a valid `SERVER_NAME` (server slug, not the display name)
+  and includes `RCON_PORT` in generated configs
 
 ### Security
 

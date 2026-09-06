@@ -37,7 +37,7 @@ nano .env
 ### 2. Start Vanilla Server
 
 ```bash
-# Start the vanilla server (Paper 1.20.4, port 25567)
+# Start the vanilla server (Paper 26.2, port 25567)
 ./scripts/start-server.sh vanilla
 
 # Monitor startup (takes ~2 minutes first time)
@@ -120,16 +120,22 @@ docker logs -f mc-vanilla
 
 Available servers (full table in the [README](../README.md#pre-configured-modpacks)):
 
-| Server Name         | Version | Memory | Port  | Notes                          |
-| ------------------- | ------- | ------ | ----- | ------------------------------ |
-| `vanilla`           | 1.20.4  | 2G     | 25567 | Paper, light — good first test |
-| `skyfactory4`       | 1.12.2  | 6G     | 25565 | Skyblock, needs Java 8 image   |
-| `rlcraft`           | 1.12.2  | 6G     | 25566 | Hardcore survival              |
-| `cobbleverse`       | 1.21.1  | 6G     | 25568 | Pokémon-style adventure        |
-| `slimes-adventure`  | 1.19.2  | 4G     | 25569 | Exploration                    |
-| `solocraft-modpack` | 1.20.1  | 3G     | 25570 | Solo-leveling-style survival   |
-| `all-the-mods-10`   | 1.21.1  | 8G     | 25578 | Heavy kitchen-sink pack        |
-| …                   |         |        |       | 15 total — see README          |
+| Server Name           | Version | Memory | Port  | Notes                          |
+| --------------------- | ------- | ------ | ----- | ------------------------------ |
+| `vanilla`             | 26.2    | 2G     | 25567 | Paper, light — good first test |
+| `skyfactory4`         | 1.12.2  | 6G     | 25565 | Skyblock, needs Java 8 image   |
+| `rlcraft`             | 1.12.2  | 6G     | 25566 | Hardcore survival              |
+| `cobbleverse`         | 1.21.1  | 6G     | 25568 | Pokémon-style adventure        |
+| `slimes-adventure`    | 1.21.1  | 4G     | 25569 | Exploration                    |
+| `solocraft-modpack`   | 1.20.1  | 3G     | 25570 | Solo-leveling-style survival   |
+| `all-the-mods-10`     | 1.21.1  | 8G     | 25578 | Heavy kitchen-sink pack        |
+| `all-the-mods-10-sky` | 1.21.1  | 8G     | 25585 | ATM10 skyblock variant         |
+| `better-mc-bmc4`      | 1.20.1  | 6G     | 25580 | Enhanced vanilla+ (top pack)   |
+| `cursed-walking`      | 1.20.1  | 8G     | 25584 | Zombie survival                |
+| `deceasedcraft`       | 1.20.1  | 6G     | 25583 | Urban zombie apocalypse        |
+| `pixelmon`            | 1.21.1  | 6G     | 25582 | Classic Pokémon mod            |
+| `prominence-2`        | 1.20.1  | 6G     | 25581 | RPG adventure                  |
+| …                     |         |        |       | 21 total — see README          |
 
 > CurseForge modpacks require `CF_API_KEY` in `.env`. First start downloads the whole
 > modpack — give it 5–10 minutes and watch `docker logs -f mc-<name>`.

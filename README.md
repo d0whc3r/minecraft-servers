@@ -4,7 +4,7 @@ Run multiple Minecraft servers — each with a different modpack — on a single
 
 ## Features
 
-- 🚀 **Multi-server**: 15 pre-configured modpacks, ready to start (add as many as you want)
+- 🚀 **Multi-server**: 21 pre-configured modpacks, ready to start (add as many as you want)
 - 🧩 **One template, many servers**: a single `docker-compose.yml` instantiated per server — no compose edits to add servers
 - 💾 **Backups**: atomic backups with SHA256 verification and rolling retention
 - 🏥 **Monitoring**: Docker health checks plus scripts for health reports and auto-restart
@@ -44,26 +44,32 @@ Accepting `EULA=TRUE` in `.env` means you accept the [Minecraft EULA](https://ww
 
 Start any of these with `./scripts/start-server.sh <server-name>`. Each server gets its own world, config, and backups under `servers/<name>/` and `backups/<name>/`.
 
-| Server Name                 | Modpack                    | MC Version | Memory | Port  | Platform   |
-| --------------------------- | -------------------------- | ---------- | ------ | ----- | ---------- |
-| `all-the-mods-10`           | All The Mods 10            | 1.21.1     | 8G     | 25578 | CurseForge |
-| `amazing-fps-booster`       | Amazing FPS Booster        | 1.20.6     | 2G     | 25573 | CurseForge |
-| `cobbleverse`               | Cobbleverse                | 1.21.1     | 6G     | 25568 | Modrinth   |
-| `menagerie`                 | Menagerie                  | auto       | 6G     | 25577 | CurseForge |
-| `my-hero-adventure`         | My Hero Adventure          | 1.12.2     | 4G     | 25576 | CurseForge |
-| `plants-vs-zombies`         | Plants vs. Zombies+        | 26.1.2     | 4G     | 25579 | CurseForge |
-| `rlcraft`                   | RLCraft                    | 1.12.2     | 6G     | 25566 | CurseForge |
-| `skyfactory4`               | SkyFactory 4               | 1.12.2     | 6G     | 25565 | CurseForge |
-| `slimes-adventure`          | Slimes Adventure           | 1.19.2     | 4G     | 25569 | Modrinth   |
-| `solocraft-modpack`         | SoloCraft                  | 1.20.1     | 3G     | 25570 | Modrinth   |
-| `solo-leveling-level-up`    | Solo Leveling: Level Up    | 1.20.1     | 4G     | 25575 | CurseForge |
-| `solo-leveling-reawakening` | Solo Leveling: Reawakening | 1.20.1     | 4G     | 25571 | CurseForge |
-| `solo-leveling-shadows`     | Solo Leveling: Shadows     | 1.20.1     | 6G     | 25574 | CurseForge |
-| `unofficial-dragon-block-c` | Unofficial Dragon Block C  | 1.12.2     | 4G     | 25572 | CurseForge |
-| `vanilla`                   | Vanilla (Paper)            | 1.20.4     | 2G     | 25567 | Paper      |
+| Server Name                 | Modpack                      | MC Version | Memory | Port  | Platform   |
+| --------------------------- | ---------------------------- | ---------- | ------ | ----- | ---------- |
+| `all-the-mods-10`           | All The Mods 10              | 1.21.1     | 8G     | 25578 | CurseForge |
+| `all-the-mods-10-sky`       | All The Mods 10: To the Sky  | 1.21.1     | 8G     | 25585 | CurseForge |
+| `amazing-fps-booster`       | Amazing FPS Booster          | 1.20.6     | 2G     | 25573 | CurseForge |
+| `better-mc-bmc4`            | Better MC [FORGE] BMC4       | 1.20.1     | 6G     | 25580 | CurseForge |
+| `cobbleverse`               | Cobbleverse                  | 1.21.1     | 6G     | 25568 | Modrinth   |
+| `cursed-walking`            | Cursed Walking               | 1.20.1     | 8G     | 25584 | CurseForge |
+| `deceasedcraft`             | DeceasedCraft                | 1.20.1     | 6G     | 25583 | CurseForge |
+| `menagerie`                 | Menagerie                    | 1.20.1     | 6G     | 25577 | CurseForge |
+| `my-hero-adventure`         | My Hero Adventure            | 1.16.5     | 4G     | 25576 | CurseForge |
+| `pixelmon`                  | The Pixelmon Modpack         | 1.21.1     | 6G     | 25582 | Modrinth   |
+| `plants-vs-zombies`         | Plants vs. Zombies+          | 26.1.2     | 4G     | 25579 | CurseForge |
+| `prominence-2`              | Prominence II: Hasturian Era | 1.20.1     | 6G     | 25581 | Modrinth   |
+| `rlcraft`                   | RLCraft                      | 1.12.2     | 6G     | 25566 | CurseForge |
+| `skyfactory4`               | SkyFactory 4                 | 1.12.2     | 6G     | 25565 | CurseForge |
+| `slimes-adventure`          | Slimes Adventure             | 1.21.1     | 4G     | 25569 | Modrinth   |
+| `solocraft-modpack`         | SoloCraft                    | 1.20.1     | 3G     | 25570 | Modrinth   |
+| `solo-leveling-level-up`    | Solo Leveling: Level Up      | 1.20.1     | 4G     | 25575 | CurseForge |
+| `solo-leveling-reawakening` | Solo Leveling: Reawakening   | 1.21.1     | 4G     | 25571 | CurseForge |
+| `solo-leveling-shadows`     | Solo Leveling: Shadows       | 1.20.1     | 6G     | 25574 | CurseForge |
+| `unofficial-dragon-block-c` | Unofficial Dragon Block C    | 1.7.10     | 4G     | 25572 | CurseForge |
+| `vanilla`                   | Vanilla (Paper)              | 26.2       | 2G     | 25567 | Paper      |
 
 > [!TIP]
-> Running **all** servers at once needs ~69GB of RAM. Start with the ones you actually play, and use `list-servers.sh` to see what's running.
+> Running **all** servers at once needs ~109GB of RAM. Start with the ones you actually play, and use `list-servers.sh` to see what's running.
 
 Every server also exposes **RCON on port + 1000** (e.g. `vanilla`: game `25567`, RCON `26567`) using the `RCON_PASSWORD` from `.env`.
 

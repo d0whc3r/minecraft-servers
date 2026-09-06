@@ -2,7 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/solo-leveling-reawakening
 **Type**: RPG-themed modpack with Solo Leveling progression system
-**Minecraft Version**: 1.20.1
+**Minecraft Version**: 1.21.1
 **Memory**: 4GB recommended
 
 ## Overview
@@ -37,7 +37,7 @@ docker logs -f mc-solo-leveling-reawakening
 ## Connection
 
 - **Address**: `your-server-ip:25571`
-- **Version**: 1.20.1
+- **Version**: 1.21.1
 - **Client**: Install Solo Leveling - Reawakening from CurseForge Launcher
 
 ## Features
@@ -72,7 +72,7 @@ Configuration file: `config/modpacks/solo-leveling-reawakening.env`
 # Modpack settings
 TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/solo-leveling-reawakening
-VERSION=1.20.1
+VERSION=1.21.1
 
 # Performance
 MEMORY=4G
