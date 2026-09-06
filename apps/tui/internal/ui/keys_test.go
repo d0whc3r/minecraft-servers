@@ -1,12 +1,13 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/d0whc3r/minecraft-servers/apps/tui/internal/domain"
 )
@@ -17,12 +18,12 @@ func TestEnterIsContextual(t *testing.T) {
 	m := resized(sampleModel(), 120, 30)
 
 	// cursor on vanilla (exited) -> enter starts it
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown}) // cursor 0 -> 1
+	next, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyDown}) // cursor 0 -> 1
 	m = next.(Model)
 	if m.servers[m.cursor].Name != "vanilla" {
 		t.Fatalf("cursor on %q, want vanilla", m.servers[m.cursor].Name)
 	}
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = next.(Model)
 	if ba, ok := m.busy["vanilla"]; !ok || ba.action != domain.ActionStart {
 		t.Errorf("enter on stopped server should start it, busy=%+v", m.busy)
@@ -31,7 +32,7 @@ func TestEnterIsContextual(t *testing.T) {
 	// cursor back on rlcraft (running) -> enter attaches logs
 	m.cursor = 0
 	m.mode = viewTable
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = next.(Model)
 	if m.mode != viewLogs || m.logServer != "rlcraft" {
 		t.Errorf("enter on running server should open logs, mode=%v server=%q", m.mode, m.logServer)
@@ -44,13 +45,13 @@ func TestQuitGuardWhileBusy(t *testing.T) {
 	m := resized(sampleModel(), 120, 30)
 	m.busy["vanilla"] = busyAction{action: domain.ActionStart, started: time.Now()}
 
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	next, _ := m.Update(tea.KeyPressMsg{Code: 'q', Text: "q"})
 	m = next.(Model)
 	if m.confirm == nil || !m.confirm.quit {
 		t.Fatal("q with running actions must raise the quit guard")
 	}
 
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")})
+	next, _ = m.Update(tea.KeyPressMsg{Code: 'n', Text: "n"})
 	m = next.(Model)
 	if m.confirm != nil {
 		t.Error("n must cancel the quit guard")
@@ -73,9 +74,7 @@ func TestMouseClickSelectsRow(t *testing.T) {
 	if m.tableTop() != 3 {
 		t.Fatalf("tableTop = %d, want 3", m.tableTop())
 	}
-	next, _ := m.Update(tea.MouseMsg{
-		Action: tea.MouseActionPress, Button: tea.MouseButtonLeft, X: 5, Y: 4,
-	})
+	next, _ := m.Update(tea.MouseClickMsg{Button: tea.MouseLeft, X: 5, Y: 4})
 	m = next.(Model)
 	if m.cursor != 1 {
 		t.Errorf("click on Y=4 should select row 1, cursor=%d", m.cursor)
@@ -105,6 +104,30 @@ func TestFilterNarrowsRows(t *testing.T) {
 	m.filter.SetValue("no-match-xyz")
 	if len(m.visible()) != 0 || m.cursor != 0 {
 		t.Errorf("empty result should keep cursor clamped, cursor=%d", m.cursor)
+	}
+}
+
+// TestEndKeyOnEmptyFilterResult pins a crash: G/end used to move the cursor
+// to -1 when nothing matched the filter, and the render loop then indexed the
+// (empty) row slice at -1 and panicked.
+func TestEndKeyOnEmptyFilterResult(t *testing.T) {
+	m := resized(sampleModel(), 120, 30)
+	m.filter.SetValue("no-match-xyz")
+	m.clampCursor()
+
+	for _, key := range []tea.KeyPressMsg{
+		{Code: 'G', Text: "G"},
+		{Code: tea.KeyEnd},
+		{Code: tea.KeyDown}, // also walks into the same clamped range
+	} {
+		next, _ := m.Update(key)
+		m = next.(Model)
+		if m.cursor != 0 {
+			t.Errorf("%v left cursor at %d, want 0", key, m.cursor)
+		}
+		if out := plain(m.render()); !strings.Contains(out, "no servers match") {
+			t.Fatalf("render with an empty result must not panic or hide the empty state: %q", out[:min(120, len(out))])
+		}
 	}
 }
 
@@ -143,6 +166,53 @@ func TestStateTokenFilter(t *testing.T) {
 	}
 }
 
+// TestLogsViewScrollKeys pins the scroll contract of the logs view: g/G (and
+// home/end) jump to the ends and sync follow, ordinary scrolling pauses
+// follow whenever it leaves the bottom, and q goes back like esc.
+func TestLogsViewScrollKeys(t *testing.T) {
+	m := resized(sampleModel(), 120, 30)
+	next, _ := m.Update(tea.KeyPressMsg{Code: 'l', Text: "l"})
+	m = next.(Model)
+	defer m.detachLogs()
+
+	// Fill the buffer so the viewport can actually scroll.
+	for i := 0; i < 50; i++ {
+		next, _ = m.Update(dockerLine(m.logCh, fmt.Sprintf("line %d", i)))
+		m = next.(Model)
+	}
+
+	// Scrolling up pauses follow…
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyUp})
+	m = next.(Model)
+	if m.logFollow {
+		t.Error("scrolling up must pause follow")
+	}
+	// …G returns to the live tail…
+	next, _ = m.Update(tea.KeyPressMsg{Code: 'G', Text: "G"})
+	m = next.(Model)
+	if !m.logFollow {
+		t.Error("G must resume follow at the bottom")
+	}
+	// …g jumps to the top and pauses…
+	next, _ = m.Update(tea.KeyPressMsg{Code: 'g', Text: "g"})
+	m = next.(Model)
+	if m.logFollow {
+		t.Error("g must pause follow at the top")
+	}
+	// …end resumes at the live tail…
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnd})
+	m = next.(Model)
+	if !m.logFollow {
+		t.Error("end must resume follow at the bottom")
+	}
+	// …and q goes back to the table, like esc.
+	next, _ = m.Update(tea.KeyPressMsg{Code: 'q', Text: "q"})
+	m = next.(Model)
+	if m.mode != viewTable {
+		t.Errorf("q in the logs view must go back, mode=%v", m.mode)
+	}
+}
+
 func names(servers []domain.Server) []string {
 	out := make([]string, len(servers))
 	for i, s := range servers {
@@ -156,7 +226,7 @@ func names(servers []domain.Server) []string {
 func TestFKeyCyclesStateFilter(t *testing.T) {
 	m := resized(sampleModel(), 120, 30)
 
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("f")})
+	next, _ := m.Update(tea.KeyPressMsg{Code: 'f', Text: "f"})
 	m = next.(Model)
 	if got := m.filter.Value(); got != "state:running" {
 		t.Fatalf("first f = %q, want state:running", got)
@@ -165,7 +235,7 @@ func TestFKeyCyclesStateFilter(t *testing.T) {
 		t.Errorf("running filter -> %v, want [rlcraft]", names(m.visible()))
 	}
 
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("f")})
+	next, _ = m.Update(tea.KeyPressMsg{Code: 'f', Text: "f"})
 	m = next.(Model)
 	if got := m.filter.Value(); got != "state:!running" {
 		t.Fatalf("second f = %q, want state:!running", got)
@@ -174,7 +244,7 @@ func TestFKeyCyclesStateFilter(t *testing.T) {
 		t.Errorf("not-running filter -> %v, want the two stopped rows", names(m.visible()))
 	}
 
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("f")})
+	next, _ = m.Update(tea.KeyPressMsg{Code: 'f', Text: "f"})
 	m = next.(Model)
 	if got := m.filter.Value(); got != "" {
 		t.Fatalf("third f = %q, want empty", got)
@@ -203,11 +273,11 @@ func TestTabCompletesStateToken(t *testing.T) {
 		{"shift+tab", "state:absent"},
 	}
 	for _, s := range steps {
-		keyType := tea.KeyTab
+		key := tea.KeyPressMsg{Code: tea.KeyTab}
 		if s.key == "shift+tab" {
-			keyType = tea.KeyShiftTab
+			key = tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift}
 		}
-		next, _ := m.Update(tea.KeyMsg{Type: keyType})
+		next, _ := m.Update(key)
 		m = next.(Model)
 		if got := m.filter.Value(); got != s.want {
 			t.Fatalf("%s from prompt -> %q, want %q", s.key, got, s.want)
@@ -216,7 +286,7 @@ func TestTabCompletesStateToken(t *testing.T) {
 
 	// Alias and negation survive completion; the prefix picks the subset.
 	m.filter.SetValue("st:!r")
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	next, _ := m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = next.(Model)
 	if got := m.filter.Value(); got != "st:!running" {
 		t.Fatalf("tab with negated alias -> %q, want st:!running", got)
@@ -225,13 +295,13 @@ func TestTabCompletesStateToken(t *testing.T) {
 	// Prefix completion: single candidate finishes, unknown prefix falls back
 	// to the whole vocabulary.
 	m.filter.SetValue("state:ex")
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = next.(Model)
 	if got := m.filter.Value(); got != "state:exited" {
 		t.Fatalf("tab on prefix -> %q, want state:exited", got)
 	}
 	m.filter.SetValue("state:zz")
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = next.(Model)
 	if got := m.filter.Value(); got != "state:running" {
 		t.Fatalf("tab on unknown prefix -> %q, want the first vocabulary entry", got)
@@ -239,13 +309,13 @@ func TestTabCompletesStateToken(t *testing.T) {
 
 	// A plain name token is left alone; a trailing space starts a new token.
 	m.filter.SetValue("van")
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = next.(Model)
 	if got := m.filter.Value(); got != "van" {
 		t.Fatalf("tab on a name token must not touch it, got %q", got)
 	}
 	m.filter.SetValue("van ")
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyTab})
 	m = next.(Model)
 	if got := m.filter.Value(); got != "van state:running" {
 		t.Fatalf("tab after a space -> %q, want a fresh state token", got)
@@ -290,9 +360,7 @@ func TestFilterChipClickTogglesState(t *testing.T) {
 	m := resized(sampleModel(), 120, 30)
 
 	y := m.filterBarRow()
-	next, _ := m.Update(tea.MouseMsg{
-		Action: tea.MouseActionPress, Button: tea.MouseButtonLeft, X: 1, Y: y,
-	})
+	next, _ := m.Update(tea.MouseClickMsg{Button: tea.MouseLeft, X: 1, Y: y})
 	m = next.(Model)
 	if got := m.filter.Value(); got != "state:running" {
 		t.Fatalf("chip click set %q, want state:running", got)
@@ -313,18 +381,14 @@ func TestFilterChipClickTogglesState(t *testing.T) {
 	}
 
 	// Clicking the same chip again clears the filter.
-	next, _ = m.Update(tea.MouseMsg{
-		Action: tea.MouseActionPress, Button: tea.MouseButtonLeft, X: 1, Y: y,
-	})
+	next, _ = m.Update(tea.MouseClickMsg{Button: tea.MouseLeft, X: 1, Y: y})
 	m = next.(Model)
 	if m.filter.Value() != "" || len(m.visible()) != 3 {
 		t.Errorf("second chip click must clear, got %q", m.filter.Value())
 	}
 
 	// Row clicks are unaffected: Y=4 is the second table row.
-	next, _ = m.Update(tea.MouseMsg{
-		Action: tea.MouseActionPress, Button: tea.MouseButtonLeft, X: 5, Y: 4,
-	})
+	next, _ = m.Update(tea.MouseClickMsg{Button: tea.MouseLeft, X: 5, Y: 4})
 	m = next.(Model)
 	if m.cursor != 1 {
 		t.Errorf("row click should select row 1, cursor=%d", m.cursor)

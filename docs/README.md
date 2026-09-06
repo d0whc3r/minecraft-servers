@@ -8,8 +8,17 @@ and quick start, see the [main README](../README.md).
 | Document                                          | Description                                  |
 | ------------------------------------------------- | -------------------------------------------- |
 | [Quick Start](QUICKSTART.md)                      | First server in ~5 minutes, daily operations |
+| [Modpack Catalog](MODPACKS.md)                    | The 28 pre-configured servers: versions, RAM |
 | [Adding Modpacks](ADDING_MODPACKS.md)             | Templates and manual creation of new servers |
 | [Environment Variables](ENVIRONMENT_VARIABLES.md) | Complete per-server configuration reference  |
+
+## Interfaces
+
+| Document                           | Description                                              |
+| ---------------------------------- | -------------------------------------------------------- |
+| [Web Panel](../apps/web/README.md) | Browser dashboard + admin panel (start/stop, RCON, logs) |
+| [Terminal UI](TUI.md)              | Full-screen terminal dashboard (mc-tui)                  |
+| [Router](ROUTER.md)                | The single entry point: domains, nip.io, routes API      |
 
 ## Operations
 

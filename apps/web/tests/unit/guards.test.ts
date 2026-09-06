@@ -103,3 +103,33 @@ describe("getServerParam", () => {
     expect(api.getServerParam(makeContext({ server: "ghost" }))).toBeNull();
   });
 });
+
+describe("clientIp", () => {
+  beforeEach(() => {
+    delete process.env.MCPANEL_TRUST_PROXY;
+  });
+
+  it("ignores X-Forwarded-For by default so it cannot rotate the rate-limit bucket", async () => {
+    const { api } = await load();
+    const res = api.clientIp(
+      makeContext({ headers: { "x-forwarded-for": "9.9.9.9" } }),
+    );
+    expect(res).toBe("127.0.0.1");
+  });
+
+  it("honors X-Forwarded-For only behind a trusted proxy", async () => {
+    process.env.MCPANEL_TRUST_PROXY = "true";
+    const { api } = await load();
+    const res = api.clientIp(
+      makeContext({
+        headers: { "x-forwarded-for": "9.9.9.9, 10.0.0.1" },
+      }),
+    );
+    expect(res).toBe("9.9.9.9");
+  });
+
+  it("falls back to the socket address without the header", async () => {
+    const { api } = await load();
+    expect(api.clientIp(makeContext({}))).toBe("127.0.0.1");
+  });
+});

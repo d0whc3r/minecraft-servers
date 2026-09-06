@@ -59,7 +59,7 @@ function makeContext(
   } as unknown as APIContext;
 }
 
-const nextPage = () =>
+const nextPage = async () =>
   new Response("<html>page</html>", {
     headers: { "content-type": "text/html" },
   });
@@ -176,5 +176,27 @@ describe("middleware authorization", () => {
     expect(res!.headers.get("content-security-policy")).toContain(
       "frame-ancestors 'none'",
     );
+  });
+
+  it("attaches hardening headers to public API and rejected responses too", async () => {
+    const { onRequest } = await load();
+    for (const context of [
+      makeContext("/api/auth/me"),
+      makeContext("/api/system"),
+      makeContext("/api/action/vanilla/start", { method: "POST" }),
+      (() => {
+        process.env.MCPANEL_PUBLIC_VIEW = "false";
+        return makeContext("/");
+      })(),
+    ]) {
+      const res = await onRequest(context, nextPage);
+      expect(
+        res!.headers.get("x-content-type-options"),
+        context.url.pathname + context.request.method,
+      ).toBe("nosniff");
+      expect(res!.headers.get("content-security-policy")).toContain(
+        "frame-ancestors 'none'",
+      );
+    }
   });
 });

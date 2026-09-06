@@ -35,8 +35,7 @@ function jsonResponse(body: unknown, status: number): Response {
   });
 }
 
-function withHardeningHeaders(response: Response | undefined) {
-  if (!response) return response;
+function withHardeningHeaders(response: Response): Response {
   response.headers.set("x-frame-options", "DENY");
   response.headers.set("x-content-type-options", "nosniff");
   response.headers.set("referrer-policy", "no-referrer");
@@ -72,30 +71,32 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
   const isApi = pathname.startsWith("/api/");
   const mutating = !["GET", "HEAD", "OPTIONS"].includes(context.request.method);
 
+  let response: Response;
   if (isApi) {
-    // 1. Explicit public surface
-    if (PUBLIC_API.has(pathname)) return next();
-
-    // 2. Status is public unless the panel is locked down
-    if (pathname === "/api/status" && isPublicView()) return next();
-
-    // 3. CSRF marker for mutations (login is exempt, handled above)
-    if (mutating && context.request.headers.get("x-mcpanel") !== "1") {
-      return jsonResponse({ error: "Request rejected" }, 403);
+    if (
+      PUBLIC_API.has(pathname) ||
+      (pathname === "/api/status" && isPublicView())
+    ) {
+      // 1. Explicit public surface (login exempt from the CSRF marker)
+      response = await next();
+    } else {
+      // 2. CSRF marker for mutations, 3. then a valid session
+      if (mutating && context.request.headers.get("x-mcpanel") !== "1") {
+        response = jsonResponse({ error: "Request rejected" }, 403);
+      } else if (!hasSession(context)) {
+        response = jsonResponse({ error: "Not authenticated" }, 401);
+      } else {
+        response = await next();
+      }
     }
-
-    // 4. Everything else needs a session
-    if (!hasSession(context)) {
-      return jsonResponse({ error: "Not authenticated" }, 401);
+  } else {
+    // Pages: dashboard follows the public-view flag; /admin always renders its
+    // sign-in shell (the data it fetches is gated by the /api rules above).
+    if (!isPublicView() && !hasSession(context) && pathname !== "/admin") {
+      response = context.redirect("/admin", 302);
+    } else {
+      response = await next();
     }
-    return withHardeningHeaders(await next());
   }
-
-  // Pages: dashboard follows the public-view flag; /admin always renders its
-  // sign-in shell (the data it fetches is gated by the /api rules above).
-  if (!isPublicView() && !hasSession(context) && pathname !== "/admin") {
-    return context.redirect("/admin", 302);
-  }
-
-  return withHardeningHeaders(await next());
+  return withHardeningHeaders(response);
 };

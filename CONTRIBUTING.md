@@ -93,6 +93,25 @@ This project follows a code of conduct to ensure a welcoming environment for all
    pnpm test
    ```
 
+### Makefile Targets
+
+One entry point for the whole monorepo (Go TUI, web panel, bash scripts):
+
+```bash
+make check      # lint (goimports+vet+staticcheck) + go tests + fast bats
+make build      # mc-tui for the host -> bin/mc-tui
+make run        # build + launch the dashboard
+make release    # full cross-compile matrix (linux/darwin) -> dist/
+make cover-html # go test coverage as HTML
+make vuln       # govulncheck against the dependency graph
+make outdated   # newer Go module/tool/JS versions
+make test-bats  # full bats suite (slow: starts real servers)
+make help       # every target with a description
+```
+
+Cross builds accept `OS=`/`ARCH=` (`make build OS=linux ARCH=arm64`); lint
+tools are pinned in `apps/tui/go.mod`'s `tool` block and run with `go tool`.
+
 ## Testing
 
 ### Running Tests

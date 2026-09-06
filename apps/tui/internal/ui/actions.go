@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/d0whc3r/minecraft-servers/apps/tui/internal/docker"
 	"github.com/d0whc3r/minecraft-servers/apps/tui/internal/domain"
@@ -43,9 +43,12 @@ type playersMsg struct {
 	err    error
 }
 
-type logLineMsg struct{ line dockerLogLine }
+type logLineMsg struct {
+	ch   chan dockerLogLine // stream the line belongs to
+	line dockerLogLine
+}
 type logStartedMsg struct{ server string }
-type logClosedMsg struct{}
+type logClosedMsg struct{ ch chan dockerLogLine }
 
 // Commands --------------------------------------------------------------------
 
@@ -84,13 +87,14 @@ func playersCmd(svc Service, server string) tea.Cmd {
 }
 
 // waitLogLineCmd blocks until the next log line (or channel close) is ready;
-// the model re-arms it after every logLineMsg it processes.
+// the model re-arms it after every logLineMsg it processes. Messages carry the
+// channel so the model can drop anything from a stream it already detached.
 func waitLogLineCmd(ch chan dockerLogLine) tea.Cmd {
 	return func() tea.Msg {
 		line, ok := <-ch
 		if !ok {
-			return logClosedMsg{}
+			return logClosedMsg{ch: ch}
 		}
-		return logLineMsg{line: line}
+		return logLineMsg{ch: ch, line: line}
 	}
 }

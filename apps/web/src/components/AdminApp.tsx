@@ -1,5 +1,12 @@
 // Admin area: login gate + server actions, live logs, RCON console, backups, system.
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import type {
   AuthMe,
   BackupFile,
@@ -203,28 +210,28 @@ function ServersTab({ push }: { push: Push }) {
     }, 5000);
   }, []);
 
-  const run = async (
-    name: string,
-    action: "start" | "stop" | "restart" | "backup",
-  ) => {
-    setBusy(`${name}:${action}`);
-    setConfirming(null);
-    try {
-      const res = await api<{ ok: boolean; output: string }>(
-        `/api/action/${name}/${action}`,
-        { method: "POST", json: {} },
-      );
-      push(
-        res.ok ? "ok" : "err",
-        `${action} ${name}: ${res.ok ? "done" : "failed"}`,
-        res.output,
-      );
-    } catch (err) {
-      push("err", `${action} ${name}: error`, (err as Error).message);
-    } finally {
-      setBusy(null);
-    }
-  };
+  const run = useCallback(
+    async (name: string, action: "start" | "stop" | "restart" | "backup") => {
+      setBusy(`${name}:${action}`);
+      setConfirming(null);
+      try {
+        const res = await api<{ ok: boolean; output: string }>(
+          `/api/action/${name}/${action}`,
+          { method: "POST", json: {} },
+        );
+        push(
+          res.ok ? "ok" : "err",
+          `${action} ${name}: ${res.ok ? "done" : "failed"}`,
+          res.output,
+        );
+      } catch (err) {
+        push("err", `${action} ${name}: error`, (err as Error).message);
+      } finally {
+        setBusy(null);
+      }
+    },
+    [push],
+  );
 
   const servers = useMemo(
     () =>
@@ -441,21 +448,35 @@ function LogsModal({
   const boxRef = useRef<HTMLPreElement>(null);
 
   useEffect(() => {
-    fetch(`/api/logs/${server}/tail?tail=300`)
-      .then((r) => r.text())
-      .then((text) => {
-        setLines(text.split("\n").slice(-400));
-        setStatus("history loaded");
-      });
+    let cancelled = false;
     const es = new EventSource(`/api/logs/${server}/stream`);
     es.addEventListener("log", (ev) => {
+      if (cancelled) return;
       const line = JSON.parse((ev as MessageEvent).data) as string;
       setLines((prev) => [...prev.slice(-800), line]);
       setStatus("live");
     });
     es.addEventListener("end", () => setStatus("stream closed"));
     es.addEventListener("error", () => setStatus("stream error"));
-    return () => es.close();
+    // History is prepended (not assigned) so live lines that arrived while
+    // the request was in flight keep their chronological position.
+    fetch(`/api/logs/${server}/tail?tail=300`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
+      .then((text) => {
+        if (cancelled) return;
+        setLines((prev) => [...text.split("\n"), ...prev].slice(-800));
+        setStatus("history loaded");
+      })
+      .catch(() => {
+        if (!cancelled) setStatus("history unavailable (live only)");
+      });
+    return () => {
+      cancelled = true;
+      es.close();
+    };
   }, [server]);
 
   useEffect(() => {

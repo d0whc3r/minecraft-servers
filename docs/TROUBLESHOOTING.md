@@ -518,6 +518,28 @@ Run the validation script to check your setup:
 3. Move backups to external storage
 4. Increase disk space
 
+### Web Panel Can't Start Servers ("mounts denied")
+
+```text
+Error response from daemon: mounts denied:
+The path /repo/backups/<server> is not shared from the host and is not known to Docker.
+```
+
+The panel runs `scripts/start-server.sh` inside its own container, and the
+script hands bind-mount paths to the **host** Docker daemon. `/repo` is the
+repo path _inside the panel container_ — the daemon needs the path as it
+exists **on the host**.
+
+**Fix:** launch the panel from the repo root with
+
+```bash
+pnpm run panel:start
+```
+
+which sets `MCPANEL_HOST_ROOT` to your checkout's host path automatically
+(or set `MCPANEL_HOST_ROOT=/path/to/minecraft-servers` in `apps/web/.env`).
+Details: [apps/web/README.md](../apps/web/README.md#starting-servers-from-the-panel).
+
 ## Diagnostic Commands
 
 ### System Information

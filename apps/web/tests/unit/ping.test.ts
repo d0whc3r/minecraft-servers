@@ -102,4 +102,29 @@ describe("pingServer", () => {
     const result = await pingServer("127.0.0.1", 1); // closed port
     expect(result).toBeNull();
   });
+
+  it("reassembles a status response split across TCP chunks", async () => {
+    // Server that writes the frame in three pieces: frame length varint,
+    // packet id + string length, then the JSON payload.
+    const splitter = net.createServer((socket) => {
+      socket.on("data", () => {
+        const frame = statusFrame(JSON.stringify(STATUS));
+        socket.write(frame.subarray(0, 1));
+        setTimeout(() => socket.write(frame.subarray(1, 3)), 10);
+        setTimeout(() => socket.write(frame.subarray(3)), 20);
+        setTimeout(() => socket.end(), 40);
+      });
+    });
+    await new Promise<void>((resolve) =>
+      splitter.listen(0, "127.0.0.1", resolve),
+    );
+    const splitPort = (splitter.address() as net.AddressInfo).port;
+    try {
+      const result = await pingServer("127.0.0.1", splitPort, 2500);
+      expect(result).not.toBeNull();
+      expect(result!.playersOnline).toBe(3);
+    } finally {
+      splitter.close();
+    }
+  });
 });

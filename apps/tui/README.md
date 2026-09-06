@@ -3,7 +3,9 @@
 A terminal dashboard (Go + Bubble Tea) for managing this repository's
 Minecraft servers: start, stop, restart, back up, follow live logs, and open
 an RCON console. Every operation is delegated to the `scripts/` management
-scripts — no logic is duplicated.
+scripts — no logic is duplicated. User guide (launch, key reference):
+[docs/TUI.md](../../docs/TUI.md). This page covers architecture and
+development.
 
 Built around the **mc-router** philosophy: there are no per-server game
 ports. The `ADDR` column shows each server's route

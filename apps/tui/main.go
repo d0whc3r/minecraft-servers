@@ -14,7 +14,7 @@ import (
 	"os"
 	"path/filepath"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/d0whc3r/minecraft-servers/apps/tui/internal/app"
 	"github.com/d0whc3r/minecraft-servers/apps/tui/internal/ui"
@@ -41,13 +41,17 @@ func main() {
 		fatal(errors.Join(errors.New("no stdout available"), err))
 	}
 
-	p := tea.NewProgram(ui.New(svc), tea.WithAltScreen(), tea.WithMouseCellMotion())
+	// Alt screen and mouse cell motion are requested by the model's View.
+	p := tea.NewProgram(ui.New(svc))
 	if _, err := p.Run(); err != nil {
 		fatal(fmt.Errorf("tui: %w", err))
 	}
 }
 
 func runDump(svc app.Service, format string) {
+	if format != "table" && format != "json" {
+		fatal(errors.New("unknown --dump format: " + format + " (use table|json)"))
+	}
 	servers, err := svc.Snapshot()
 	if err != nil {
 		fatal(err)
@@ -59,9 +63,6 @@ func runDump(svc app.Service, format string) {
 			fatal(err)
 		}
 		return
-	}
-	if format != "table" {
-		fatal(errors.New("unknown --dump format: " + format + " (use table|json)"))
 	}
 	for _, s := range servers {
 		state := s.StateLabel()

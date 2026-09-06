@@ -32,13 +32,24 @@ func States() (map[string]domain.ContainerState, error) {
 	if err != nil {
 		return nil, wrapCmdErr("docker ps", err)
 	}
+	return parseStates(out), nil
+}
 
+// parseStates parses `docker ps --format` output: one tab-separated record of
+// name, state, status and mc-router host label per line.
+func parseStates(out []byte) map[string]domain.ContainerState {
 	states := make(map[string]domain.ContainerState)
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	// Lines are split raw: TrimSpace on the whole output would eat the
+	// trailing tab of the last line when its router label is empty, and the
+	// field count would drop that container silently.
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSuffix(line, "\r") // tolerate CRLF output
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
-		fields := strings.Split(line, "\t")
+		// The router label is last: SplitN keeps any stray tab inside it out
+		// of the state fields.
+		fields := strings.SplitN(line, "\t", 4)
 		if len(fields) < 4 {
 			continue
 		}
@@ -53,5 +64,5 @@ func States() (map[string]domain.ContainerState, error) {
 			Route:  strings.TrimSpace(fields[3]),
 		}
 	}
-	return states, nil
+	return states
 }

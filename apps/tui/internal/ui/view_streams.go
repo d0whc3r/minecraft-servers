@@ -5,7 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
+
+	"charm.land/lipgloss/v2"
 )
 
 // Logs view --------------------------------------------------------------------
@@ -17,12 +19,8 @@ func (m Model) logsView() string {
 	if m.logErr != "" {
 		title += "\n" + styleToastErr.Render(m.logErr)
 	}
-	footer := renderHints([]hint{
-		{"esc", "back"}, {"f", "follow:" + onOff(m.logFollow)},
-		{"↑↓", "scroll"}, {"g/G", "ends"}, {"q", "quit app"},
-	}, m.width)
 
-	return title + "\n" + m.ruleView() + "\n" + m.logVP.View() + "\n" + footer
+	return title + "\n" + m.ruleView() + "\n" + m.logVP.View() + "\n" + m.footerView()
 }
 
 // Console view -----------------------------------------------------------------
@@ -48,10 +46,7 @@ func (m Model) consoleView() string {
 			lines = append(lines, inStyle.Render("❯ "+e.input))
 		}
 		if e.reply != "" {
-			reply := e.reply
-			if len(reply) > 4000 {
-				reply = reply[:4000] + "…"
-			}
+			reply := ansi.Truncate(e.reply, 4000, "…")
 			style := outStyle
 			if e.isErr {
 				style = errStyle

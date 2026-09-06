@@ -43,9 +43,19 @@ services:
       # `docker compose logs panel`), or pin your own from apps/web/.env.
       MCPANEL_PASSWORD: ${MCPANEL_PASSWORD:-}
       MCPANEL_PUBLIC_VIEW: ${MCPANEL_PUBLIC_VIEW:-true}
+      # Set true only behind a reverse proxy that overwrites X-Forwarded-For;
+      # keeps login rate limiting unspoofable otherwise.
+      MCPANEL_TRUST_PROXY: ${MCPANEL_TRUST_PROXY:-false}
+      MCPANEL_SECURE_COOKIES: ${MCPANEL_SECURE_COOKIES:-false}
       # Reach mc-router and the per-server RCON by container DNS.
       MCPANEL_ROUTER_HOST: minecraft-router
       MCPANEL_RCON_HOST: container
+      # Host path of this repo checkout. The panel runs scripts/*.sh, which
+      # hand bind-mount sources (servers/.../data, backups/...) to the HOST
+      # Docker daemon; /repo only exists inside this container, so without
+      # this the daemon rejects them with "mounts denied".
+      # `pnpm run panel:start` sets it automatically from the launch cwd.
+      MCPANEL_HOST_ROOT: ${MCPANEL_HOST_ROOT:-}
       TZ: ${TZ:-UTC}
     volumes:
       - ../..:/repo

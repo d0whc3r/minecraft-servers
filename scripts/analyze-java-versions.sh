@@ -27,6 +27,7 @@ get_java_version() {
     java11) echo "java11" ;;
     java17) echo "java17" ;;
     java21) echo "java21" ;;
+    java25) echo "java25" ;;
     latest | "") echo "latest" ;;
     *)
       echo "WARNING: Unknown JAVA_VERSION '$java_version' for $modpack, using 'latest'" >&2

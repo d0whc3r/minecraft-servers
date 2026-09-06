@@ -5,15 +5,16 @@ package ui
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 
+	"github.com/d0whc3r/minecraft-servers/apps/tui/internal/backups"
 	"github.com/d0whc3r/minecraft-servers/apps/tui/internal/domain"
 )
 
@@ -63,6 +64,8 @@ const (
 	maxLogRune   = 1000
 	maxConEntrys = 200
 	maxEvents    = 50
+
+	filterMaxWidth = 46 // visible length of the filter placeholder
 
 	playersTTL   = 30 * time.Second // don't re-poll a server before this
 	playersEvery = 6                // …and only check on every Nth refresh tick
@@ -121,6 +124,10 @@ type Model struct {
 	playersAt map[string]time.Time
 	ticks     int
 
+	// newest backup per server, refreshed with each snapshot so View never
+	// touches the filesystem (it renders many times per second).
+	latestBackups map[string]backups.Backup
+
 	refreshedAt time.Time
 }
 
@@ -139,13 +146,14 @@ func New(svc Service) Model {
 	sp := spinner.New(spinner.WithSpinner(spinner.MiniDot))
 
 	return Model{
-		svc:       svc,
-		sp:        sp,
-		busy:      make(map[string]busyAction),
-		filter:    filter,
-		conInput:  conInput,
-		players:   make(map[string]string),
-		playersAt: make(map[string]time.Time),
+		svc:           svc,
+		sp:            sp,
+		busy:          make(map[string]busyAction),
+		filter:        filter,
+		conInput:      conInput,
+		players:       make(map[string]string),
+		playersAt:     make(map[string]time.Time),
+		latestBackups: make(map[string]backups.Backup),
 	}
 }
 
@@ -159,8 +167,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		m.logVP.Width = msg.Width - 2
-		m.logVP.Height = msg.Height - 4
+		// v2 textinputs clip their placeholder to Width, so give the filter
+		// room for its grammar hint while leaving the census chips visible.
+		m.filter.SetWidth(max(20, min(filterMaxWidth, msg.Width-70)))
+		m.conInput.SetWidth(max(20, msg.Width-4))
+		m.logVP.SetWidth(msg.Width - 2)
+		m.logVP.SetHeight(msg.Height - 4)
 		return m, nil
 
 	case spinner.TickMsg:
@@ -182,6 +194,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err == nil {
 			m.servers = msg.servers
 			m.refreshedAt = time.Now()
+			m.refreshBackups()
 		}
 		m.clampCursor()
 		return m, nil
@@ -219,8 +232,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case logLineMsg:
-		if m.mode != viewLogs || m.logCh == nil {
-			return m, nil
+		if msg.ch != m.logCh {
+			return m, nil // stale: the stream was detached or re-attached
 		}
 		if msg.line.Err != nil {
 			m.logErr = "error: " + msg.line.Err.Error()
@@ -230,18 +243,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, waitLogLineCmd(m.logCh)
 
 	case logClosedMsg:
-		if m.mode == viewLogs {
+		if msg.ch == m.logCh && m.mode == viewLogs {
 			m.logErr = "log stream ended (press esc)"
 		}
 		return m, nil
 
-	case tea.MouseMsg:
+	case tea.MouseWheelMsg:
+		if m.mode != viewLogs || m.logCh == nil {
+			return m, nil
+		}
+		var cmd tea.Cmd
+		m.logVP, cmd = m.logVP.Update(msg)
+		m.logFollow = m.logVP.AtBottom()
+		return m, cmd
+
+	case tea.MouseClickMsg:
 		return m.handleMouse(msg)
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 	}
 	return m, nil
+}
+
+// View implements tea.Model. The dashboard owns the alternate screen and
+// requests cell-motion mouse events (row selection, filter chips).
+func (m Model) View() tea.View {
+	v := tea.NewView(m.render())
+	v.AltScreen = true
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 func (m Model) handleActionDone(msg actionDoneMsg) (tea.Model, tea.Cmd) {
@@ -289,8 +320,8 @@ func errShort(err error) string {
 	if i := strings.Index(s, "\n"); i > 0 {
 		s = s[:i]
 	}
-	if len(s) > 120 {
-		s = s[:117] + "…"
+	if r := []rune(s); len(r) > 120 {
+		s = string(r[:117]) + "…"
 	}
 	return s
 }
@@ -625,9 +656,21 @@ func (m *Model) appendCon(entry conEntry) {
 	}
 }
 
+// refreshBackups re-reads the newest backup for every server. It runs on the
+// Update side (once per snapshot), never in View: rendering must not do I/O.
+func (m *Model) refreshBackups() {
+	for _, s := range m.servers {
+		if b, ok := m.svc.LatestBackup(s.Name); ok {
+			m.latestBackups[s.Name] = b
+		} else {
+			delete(m.latestBackups, s.Name)
+		}
+	}
+}
+
 // lastBackupLabel renders the newest backup for the detail pane.
 func (m Model) lastBackupLabel(server string) string {
-	b, ok := m.svc.LatestBackup(server)
+	b, ok := m.latestBackups[server]
 	if !ok {
 		return ""
 	}
@@ -640,6 +683,6 @@ func sortBusyNames(busy map[string]busyAction) []string {
 	for name := range busy {
 		names = append(names, name)
 	}
-	sort.Strings(names)
+	slices.Sort(names)
 	return names
 }

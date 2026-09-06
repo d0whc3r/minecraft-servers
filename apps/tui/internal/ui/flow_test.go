@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/d0whc3r/minecraft-servers/apps/tui/internal/domain"
 )
@@ -19,14 +19,14 @@ func TestPressingXRunsFullStopFlow(t *testing.T) {
 	m := resized(sampleModelWith(fake), 120, 30)
 
 	// x on the selected running server raises a confirmation…
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	next, _ := m.Update(tea.KeyPressMsg{Code: 'x', Text: "x"})
 	m = next.(Model)
 	if m.confirm == nil || m.confirm.action != domain.ActionStop {
 		t.Fatalf("x should raise a stop confirmation, got %+v", m.confirm)
 	}
 
 	// …y executes it and marks the server busy…
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
+	next, _ = m.Update(tea.KeyPressMsg{Code: 'y', Text: "y"})
 	m = next.(Model)
 	if !m.isBusy("rlcraft") {
 		t.Fatal("stop should be running (busy) after confirm")
@@ -55,7 +55,7 @@ func TestFailedActionShowsErrorToastAndKeepsOutput(t *testing.T) {
 	m := resized(sampleModelWith(fake), 120, 30)
 	m.cursor = 1 // vanilla (stopped)
 
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+	next, _ := m.Update(tea.KeyPressMsg{Code: 's', Text: "s"})
 	m = next.(Model)
 	if _, busy := m.busy["vanilla"]; !busy {
 		t.Fatal("start should be busy")
@@ -74,12 +74,12 @@ func TestFailedActionShowsErrorToastAndKeepsOutput(t *testing.T) {
 	}
 
 	// `o` must now open the output popup showing the failure.
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("o")})
+	next, _ = m.Update(tea.KeyPressMsg{Code: 'o', Text: "o"})
 	m = next.(Model)
 	if m.mode != viewOutput {
 		t.Fatal("o should open the output popup after a failure")
 	}
-	if out := m.View(); !strings.Contains(out, "port conflict") {
+	if out := m.render(); !strings.Contains(out, "port conflict") {
 		t.Error("output popup must show the captured script output")
 	}
 }
@@ -89,7 +89,7 @@ func TestFailedActionShowsErrorToastAndKeepsOutput(t *testing.T) {
 func TestLogStreamLifecycle(t *testing.T) {
 	fake := newFakeService(sampleServers(), nil)
 	m := resized(sampleModelWith(fake), 120, 30)
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
+	next, _ := m.Update(tea.KeyPressMsg{Code: 'l', Text: "l"})
 	m = next.(Model)
 
 	if m.mode != viewLogs || m.logCh == nil {
@@ -97,7 +97,7 @@ func TestLogStreamLifecycle(t *testing.T) {
 	}
 
 	for i := 0; i < 3; i++ {
-		next, _ = m.Update(logLineMsg{line: dockerLine("line " + string(rune('a'+i)))})
+		next, _ = m.Update(dockerLine(m.logCh, "line "+string(rune('a'+i))))
 		m = next.(Model)
 	}
 	if len(m.logLines) != 3 {
@@ -105,7 +105,7 @@ func TestLogStreamLifecycle(t *testing.T) {
 	}
 
 	// An error line marks the view but the stream stays open.
-	next, _ = m.Update(logLineMsg{line: dockerLineErr(errors.New("boom"))})
+	next, _ = m.Update(dockerLineErr(m.logCh, errors.New("boom")))
 	m = next.(Model)
 	if !strings.Contains(m.logErr, "boom") {
 		t.Errorf("logErr = %q, want the pump error", m.logErr)
@@ -113,7 +113,7 @@ func TestLogStreamLifecycle(t *testing.T) {
 
 	// Ring buffer: oldest lines are dropped beyond the cap.
 	for i := 0; i < maxLogLines+10; i++ {
-		next, _ = m.Update(logLineMsg{line: dockerLine("x")})
+		next, _ = m.Update(dockerLine(m.logCh, "x"))
 		m = next.(Model)
 	}
 	if len(m.logLines) != maxLogLines {
@@ -131,13 +131,82 @@ func TestLogStreamLifecycle(t *testing.T) {
 	m.detachLogs()
 }
 
+// TestStaleLogStreamMessagesIgnored guards the detach/re-attach race: lines
+// and close notices from an old stream must not land in the new stream's
+// view or fake a "stream ended" on it.
+func TestStaleLogStreamMessagesIgnored(t *testing.T) {
+	fake := newFakeService(sampleServers(), nil)
+	m := resized(sampleModelWith(fake), 120, 30)
+	next, _ := m.Update(tea.KeyPressMsg{Code: 'l', Text: "l"})
+	m = next.(Model)
+	oldCh := m.logCh
+
+	// Re-attach (leave the view, enter again): a fresh stream replaces the
+	// old one while its pump is still winding down.
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
+	m = next.(Model)
+	next, _ = m.Update(tea.KeyPressMsg{Code: 'l', Text: "l"})
+	m = next.(Model)
+	if m.logCh == nil || m.logCh == oldCh {
+		t.Fatalf("re-attach must install a new stream channel, got %v", m.logCh)
+	}
+
+	// The old stream's pending line and close notice are dropped.
+	next, _ = m.Update(dockerLine(oldCh, "stale line"))
+	m = next.(Model)
+	if len(m.logLines) != 0 {
+		t.Errorf("stale line leaked into the new view: %v", m.logLines)
+	}
+	next, _ = m.Update(waitLogLineCmd(oldCh)())
+	m = next.(Model)
+	if m.logErr != "" {
+		t.Errorf("stale close faked an error: %q", m.logErr)
+	}
+
+	// The current stream still works.
+	next, _ = m.Update(dockerLine(m.logCh, "fresh line"))
+	m = next.(Model)
+	if len(m.logLines) != 1 {
+		t.Errorf("current stream line dropped: %v", m.logLines)
+	}
+	m.detachLogs()
+}
+
+// TestBackupLabelComesFromSnapshotCache checks that backup info is refreshed
+// with each snapshot (never read from disk during render) and reaches the
+// detail pane.
+func TestBackupLabelComesFromSnapshotCache(t *testing.T) {
+	fake := newFakeService(sampleServers(), nil)
+	fake.hasBackup = true
+	m := resized(sampleModelWith(fake), 120, 30)
+
+	if label := m.lastBackupLabel("rlcraft"); label != "" {
+		t.Fatalf("no snapshot yet: label = %q, want empty", label)
+	}
+
+	next, _ := m.Update(serversMsg{servers: sampleServers()})
+	m = next.(Model)
+	if label := m.lastBackupLabel("rlcraft"); !strings.Contains(label, "rlcraft-20260906-030000.tar.gz") {
+		t.Errorf("label = %q, want the newest backup name", label)
+	}
+
+	// A server without backups drops out of the cache instead of going stale.
+	fake.hasBackup = false
+	next, _ = m.Update(serversMsg{servers: sampleServers()})
+	m = next.(Model)
+	if label := m.lastBackupLabel("rlcraft"); label != "" {
+		t.Errorf("label = %q, want empty after the backup disappeared", label)
+	}
+}
+
 // TestLogLineIgnoredWhenDetached guards the race where a log line arrives
 // after the user left the logs view.
 func TestLogLineIgnoredWhenDetached(t *testing.T) {
 	m := resized(sampleModel(), 120, 30)
 	m.mode = viewTable
 	m.logCh = nil
-	next, _ := m.Update(logLineMsg{line: dockerLine("late line")})
+	orphan := make(chan dockerLogLine, 1)
+	next, _ := m.Update(dockerLine(orphan, "late line"))
 	m = next.(Model)
 	if len(m.logLines) != 0 {
 		t.Errorf("detached model must ignore log lines, got %d", len(m.logLines))
@@ -207,19 +276,21 @@ func TestPlayerPollingSkipsStoppedOrNoRconServers(t *testing.T) {
 func TestSlashStateFilterFlow(t *testing.T) {
 	m := resized(sampleModel(), 120, 30)
 
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+	next, _ := m.Update(tea.KeyPressMsg{Code: '/', Text: "/"})
 	m = next.(Model)
 	if !m.filterOpen {
 		t.Fatal("/ must open the filter prompt")
 	}
 
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("st:run")})
+	next, _ = m.Update(tea.KeyPressMsg{Text: "st:run"})
 	m = next.(Model)
 	if got := len(m.visible()); got != 1 || m.visible()[0].Name != "rlcraft" {
 		t.Fatalf("typed query narrowed rows to %v, want [rlcraft]", names(m.visible()))
 	}
 
-	out := m.View()
+	// The prompt renders "/" and the value as separately styled runs, so
+	// assert against the plain text the terminal shows.
+	out := plain(m.render())
 	if !strings.Contains(out, "rlcraft") || strings.Contains(out, "vanilla") {
 		t.Error("rendered table must only contain the running server")
 	}
@@ -228,21 +299,24 @@ func TestSlashStateFilterFlow(t *testing.T) {
 	}
 
 	// enter closes the prompt but keeps the query…
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
 	m = next.(Model)
 	if m.filterOpen || len(m.visible()) != 1 {
 		t.Fatalf("enter must close the prompt keeping %d rows", len(m.visible()))
 	}
 
 	// …and esc in the table view clears it.
-	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	next, _ = m.Update(tea.KeyPressMsg{Code: tea.KeyEsc})
 	m = next.(Model)
 	if m.filter.Value() != "" || len(m.visible()) != 3 {
 		t.Errorf("esc must clear the filter, got %q", m.filter.Value())
 	}
 }
 
-func dockerLine(text string) dockerLogLine { return dockerLogLine{Text: text} }
-func dockerLineErr(err error) dockerLogLine {
-	return dockerLogLine{Err: err}
+func dockerLine(ch chan dockerLogLine, text string) logLineMsg {
+	return logLineMsg{ch: ch, line: dockerLogLine{Text: text}}
+}
+
+func dockerLineErr(ch chan dockerLogLine, err error) logLineMsg {
+	return logLineMsg{ch: ch, line: dockerLogLine{Err: err}}
 }

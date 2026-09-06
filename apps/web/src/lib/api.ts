@@ -48,10 +48,19 @@ export function getServerParam(
   return name;
 }
 
+/**
+ * Client IP for login throttling. `X-Forwarded-For` is attacker-controlled
+ * unless the panel sits behind a proxy we trust, so it is only honored when
+ * MCPANEL_TRUST_PROXY=true; otherwise the socket address is used and spoofed
+ * headers cannot rotate the rate-limit bucket.
+ */
 export function clientIp(context: Parameters<APIRoute>[0]): string {
-  return (
-    context.request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
-    context.clientAddress ||
-    "unknown"
-  );
+  if (process.env.MCPANEL_TRUST_PROXY === "true") {
+    const forwarded = context.request.headers
+      .get("x-forwarded-for")
+      ?.split(",")[0]
+      .trim();
+    if (forwarded) return forwarded;
+  }
+  return context.clientAddress || "unknown";
 }

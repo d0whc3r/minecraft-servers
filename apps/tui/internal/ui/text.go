@@ -6,13 +6,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
+
+	"charm.land/lipgloss/v2"
 )
 
 // fitCell truncates s to width w and pads it, left- or right-aligned. Styles
 // apply before padding so backgrounds fill the whole cell.
 func fitCell(s string, w int, style lipgloss.Style, right bool) string {
-	s = truncate(s, w)
+	s = ansi.Truncate(s, w, "…")
 	styled := style.Render(s)
 	if gap := w - lipgloss.Width(styled); gap > 0 {
 		if right {
@@ -21,20 +23,6 @@ func fitCell(s string, w int, style lipgloss.Style, right bool) string {
 		return styled + strings.Repeat(" ", gap)
 	}
 	return styled
-}
-
-func truncate(s string, w int) string {
-	if w <= 0 {
-		return ""
-	}
-	r := []rune(s)
-	if len(r) <= w {
-		return s
-	}
-	if w == 1 {
-		return string(r[:1])
-	}
-	return string(r[:w-1]) + "…"
 }
 
 func onOff(b bool) string {

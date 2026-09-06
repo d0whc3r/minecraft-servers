@@ -223,6 +223,15 @@ get_backup_dir() {
 # DOCKER COMPOSE HELPERS
 # ============================================================================
 
+# Repo root as the Docker daemon resolves it. On the host this is $(pwd);
+# inside the panel container the checkout is mounted at /repo - a path that
+# does not exist on the host - so the bind-mount sources handed to
+# `docker compose` must come from MCPANEL_HOST_ROOT (set by the panel
+# deployment) or the daemon rejects them with "mounts denied".
+repo_root() {
+  echo "${MCPANEL_HOST_ROOT:-$(pwd)}"
+}
+
 # Read a variable from an env file (quotes stripped; empty when unset)
 # Args: $1 - env file path, $2 - variable name
 # Returns: value (stdout)
@@ -292,9 +301,9 @@ docker_compose_up() {
 
   # Set dynamic environment variables for docker compose substitution
   export CONTAINER_NAME="mc-${server_name}"
-  export SERVER_DATA_DIR="$(pwd)/servers/${server_name}/data"
-  export SERVER_MODS_DIR="$(pwd)/servers/${server_name}/mods"
-  export SERVER_BACKUP_DIR="$(pwd)/backups/${server_name}"
+  export SERVER_DATA_DIR="$(repo_root)/servers/${server_name}/data"
+  export SERVER_MODS_DIR="$(repo_root)/servers/${server_name}/mods"
+  export SERVER_BACKUP_DIR="$(repo_root)/backups/${server_name}"
   export SERVER_CONFIG_FILE="$config_file"
 
   debug "Starting server with docker compose -p mc-${server_name} (RCON on 127.0.0.1:${RCON_PORT})"
@@ -328,9 +337,9 @@ docker_compose_restart() {
 
   # Set dynamic environment variables
   export CONTAINER_NAME="mc-${server_name}"
-  export SERVER_DATA_DIR="$(pwd)/servers/${server_name}/data"
-  export SERVER_MODS_DIR="$(pwd)/servers/${server_name}/mods"
-  export SERVER_BACKUP_DIR="$(pwd)/backups/${server_name}"
+  export SERVER_DATA_DIR="$(repo_root)/servers/${server_name}/data"
+  export SERVER_MODS_DIR="$(repo_root)/servers/${server_name}/mods"
+  export SERVER_BACKUP_DIR="$(repo_root)/backups/${server_name}"
   export SERVER_CONFIG_FILE="$config_file"
 
   debug "Restarting server with docker compose -p mc-${server_name} restart"

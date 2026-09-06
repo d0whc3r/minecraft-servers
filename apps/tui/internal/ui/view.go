@@ -5,28 +5,32 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 
 	"github.com/d0whc3r/minecraft-servers/apps/tui/internal/domain"
 )
 
-// View implements tea.Model.
-func (m Model) View() string {
+// render draws the current screen as a string; View wraps it in a tea.View.
+func (m Model) render() string {
 	if m.width == 0 {
 		return "loading…"
 	}
+	var body string
 	switch m.mode {
 	case viewLogs:
-		return m.logsView()
+		body = m.logsView()
 	case viewConsole:
-		return m.consoleView()
+		body = m.consoleView()
 	case viewHelp:
-		return m.helpView()
+		body = m.helpView()
 	case viewOutput:
-		return m.outputView()
+		body = m.outputView()
+	default:
+		body = m.tableView()
 	}
-
-	body := m.tableView()
+	// The confirm overlay is drawn over any mode: ctrl+c raises the quit
+	// guard from logs/console too, and hiding it there strands the keyboard
+	// on a prompt the user cannot see.
 	if m.confirm != nil {
 		return m.confirmModal(body)
 	}
@@ -40,18 +44,19 @@ func (m Model) View() string {
 func (m Model) tableView() string {
 	var b strings.Builder
 
+	cols := m.tableColumns()
 	b.WriteString(m.headerView())
 	b.WriteString("\n")
 	b.WriteString(m.ruleView())
 	b.WriteString("\n")
-	b.WriteString(m.tableHeadView())
+	b.WriteString(m.tableHeadView(cols))
 	b.WriteString("\n")
 
 	rows := m.tableRows()
 	vis := m.visible()
 	rendered := 0
 	for i := m.offset; i < m.offset+rows && i < len(vis); i++ {
-		b.WriteString(m.rowView(vis[i], i == m.cursor))
+		b.WriteString(m.rowView(vis[i], cols, i == m.cursor))
 		b.WriteString("\n")
 		rendered++
 	}
@@ -261,8 +266,7 @@ func fixedColumnsWidth(cols []column, upto int) int {
 	return total
 }
 
-func (m Model) tableHeadView() string {
-	cols := m.tableColumns()
+func (m Model) tableHeadView(cols []column) string {
 	cells := make([]string, 0, len(cols)+1)
 	cells = append(cells, fitCell("NAME", m.nameWidth()+2, styleTableHead, false))
 	for _, c := range cols {
@@ -275,7 +279,7 @@ func (m Model) tableHeadView() string {
 	return strings.Join(cells, " ")
 }
 
-func (m Model) rowView(s domain.Server, selected bool) string {
+func (m Model) rowView(s domain.Server, cols []column, selected bool) string {
 	lead := "  "
 	if selected {
 		lead = "› "
@@ -290,7 +294,6 @@ func (m Model) rowView(s domain.Server, selected bool) string {
 		}
 	}
 
-	cols := m.tableColumns()
 	cells := make([]string, 0, len(cols)+1)
 	cells = append(cells, fitCell(name, m.nameWidth()+2, lipgloss.NewStyle(), false))
 	for _, c := range cols {
@@ -557,8 +560,8 @@ func (m Model) footerView() string {
 	switch m.mode {
 	case viewLogs:
 		return renderHints([]hint{
-			{"esc", "back"}, {"f", "follow:" + onOff(m.logFollow)},
-			{"↑↓", "scroll"}, {"g/G", "ends"}, {"q", "quit app"},
+			{"esc/q", "back"}, {"f", "follow:" + onOff(m.logFollow)},
+			{"↑↓", "scroll"}, {"g/G", "ends"},
 		}, m.width)
 	case viewConsole:
 		return renderHints([]hint{

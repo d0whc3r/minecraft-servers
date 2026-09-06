@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/d0whc3r/minecraft-servers/apps/tui/internal/domain"
@@ -24,12 +24,16 @@ func Load(root string) ([]domain.ServerConfig, error) {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".env") {
 			continue
 		}
+		name := strings.TrimSuffix(entry.Name(), ".env")
+		if name == "" { // a literal ".env" is not a server
+			continue
+		}
 		kv, err := parseEnvFile(filepath.Join(dir, entry.Name()))
 		if err != nil {
 			return nil, err
 		}
 		configs = append(configs, domain.ServerConfig{
-			Name:       strings.TrimSuffix(entry.Name(), ".env"),
+			Name:       name,
 			Type:       kv["TYPE"],
 			Version:    kv["VERSION"],
 			Memory:     kv["MEMORY"],
@@ -37,7 +41,9 @@ func Load(root string) ([]domain.ServerConfig, error) {
 			RconEnable: strings.EqualFold(kv["ENABLE_RCON"], "true"),
 		})
 	}
-	sort.Slice(configs, func(i, j int) bool { return configs[i].Name < configs[j].Name })
+	slices.SortFunc(configs, func(a, b domain.ServerConfig) int {
+		return strings.Compare(a.Name, b.Name)
+	})
 	return configs, nil
 }
 

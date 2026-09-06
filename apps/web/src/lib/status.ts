@@ -19,15 +19,11 @@ import type {
 const STATUS_CACHE_MS = 3_000;
 let cache: { at: number; data: StatusResponse } | null = null;
 
-function deriveState(
-  container: ContainerInfo | undefined,
-  pingOk: boolean,
-): ServerState {
+function deriveState(container: ContainerInfo | undefined): ServerState {
   if (!container) return "missing";
   if (container.state === "running") {
     if (container.health === "unhealthy") return "unhealthy";
     if (container.health === "starting") return "starting";
-    if (pingOk) return "running";
     // running but not accepting connections yet
     return container.uptimeSec !== null && container.uptimeSec < 300
       ? "starting"
@@ -35,16 +31,6 @@ function deriveState(
   }
   if (container.state === "restarting") return "starting";
   return "stopped";
-}
-
-function formatUptime(sec: number | null): string {
-  if (sec === null) return "—";
-  const d = Math.floor(sec / 86400);
-  const h = Math.floor((sec % 86400) / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
 }
 
 async function probePlayers(def: ServerDef) {
@@ -78,7 +64,7 @@ async function probePlayers(def: ServerDef) {
           .filter(Boolean);
         return {
           ping: {
-            latencyMs: null as unknown as number,
+            latencyMs: null,
             motd: null,
             versionName: null,
             playersOnline: Number(m[1]),
@@ -104,7 +90,7 @@ export async function buildStatus(): Promise<StatusResponse> {
   const probes = await Promise.all(
     [...registry.values()].map(async (def) => {
       const container = containers.get(`mc-${def.name}`);
-      const state = deriveState(container, false);
+      const state = deriveState(container);
       let ping = null as Awaited<ReturnType<typeof probePlayers>>["ping"];
       if (container?.state === "running" && container.health !== "unhealthy") {
         try {
@@ -192,5 +178,3 @@ export async function buildStatus(): Promise<StatusResponse> {
   cache = { at: Date.now(), data };
   return data;
 }
-
-export { formatUptime };

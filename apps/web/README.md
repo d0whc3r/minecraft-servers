@@ -46,16 +46,38 @@ bridge, reaches mc-router and each `mc-<server>` container by DNS, publishes
 only the web UI, and mounts the repo checkout plus the Docker socket so it can
 run the management scripts.
 
+**From the repo root** (simplest — it also sets `MCPANEL_HOST_ROOT` for you,
+see [Starting servers from the panel](#starting-servers-from-the-panel)):
+
+```bash
+pnpm run panel:start
+```
+
+Or with plain compose:
+
 ```bash
 cd apps/web
 cp .env.example .env       # set the admin credentials (MCPANEL_USER/PASSWORD)
-docker compose up -d --build
+MCPANEL_HOST_ROOT=$PWD/../../ docker compose up -d --build
 ```
 
 The UI is then on `http://<host>:3777` (change with `PANEL_PORT` in
 `apps/web/.env`). Requirements: the `minecraft-network` bridge exists (it is
 created the first time any server starts) and the `minecraft-router` container
 is running — `./scripts/router.sh start`.
+
+### Starting servers from the panel
+
+The panel's Start/Stop/Restart buttons run this repo's own scripts
+(`scripts/start-server.sh`, …) **inside the panel container**, and those
+scripts hand the bind-mount directories (`servers/<name>/data`,
+`backups/<name>/`, …) to the host's Docker daemon. The daemon only
+understands **host paths**, but the checkout is mounted at `/repo` inside the
+container — a path that does not exist on the host. `MCPANEL_HOST_ROOT`
+bridges the gap: it tells the scripts where the repo lives on the host
+(`pnpm run panel:start` sets it to the directory you launch from). Without
+it, starting a server fails with
+`mounts denied: The path /repo/... is not shared from the host`.
 
 Admin credentials in Docker work exactly like a native run:
 
@@ -76,14 +98,14 @@ manage every container and file on this host. Keep it off the public internet
 ## Admin credentials
 
 - **First boot:** if no credentials exist yet, the panel generates a random
-  8-character password for the `admin` user and prints it **once to the server
+  12-character password for the `admin` user and prints it **once to the server
   console**, next to the panel banner:
 
   ```
   ┌──────────────────────────────────────────────────────┐
   │  Minecraft Servers admin panel                       │
   │  User: admin                                         │
-  │  Generated password: 4916cfe2                        │
+  │  Generated password: 4916cfe2a1b3                      │
   │  (store it now, or set MCPANEL_PASSWORD instead)     │
   └──────────────────────────────────────────────────────┘
   ```
@@ -140,16 +162,18 @@ Other useful facts:
 
 ## Configuration (environment variables)
 
-| Variable                 | Default         | Description                                                 |
-| ------------------------ | --------------- | ----------------------------------------------------------- |
-| `PORT`                   | `4321`          | HTTP port of the panel                                      |
-| `HOST`                   | `0.0.0.0`       | Listen interface (`127.0.0.1` for local-only access)        |
-| `MCPANEL_USER`           | `admin`         | Admin username                                              |
-| `MCPANEL_PASSWORD`       | (generated)     | Admin password; if unset, one is generated and printed once |
-| `MCPANEL_PUBLIC_VIEW`    | `true`          | `false` → the dashboard requires sign-in too                |
-| `MCPANEL_SECURE_COOKIES` | `false`         | `true` when serving the panel behind HTTPS                  |
-| `MCPANEL_ROOT`           | (auto)          | Repo root override if auto-detection fails                  |
-| `MCPANEL_DATA_DIR`       | `apps/web/data` | Where `auth.json` and `secret.key` live                     |
+| Variable                 | Default         | Description                                                                                                              |
+| ------------------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `PORT`                   | `4321`          | HTTP port of the panel                                                                                                   |
+| `HOST`                   | `0.0.0.0`       | Listen interface (`127.0.0.1` for local-only access)                                                                     |
+| `MCPANEL_USER`           | `admin`         | Admin username                                                                                                           |
+| `MCPANEL_PASSWORD`       | (generated)     | Admin password; if unset, one is generated and printed once                                                              |
+| `MCPANEL_PUBLIC_VIEW`    | `true`          | `false` → the dashboard requires sign-in too                                                                             |
+| `MCPANEL_SECURE_COOKIES` | `false`         | `true` when serving the panel behind HTTPS                                                                               |
+| `MCPANEL_TRUST_PROXY`    | `false`         | `true` behind a reverse proxy: login throttling then keys on the proxy-forwarded client IP                               |
+| `MCPANEL_ROOT`           | (auto)          | Repo root override if auto-detection fails                                                                               |
+| `MCPANEL_HOST_ROOT`      | (unset)         | Repo path **on the host** — needed for start/stop from the containerized panel ([why](#starting-servers-from-the-panel)) |
+| `MCPANEL_DATA_DIR`       | `apps/web/data` | Where `auth.json` and `secret.key` live                                                                                  |
 
 ## How it works
 
@@ -196,7 +220,10 @@ impossible to bypass by adding a new route):
   `Permissions-Policy`.
 - Password hashed with scrypt; HMAC-SHA256 signed sessions (stateless — no
   storage lookup per request); `HttpOnly` `SameSite=Lax` cookie, 24 h TTL.
-- Login rate limiting: 8 failed attempts per 10 minutes per IP.
+- Login rate limiting: 8 failed attempts per 10 minutes per IP. The IP is
+  the socket address; `X-Forwarded-For` is only honored with
+  `MCPANEL_TRUST_PROXY=true` (otherwise a client could spoof it to dodge
+  the limit).
 - Secrets (`RCON_PASSWORD`, `CF_API_KEY`, …) are masked in the config view.
 - `apps/web/data/` (credentials and signing key) is not version controlled.
 

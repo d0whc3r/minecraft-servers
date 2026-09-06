@@ -47,6 +47,42 @@ func TestStatesLineFormat(t *testing.T) {
 	}
 }
 
+// TestParseStatesLastLineWithoutLabel pins the parser against the output
+// shape that loses a container: the last docker record ends in a tab when its
+// router label is empty, and wholesale output trimming used to eat that tab,
+// dropping the field count and silently hiding the server.
+func TestParseStatesLastLineWithoutLabel(t *testing.T) {
+	out := strings.Join([]string{
+		strings.Join([]string{"mc-a", "running", "Up 9 minutes (healthy)", "a.mc.lan"}, "\t"),
+		strings.Join([]string{"mc-b", "running", "Up 29 minutes (healthy)", ""}, "\t"),
+		"",
+	}, "\n")
+
+	states := parseStates([]byte(out))
+	if len(states) != 2 {
+		t.Fatalf("parsed %d servers (%v), want 2", len(states), states)
+	}
+	if got := states["b"]; got.State != "running" || got.Route != "" || got.Health != "healthy" {
+		t.Errorf("last line parsed as %+v, want running/healthy with empty route", got)
+	}
+}
+
+// TestParseStatesIgnoresJunk covers the records the parser must skip: blank
+// lines, foreign containers and malformed rows.
+func TestParseStatesIgnoresJunk(t *testing.T) {
+	out := strings.Join([]string{
+		"",
+		strings.Join([]string{"mc-ok", "exited", "Exited (0) 3 days ago", ""}, "\t"),
+		"cobbleverse_server-mc-1\trunning\tUp 1 second (healthy)\tx",
+		"mc-short\trunning", // missing fields
+	}, "\n")
+
+	states := parseStates([]byte(out))
+	if len(states) != 1 || states["ok"].State != "exited" {
+		t.Errorf("parsed %v, want only mc-ok", states)
+	}
+}
+
 // TestStatesLineWithoutRouterLabel covers containers created before a domain
 // was configured (label empty or field absent) — the parser must not panic
 // and the route stays empty for the caller to derive.

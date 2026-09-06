@@ -73,9 +73,11 @@ export function ensureAuthConfigured(): {
   }
   fs.mkdirSync(PANEL_DATA_DIR, { recursive: true });
   const user = envUser || "admin";
+  // 6 random bytes = 12 hex chars (~48 bits): fine for a first-boot
+  // convenience secret that the operator is told to replace or store.
   const generatedPassword = envPass
     ? undefined
-    : crypto.randomBytes(4).toString("hex");
+    : crypto.randomBytes(6).toString("hex");
   const password = envPass || generatedPassword!;
   const salt = crypto.randomBytes(16).toString("hex");
   const record: AuthRecord = { user, salt, hash: scryptHash(password, salt) };

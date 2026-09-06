@@ -30,6 +30,8 @@
     "server:list": "./scripts/list-servers.sh",
     "server:health": "./scripts/health-check.sh --all",
     "tui": "./scripts/tui.sh",
+    "panel:start": "MCPANEL_HOST_ROOT=$PWD docker compose -f apps/web/docker-compose.yml up -d --build",
+    "router:start": "./scripts/router.sh start",
     "backup": "./scripts/backup.sh",
     "restore": "./scripts/restore.sh",
     "dev:clean": "rm -rf node_modules && pnpm install",

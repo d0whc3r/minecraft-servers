@@ -23,7 +23,7 @@ function startRconServer(
     const server = net.createServer((socket) => {
       let buffer = Buffer.alloc(0);
       const authed = () => !authFail;
-      socket.on("data", (chunk) => {
+      socket.on("data", (chunk: Buffer) => {
         buffer = Buffer.concat([buffer, chunk]);
         for (;;) {
           if (buffer.length < 12) return;

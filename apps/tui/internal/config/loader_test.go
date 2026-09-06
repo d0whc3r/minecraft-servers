@@ -84,6 +84,7 @@ func TestLoadSortsAndParses(t *testing.T) {
 	write("b-server.env", "TYPE=PAPER\nMEMORY=4G\n")
 	write("a-server.env", "TYPE=VANILLA\nMEMORY=2G\nENABLE_RCON=TRUE\nRCON_PORT=26565\n")
 	write("ignored.txt", "not a config")
+	write(".env", "TYPE=PAPER\n") // not a server: its name would be empty
 	if err := os.Mkdir(filepath.Join(dir, "subdir.env"), 0o700); err != nil {
 		t.Fatal(err)
 	}

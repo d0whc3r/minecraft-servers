@@ -1,10 +1,14 @@
 package ui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"image/color"
+
+	"charm.land/lipgloss/v2"
+)
 
 // ANSI-256 palette. Deliberately small: one accent, four semantic colors,
 // two grays. Everything else derives from these.
-const (
+var (
 	colorAccent = lipgloss.Color("213") // violet: brand, focus, modals
 	colorOk     = lipgloss.Color("78")  // soft green: running / healthy / success
 	colorWarn   = lipgloss.Color("214") // orange: starting / restarting
@@ -62,7 +66,7 @@ var (
 // the visual language of the whole app.
 type StateVisual struct {
 	Icon  string
-	Color lipgloss.Color
+	Color color.Color
 }
 
 // StateVisualFor maps a container state + health to its glyph and color.
@@ -91,6 +95,6 @@ func StateVisualFor(state, health string) StateVisual {
 
 // StateColor picks the accent color used for state-derived chrome (detail
 // border, badges).
-func StateColor(state, health string) lipgloss.Color {
+func StateColor(state, health string) color.Color {
 	return StateVisualFor(state, health).Color
 }

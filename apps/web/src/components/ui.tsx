@@ -1,6 +1,7 @@
 // Reusable UI kit for the panel: buttons, chips, dots, meters, modals, toasts.
 // Styling is Tailwind; tokens live in src/styles/global.css (@theme).
 import {
+  useCallback,
   useEffect,
   useState,
   type ButtonHTMLAttributes,
@@ -261,14 +262,18 @@ let toastSeq = 1;
 
 export function useToasts() {
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
-  const push = (kind: ToastMsg["kind"], text: string, detail?: string) => {
-    const id = toastSeq++;
-    setToasts((t) => [...t, { id, kind, text, detail }]);
-    setTimeout(
-      () => setToasts((t) => t.filter((x) => x.id !== id)),
-      kind === "err" ? 10000 : 5000,
-    );
-  };
+  // Stable identity: consumers put `push` in effect/memo deps.
+  const push = useCallback(
+    (kind: ToastMsg["kind"], text: string, detail?: string) => {
+      const id = toastSeq++;
+      setToasts((t) => [...t, { id, kind, text, detail }]);
+      setTimeout(
+        () => setToasts((t) => t.filter((x) => x.id !== id)),
+        kind === "err" ? 10000 : 5000,
+      );
+    },
+    [],
+  );
   const list = (
     <div
       className="fixed right-4 bottom-4 z-60 flex max-w-[min(420px,calc(100vw-2rem))] flex-col gap-2"

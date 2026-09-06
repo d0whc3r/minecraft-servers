@@ -30,3 +30,9 @@ jobs:
 
       - name: Run validation suite
         run: pnpm run lint
+
+      - name: Type-check web panel
+        run: pnpm --filter @minecraft-servers/web check
+
+      - name: Unit tests (web panel)
+        run: pnpm --filter @minecraft-servers/web test

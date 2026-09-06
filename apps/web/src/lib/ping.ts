@@ -2,7 +2,8 @@
 import net from "node:net";
 
 export interface PingResult {
-  latencyMs: number;
+  /** Round-trip time; null when the result came from a non-timing source. */
+  latencyMs: number | null;
   motd: string | null;
   versionName: string | null;
   playersOnline: number;
@@ -36,7 +37,9 @@ class Reader {
   private buf: Buffer = Buffer.alloc(0);
   private offset = 0;
   push(chunk: Buffer) {
-    this.buf = this.offset === 0 ? Buffer.concat([this.buf, chunk]) : chunk;
+    // Compact past consumed bytes before appending, so a partial frame left
+    // in the buffer survives chunk boundaries.
+    this.buf = Buffer.concat([this.buf.subarray(this.offset), chunk]);
     this.offset = 0;
   }
   /** Snapshot of the unconsumed bytes. */
@@ -130,12 +133,12 @@ export function pingServer(
       socket.write(request);
     });
 
-    socket.on("data", (chunk) => {
+    socket.on("data", (chunk: Buffer) => {
       reader.push(chunk);
       if (!reader.available) return;
       // Probe the frame from a snapshot without consuming the stream reader.
       const probe = new Reader();
-      probe.push(Buffer.from(reader.slice()));
+      probe.push(reader.slice());
       const total = probe.readVarint();
       if (total === null || probe.available < total) return; // wait for more data
       const packetId = probe.readVarint();

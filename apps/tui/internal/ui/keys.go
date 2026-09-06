@@ -5,16 +5,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/d0whc3r/minecraft-servers/apps/tui/internal/domain"
 )
 
 // Keys -----------------------------------------------------------------------
 
-func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if msg.Type == tea.KeyCtrlC {
+func (m Model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	if msg.String() == "ctrl+c" {
 		return m.confirmQuitOr()
 	}
 
@@ -53,7 +53,7 @@ func (m Model) confirmQuitOr() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleConfirmKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "y", "Y", "enter":
 		c := *m.confirm
@@ -69,7 +69,7 @@ func (m Model) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m Model) handleTableKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleTableKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.filterOpen {
 		return m.handleFilterKey(msg)
 	}
@@ -90,7 +90,8 @@ func (m Model) handleTableKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.cursor = 0
 		m.ensureVisible()
 	case "G", "end":
-		m.cursor = len(m.visible()) - 1
+		// max guards the empty-filter case: -1 would panic the render loop.
+		m.cursor = max(len(m.visible())-1, 0)
 		m.ensureVisible()
 	case "enter":
 		// Contextual primary action: start a stopped server, follow the logs
@@ -192,7 +193,7 @@ func (m Model) handleTableKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleFilterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleFilterKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "enter":
 		m.filterOpen = false
@@ -216,7 +217,7 @@ func (m Model) handleFilterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleLogsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleLogsKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc", "q":
 		m.detachLogs()
@@ -227,18 +228,23 @@ func (m Model) handleLogsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.logVP.GotoBottom()
 		}
 		return m, nil
+	case "g", "home":
+		m.logVP.GotoTop()
+		m.logFollow = false
+		return m, nil
+	case "G", "end":
+		m.logVP.GotoBottom()
+		m.logFollow = true
+		return m, nil
 	}
 	var cmd tea.Cmd
 	m.logVP, cmd = m.logVP.Update(msg)
-	if m.logVP.AtBottom() {
-		m.logFollow = true
-	} else if msg.Type == tea.KeyUp || msg.Type == tea.KeyPgUp {
-		m.logFollow = false
-	}
+	// Any scroll that leaves the bottom pauses follow; landing on it resumes.
+	m.logFollow = m.logVP.AtBottom()
 	return m, cmd
 }
 
-func (m Model) handleConsoleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleConsoleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+l":
 		m.conLines = nil
@@ -282,11 +288,11 @@ func (m Model) handleConsoleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // Mouse: left click selects the row under the pointer, or toggles a state
 // chip of the filter bar (table view only).
-func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleMouse(msg tea.MouseClickMsg) (tea.Model, tea.Cmd) {
 	if m.mode != viewTable || m.confirm != nil || m.filterOpen {
 		return m, nil
 	}
-	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
+	if msg.Button != tea.MouseLeft {
 		return m, nil
 	}
 	if label, ok := m.filterChipAt(msg.X, msg.Y); ok {

@@ -46,7 +46,7 @@ function runScript(args: string[], timeoutMs: number): Promise<string> {
         if (err && !output) return reject(new Error(err.message));
         if (err) {
           const error = new Error(output) as Error & { exitCode?: number };
-          error.exitCode = err.code ?? 1;
+          error.exitCode = typeof err.code === "number" ? err.code : 1;
           return reject(error);
         }
         resolve(output || "(no output)");

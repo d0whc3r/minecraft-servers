@@ -6,11 +6,16 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/d0whc3r/minecraft-servers/apps/tui/internal/domain"
 )
+
+// plain strips ANSI escapes: unlike lipgloss v1, styles always emit codes, so
+// offset-sensitive assertions must measure what the terminal actually shows.
+func plain(s string) string { return ansi.Strip(s) }
 
 func sampleServers() []domain.Server {
 	return []domain.Server{
@@ -68,7 +73,7 @@ func runeOffset(s, sub string) int {
 // data and asserts the columns line up between header and rows.
 func TestTableViewRendersAlignedColumns(t *testing.T) {
 	m := resized(sampleModel(), 120, 30)
-	out := m.View()
+	out := plain(m.render())
 	t.Log("\n" + out)
 
 	lines := strings.Split(out, "\n")
@@ -166,7 +171,7 @@ func TestTableViewRendersAlignedColumns(t *testing.T) {
 // TestNarrowTerminalHidesColumns checks the responsive column priority.
 func TestNarrowTerminalHidesColumns(t *testing.T) {
 	m := resized(sampleModel(), 76, 24)
-	head := strings.Split(m.View(), "\n")[2]
+	head := strings.Split(m.render(), "\n")[2]
 	if runeOffset(head, "HEALTH") >= 0 {
 		t.Error("HEALTH should be hidden below width 80")
 	}
@@ -175,7 +180,7 @@ func TestNarrowTerminalHidesColumns(t *testing.T) {
 	}
 
 	m = resized(sampleModel(), 100, 24)
-	head = strings.Split(m.View(), "\n")[2]
+	head = strings.Split(m.render(), "\n")[2]
 	if runeOffset(head, "VER") < 0 || runeOffset(head, "PLAYERS") >= 0 {
 		t.Errorf("column priority wrong at width 100: %s", head)
 	}
@@ -188,27 +193,35 @@ func TestSubViewsRender(t *testing.T) {
 
 	m := sampleModel()
 	m.width, m.height = 100, 24
-	m.logVP = viewport.New(98, 20)
+	m.logVP = viewport.New(viewport.WithWidth(98), viewport.WithHeight(20))
 	m.mode = viewLogs
 	m.logStartedAt = time.Now()
-	if out := m.View(); !strings.Contains(out, "logs ·") {
+	if out := m.render(); !strings.Contains(out, "logs ·") {
 		t.Errorf("logs view missing title: %q", out[:min(80, len(out))])
 	}
 
 	m.confirm = &confirmAction{action: domain.ActionStop, server: "vanilla",
 		question: "Stop vanilla?", impact: "⚠ 3 player(s) online will be disconnected"}
 	m.mode = viewTable
-	out := m.View()
+	out := m.render()
 	if !strings.Contains(out, "Stop vanilla?") || !strings.Contains(out, "3 player(s)") {
 		t.Error("confirm modal must show question and impact line")
 	}
 
+	// The quit guard can be raised from any mode (ctrl+c in the logs view):
+	// hiding the prompt there would strand the keyboard invisibly.
+	m.mode = viewLogs
+	m.confirm = &confirmAction{quit: true, question: "1 script action(s) still running. Quit anyway?"}
+	if out := m.render(); !strings.Contains(out, "Quit") || !strings.Contains(out, "still running") {
+		t.Error("confirm modal must stay visible over the logs view")
+	}
+
 	m.confirm = nil
 	m.mode = viewHelp
-	if out := m.View(); !strings.Contains(out, "keyboard reference") {
+	if out := m.render(); !strings.Contains(out, "keyboard reference") {
 		t.Error("help view missing title")
 	}
-	if out := m.View(); !strings.Contains(out, "Filtering") || !strings.Contains(out, "state:!run") {
+	if out := m.render(); !strings.Contains(out, "Filtering") || !strings.Contains(out, "state:!run") {
 		t.Error("help view missing the filtering section")
 	}
 }
@@ -241,18 +254,18 @@ func TestFilterBarAlwaysVisible(t *testing.T) {
 	if !strings.Contains(idle, "state:<pfx>") || !strings.Contains(idle, "!negate") {
 		t.Errorf("idle bar must teach the grammar, got %q", idle)
 	}
-	if strings.Contains(m.View(), "restarting 1") {
+	if strings.Contains(m.render(), "restarting 1") {
 		t.Error("states absent from the fleet must stay out of the census")
 	}
 
 	// The bar renders in every state, so the frame never shifts; it never
 	// exceeds the terminal either.
-	idleFrame := frameLines(m.View())
+	idleFrame := frameLines(m.render())
 	m.filterOpen = true
 	m.filter.Focus()
 	defer m.filter.Blur()
 
-	open := m.View()
+	open := m.render()
 	openFrame := frameLines(open)
 	if !strings.Contains(open, "tab completes") {
 		t.Error("empty open prompt must show the placeholder teaching the grammar")
@@ -268,7 +281,7 @@ func TestFilterBarAlwaysVisible(t *testing.T) {
 	// A typed prefix dims non-matching chips but keeps them listed.
 	m.filter.SetValue("state:run")
 	dim := styleHeaderDim.Render("[○ exited 1]")
-	if open := m.View(); !strings.Contains(open, dim) {
+	if open := m.render(); !strings.Contains(open, dim) {
 		t.Error("chips excluded by the typed prefix must render dim, not vanish")
 	}
 

@@ -122,31 +122,31 @@ docker logs -f mc-vanilla
 ./scripts/start-all.sh
 ```
 
-Available servers (full table in the [README](../README.md#pre-configured-modpacks)):
+Available servers (full catalog in [Modpacks](MODPACKS.md)):
 
-| Server Name              | Version | Memory | Notes                              |
-| ------------------------ | ------- | ------ | ---------------------------------- |
-| `vanilla`                | 26.2    | 2G     | Paper, light — good first test     |
-| `skyfactory4`            | 1.12.2  | 6G     | Skyblock, needs Java 8 image       |
-| `stoneblock4`            | 1.21.1  | 8G     | Skyblock-in-a-cave (2025 top pick) |
-| `rlcraft`                | 1.12.2  | 6G     | Hardcore survival                  |
-| `cobbleverse`            | 1.21.1  | 6G     | Pokémon-style adventure            |
-| `cobblemon`              | 1.21.1  | 6G     | Official Cobblemon pack            |
-| `slimes-adventure`       | 1.21.1  | 4G     | Exploration                        |
-| `solocraft-modpack`      | 1.20.1  | 3G     | Solo-leveling-style survival       |
-| `all-the-mods-10`        | 1.21.1  | 8G     | Heavy kitchen-sink pack            |
-| `all-the-mods-10-sky`    | 1.21.1  | 8G     | ATM10 skyblock variant             |
-| `all-the-mods-11`        | 26.1.2  | 8G     | Next-gen ATM (beta, Java 25)       |
-| `better-mc-bmc4`         | 1.20.1  | 6G     | Enhanced vanilla+ (top pack)       |
-| `better-mc-bmc5`         | 1.21.1  | 8G     | BMC4 successor (NeoForge)          |
-| `cursed-walking`         | 1.20.1  | 8G     | Zombie survival                    |
-| `dawncraft`              | 1.18.2  | 8G     | RPG soulslike adventure            |
-| `deceasedcraft`          | 1.20.1  | 6G     | Urban zombie apocalypse            |
-| `homestead`              | 1.20.1  | 6G     | Cozy survival                      |
-| `zombie-invade-100-days` | 1.20.1  | 6G     | Horde siege survival               |
-| `pixelmon`               | 1.21.1  | 6G     | Classic Pokémon mod                |
-| `prominence-2`           | 1.20.1  | 6G     | RPG adventure                      |
-| …                        |         |        | 28 total — see README              |
+| Server Name              | Version | Memory | Notes                                  |
+| ------------------------ | ------- | ------ | -------------------------------------- |
+| `vanilla`                | 26.2    | 2G     | Paper, light — good first test         |
+| `skyfactory4`            | 1.12.2  | 6G     | Skyblock, needs Java 8 image           |
+| `stoneblock4`            | 1.21.1  | 8G     | Skyblock-in-a-cave (2025 top pick)     |
+| `rlcraft`                | 1.12.2  | 6G     | Hardcore survival                      |
+| `cobbleverse`            | 1.21.1  | 6G     | Pokémon-style adventure                |
+| `cobblemon`              | 1.21.1  | 6G     | Official Cobblemon pack                |
+| `slimes-adventure`       | 1.21.1  | 4G     | Exploration                            |
+| `solocraft-modpack`      | 1.20.1  | 3G     | Solo-leveling-style survival           |
+| `all-the-mods-10`        | 1.21.1  | 8G     | Heavy kitchen-sink pack                |
+| `all-the-mods-10-sky`    | 1.21.1  | 8G     | ATM10 skyblock variant                 |
+| `all-the-mods-11`        | 26.1.2  | 8G     | Next-gen ATM (beta, Java 25)           |
+| `better-mc-bmc4`         | 1.20.1  | 6G     | Enhanced vanilla+ (top pack)           |
+| `better-mc-bmc5`         | 1.21.1  | 8G     | BMC4 successor (NeoForge)              |
+| `cursed-walking`         | 1.20.1  | 8G     | Zombie survival                        |
+| `dawncraft`              | 1.18.2  | 8G     | RPG soulslike adventure                |
+| `deceasedcraft`          | 1.20.1  | 6G     | Urban zombie apocalypse                |
+| `homestead`              | 1.20.1  | 6G     | Cozy survival                          |
+| `zombie-invade-100-days` | 1.20.1  | 6G     | Horde siege survival                   |
+| `pixelmon`               | 1.21.1  | 6G     | Classic Pokémon mod                    |
+| `prominence-2`           | 1.20.1  | 6G     | RPG adventure                          |
+| …                        |         |        | 28 total — see [Modpacks](MODPACKS.md) |
 
 > CurseForge modpacks require `CF_API_KEY` in `.env`. First start downloads the whole
 > modpack — give it 5–10 minutes and watch `docker logs -f mc-<name>`.

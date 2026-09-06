@@ -28,7 +28,7 @@ describe("ensureAuthConfigured / verifyCredentials", () => {
   it("generates a random password when nothing is configured", async () => {
     const auth = await loadAuth();
     const { generatedPassword } = auth.ensureAuthConfigured();
-    expect(generatedPassword).toMatch(/^[0-9a-f]{8}$/);
+    expect(generatedPassword).toMatch(/^[0-9a-f]{12}$/);
     expect(auth.verifyCredentials("admin", generatedPassword!)).toBe(true);
     expect(auth.verifyCredentials("admin", "wrong")).toBe(false);
   });
