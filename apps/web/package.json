@@ -25,17 +25,17 @@
     "@astrojs/react": "^6.0.5",
     "@tanstack/react-table": "^9.2.4",
     "astro": "^7.3.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
     "prettier-plugin-astro": "^0.14.1",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5.7.0",
+    "typescript": "^7.0.2",
     "vitest": "^5.0.0"
   }
 }
