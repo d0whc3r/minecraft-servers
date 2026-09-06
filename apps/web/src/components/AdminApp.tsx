@@ -21,7 +21,11 @@ import {
   startPolling,
   timeAgo,
 } from "@/lib/client";
-import { DataTable, type DataTableColumn, type TableFilter } from "@/components/DataTable";
+import {
+  DataTable,
+  type DataTableColumn,
+  type TableFilter,
+} from "@/components/DataTable";
 import {
   Button,
   buttonClass,

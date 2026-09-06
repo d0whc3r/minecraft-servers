@@ -2,7 +2,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { AuthMe, ServerStatus, StatusResponse } from "@/types";
 import { api, formatUptime, startPolling } from "@/lib/client";
-import { DataTable, type DataTableColumn, type TableFilter } from "@/components/DataTable";
+import {
+  DataTable,
+  type DataTableColumn,
+  type TableFilter,
+} from "@/components/DataTable";
 import {
   Button,
   Chip,
