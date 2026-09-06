@@ -1,0 +1,14 @@
+{
+  "name": "@minecraft-servers/tui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Terminal UI (Go + Bubble Tea) to manage the Minecraft docker servers",
+  "scripts": {
+    "build": "mkdir -p ../../bin && go build -o ../../bin/mc-tui .",
+    "dev": "go run .",
+    "start": "../../bin/mc-tui",
+    "test": "go test ./...",
+    "lint": "gofmt -l . && go vet ./...",
+    "dump": "go run . --dump table"
+  }
+}
