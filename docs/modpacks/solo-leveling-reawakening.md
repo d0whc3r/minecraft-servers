@@ -23,20 +23,20 @@ docker logs -f mc-solo-leveling-reawakening
 
 ## Server Details
 
-| Setting         | Value                             |
-| --------------- | --------------------------------- |
-| **Port**        | 25571                             |
-| **Memory**      | 4GB                               |
-| **Type**        | CurseForge                        |
-| **Max Players** | 20 (supports small-medium groups) |
-| **Difficulty**  | Normal                            |
-| **Mode**        | Survival                          |
-| **PVP**         | Enabled (player combat)           |
-| **Container**   | mc-solo-leveling-reawakening      |
+| Setting         | Value                                          |
+| --------------- | ---------------------------------------------- |
+| **Route**       | `solo-leveling-reawakening.<MC_ROUTER_DOMAIN>` |
+| **Memory**      | 4GB                                            |
+| **Type**        | CurseForge                                     |
+| **Max Players** | 20 (supports small-medium groups)              |
+| **Difficulty**  | Normal                                         |
+| **Mode**        | Survival                                       |
+| **PVP**         | Enabled (player combat)                        |
+| **Container**   | mc-solo-leveling-reawakening                   |
 
 ## Connection
 
-- **Address**: `your-server-ip:25571`
+- **Address**: `solo-leveling-reawakening.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `solo-leveling-reawakening.192.168.1.10.nip.io`)
 - **Version**: 1.21.1
 - **Client**: Install Solo Leveling - Reawakening from CurseForge Launcher
 
@@ -122,7 +122,7 @@ Players need to install the Solo Leveling - Reawakening modpack to connect:
 1. **Install CurseForge App**: https://www.curseforge.com/download/app
 2. **Search for "Solo Leveling - Reawakening"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25571`
+4. **Launch and connect** to the server route: `solo-leveling-reawakening.<MC_ROUTER_DOMAIN>` (e.g. `solo-leveling-reawakening.192.168.1.10.nip.io`)
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 
@@ -224,7 +224,7 @@ WHITELIST=player1,player2,player3
 docker logs mc-solo-leveling-reawakening
 
 # Common issues:
-# - Port 25571 already in use
+# - Router port busy: change MC_ROUTER_PORT in .env
 # - Insufficient memory (need 4GB+)
 # - CurseForge API issues
 ```
@@ -241,7 +241,7 @@ MEMORY=6G
 ### Clients can't connect
 
 1. Ensure client has Solo Leveling - Reawakening modpack installed
-2. Check firewall allows port 25571
+2. Verify the route `solo-leveling-reawakening.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify server is running: `docker ps | grep solo-leveling`
 4. Check server logs for errors
 

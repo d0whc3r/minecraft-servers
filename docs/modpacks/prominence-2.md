@@ -26,19 +26,19 @@ docker logs -f mc-prominence-2
 
 ## Server Details
 
-| Setting         | Value             |
-| --------------- | ----------------- |
-| **Port**        | 25581             |
-| **RCON**        | 26581             |
-| **Memory**      | 6GB               |
-| **Type**        | Modrinth (Fabric) |
-| **Max Players** | 20                |
-| **Difficulty**  | Normal            |
-| **Mode**        | Survival          |
+| Setting         | Value                             |
+| --------------- | --------------------------------- |
+| **Route**       | `prominence-2.<MC_ROUTER_DOMAIN>` |
+| **RCON**        | 26581                             |
+| **Memory**      | 6GB                               |
+| **Type**        | Modrinth (Fabric)                 |
+| **Max Players** | 20                                |
+| **Difficulty**  | Normal                            |
+| **Mode**        | Survival                          |
 
 ## Connection
 
-- **Address**: `your-server-ip:25581`
+- **Address**: `prominence-2.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `prominence-2.192.168.1.10.nip.io`)
 - **Version**: 1.20.1
 - **Client**: Install "Prominence II RPG: Hasturian Era" from the Modrinth app or CurseForge launcher
 
@@ -90,13 +90,13 @@ docker logs -f mc-prominence-2
 
 ```bash
 docker logs mc-prominence-2
-# Common issues: port 25581 in use, insufficient memory, download failures
+# Common issues: insufficient memory, download failures
 ```
 
 ### Clients can't connect
 
 1. Ensure the client has Prominence II: Hasturian Era (Fabric) installed
-2. Check firewall allows port 25581
+2. Verify the route `prominence-2.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify the server is running: `docker ps | grep prominence-2`
 
 ## Resources

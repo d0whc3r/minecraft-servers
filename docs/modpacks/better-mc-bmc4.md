@@ -25,19 +25,19 @@ docker logs -f mc-better-mc-bmc4
 
 ## Server Details
 
-| Setting         | Value              |
-| --------------- | ------------------ |
-| **Port**        | 25580              |
-| **RCON**        | 26580              |
-| **Memory**      | 6GB                |
-| **Type**        | CurseForge (Forge) |
-| **Max Players** | 20                 |
-| **Difficulty**  | Normal             |
-| **Mode**        | Survival           |
+| Setting         | Value                               |
+| --------------- | ----------------------------------- |
+| **Route**       | `better-mc-bmc4.<MC_ROUTER_DOMAIN>` |
+| **RCON**        | 26580                               |
+| **Memory**      | 6GB                                 |
+| **Type**        | CurseForge (Forge)                  |
+| **Max Players** | 20                                  |
+| **Difficulty**  | Normal                              |
+| **Mode**        | Survival                            |
 
 ## Connection
 
-- **Address**: `your-server-ip:25580`
+- **Address**: `better-mc-bmc4.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `better-mc-bmc4.192.168.1.10.nip.io`)
 - **Version**: 1.20.1
 - **Client**: Install "Better MC [FORGE] - BMC4" from the CurseForge launcher
 
@@ -109,7 +109,7 @@ docker logs -f mc-better-mc-bmc4
 
 ```bash
 docker logs mc-better-mc-bmc4
-# Common issues: port 25580 in use, insufficient memory, download failures
+# Common issues: insufficient memory, download failures
 ```
 
 ### Mod loading crash mentioning oculus/colorwheel
@@ -120,7 +120,7 @@ update re-adds them, keep `CF_EXCLUDE_MODS="oculus,colorwheel"` up to date.
 ### Clients can't connect
 
 1. Ensure the client has Better MC BMC4 (Forge) installed — not the Fabric variant
-2. Check firewall allows port 25580
+2. Verify the route `better-mc-bmc4.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify the server is running: `docker ps | grep better-mc-bmc4`
 
 ## Resources

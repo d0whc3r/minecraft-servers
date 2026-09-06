@@ -177,7 +177,7 @@ validate_system_requirements() {
   done
 
   # Check script permissions
-  local scripts=("start-server.sh" "stop-server.sh" "restart-server.sh" "list-servers.sh" "backup.sh" "restore.sh" "add-modpack.sh" "health-check.sh" "auto-restart.sh")
+  local scripts=("start-server.sh" "stop-server.sh" "restart-server.sh" "list-servers.sh" "backup.sh" "restore.sh" "add-modpack.sh" "health-check.sh" "auto-restart.sh" "router.sh")
   for script in "${scripts[@]}"; do
     local script_path="scripts/$script"
     if [[ -f "$script_path" ]]; then
@@ -275,15 +275,16 @@ validate_config_file() {
     validation_error "Invalid memory format: $memory (must be like '4G' or '4096M')"
   fi
 
-  # Validate SERVER_PORT if present
+  # Validate RCON_PORT: the only per-server port (loopback admin traffic).
+  # Game ports are never published - mc-router routes players by hostname
   local port
-  port=$(grep "^SERVER_PORT=" "$config_file" | cut -d'=' -f2- | sed 's/^"//' | sed 's/"$//')
-  if [[ -n "$port" ]]; then
-    if [[ "$port" =~ ^[0-9]+$ ]] && [[ "$port" -ge 1024 ]] && [[ "$port" -le 65535 ]]; then
-      validation_success "Server port valid: $port"
-    else
-      validation_error "Invalid server port: $port (must be 1024-65535)"
-    fi
+  port=$(grep "^RCON_PORT=" "$config_file" | cut -d'=' -f2- | sed 's/^"//' | sed 's/"$//')
+  if [[ -z "$port" ]]; then
+    validation_error "RCON_PORT missing (required; managed range 26565-26664)"
+  elif [[ "$port" =~ ^[0-9]+$ ]] && [[ "$port" -ge 26565 ]] && [[ "$port" -le 26664 ]]; then
+    validation_success "RCON port valid: $port (loopback-only)"
+  else
+    validation_error "Invalid RCON port: $port (must be 26565-26664)"
   fi
 
   # Validate CF_PAGE_URL for AUTO_CURSEFORGE

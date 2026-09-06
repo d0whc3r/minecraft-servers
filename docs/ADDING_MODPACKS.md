@@ -15,7 +15,7 @@ Two paths:
 ./scripts/add-modpack.sh my-atm8 --modpack=atm8
 
 # With a specific port and memory
-./scripts/add-modpack.sh sf4-creative --modpack=skyfactory4 --port=25590
+./scripts/add-modpack.sh sf4-creative --modpack=skyfactory4 --rcon-port=26600
 
 # Then customize and start
 nano config/modpacks/my-atm8.env
@@ -32,21 +32,26 @@ Required:
 
 Options:
   --modpack=<name> Use a built-in template (see table below)
-  --port=<number>  Specific port (25565-25664; auto-assigned if omitted)
+  --rcon-port=<n>  Specific loopback admin port (26565-26664; auto-assigned if omitted)
   --memory=<size>  RAM allocation (e.g. 4G, 8G, 2048M)
 ```
 
 ### Built-in Templates
 
-| Template      | Description       | Type            | Version | Memory |
-| ------------- | ----------------- | --------------- | ------- | ------ |
-| `atm8`        | All The Mods 8    | AUTO_CURSEFORGE | 1.20.1  | 8G     |
-| `skyfactory4` | SkyFactory 4      | AUTO_CURSEFORGE | 1.12.2  | 4G     |
-| `prominence2` | Prominence II RPG | AUTO_CURSEFORGE | 1.20.1  | 6G     |
-| `rlcraft`     | RLCraft           | AUTO_CURSEFORGE | 1.12.2  | 6G     |
-| `vanilla`     | Vanilla Optimized | PAPER           | 26.2    | 2G     |
+| Template         | Description                 | Type            | Version | Memory |
+| ---------------- | --------------------------- | --------------- | ------- | ------ |
+| `atm8`           | All The Mods 8              | AUTO_CURSEFORGE | 1.20.1  | 8G     |
+| `atm10sky`       | All The Mods 10: To the Sky | AUTO_CURSEFORGE | 1.21.1  | 8G     |
+| `bmc4`           | Better MC BMC4              | AUTO_CURSEFORGE | 1.20.1  | 6G     |
+| `cursed-walking` | Cursed Walking              | AUTO_CURSEFORGE | 1.20.1  | 8G     |
+| `deceasedcraft`  | DeceasedCraft               | AUTO_CURSEFORGE | 1.20.1  | 6G     |
+| `pixelmon`       | The Pixelmon Modpack        | MODRINTH        | 1.21.1  | 6G     |
+| `prominence2`    | Prominence II RPG           | AUTO_CURSEFORGE | 1.20.1  | 6G     |
+| `rlcraft`        | RLCraft                     | AUTO_CURSEFORGE | 1.12.2  | 6G     |
+| `skyfactory4`    | SkyFactory 4                | AUTO_CURSEFORGE | 1.12.2  | 4G     |
+| `vanilla`        | Vanilla Optimized           | PAPER           | 26.2    | 2G     |
 
-> The script's templates are independent from the 21 pre-configured servers already in
+> The script's templates are independent from the 28 pre-configured servers already in
 > `config/modpacks/`. The pre-configured servers are started directly with
 > `./scripts/start-server.sh <name>` — no need to "add" them first.
 
@@ -72,14 +77,14 @@ VERSION=1.20.1
 # RAM allocation (2G-16G depending on the modpack)
 MEMORY=4G
 
-# Unique port (check existing: grep SERVER_PORT config/modpacks/*.env)
-SERVER_PORT=25580
-
-# Display/identifier name (lowercase, no spaces)
+# Identifier name (lowercase, no spaces) — also builds the player-facing
+# route <SERVER_NAME>.<MC_ROUTER_DOMAIN> via mc-router
 SERVER_NAME=your-modpack
 
-# RCON port — project convention: SERVER_PORT + 1000, unique per server
-RCON_PORT=26580
+# The only per-server port: the loopback admin console (unique per server,
+# managed range 26565-26664). Game traffic has no port — players connect via
+# <SERVER_NAME>.<MC_ROUTER_DOMAIN> through mc-router
+RCON_PORT=26600
 ```
 
 ### Step 3: Configure According to Modpack Type
@@ -159,8 +164,8 @@ docker ps | grep mc-your-modpack
 
 - [ ] `.env` created in `config/modpacks/`
 - [ ] `SERVER_NAME` unique and valid (lowercase, hyphens, no spaces)
-- [ ] `SERVER_PORT` unique (25565-25664)
-- [ ] `RCON_PORT` unique (convention: `SERVER_PORT + 1000`)
+- [ ] `RCON_PORT` unique (managed range 26565-26664; loopback admin only)
+- [ ] Route live in `./scripts/router.sh status` (`<name>.<MC_ROUTER_DOMAIN>`)
 - [ ] `TYPE` correct for the modpack
 - [ ] `VERSION` matches the modpack (mandatory and exact for MODRINTH)
 - [ ] `MEMORY` sufficient for the modpack
@@ -203,18 +208,19 @@ Full variable reference: [Environment Variables](ENVIRONMENT_VARIABLES.md).
 ## Port Management
 
 ```bash
-# Check which ports are taken
-grep SERVER_PORT config/modpacks/*.env
+# Check which RCON ports are taken
+grep RCON_PORT config/modpacks/*.env
 
-# Auto-assign (first free in 25565-25664)
+# Auto-assign (first free in 26565-26664)
 ./scripts/add-modpack.sh new-server
 
-# Or choose explicitly
-./scripts/add-modpack.sh new-server --port=25590
+# Or choose the loopback admin port explicitly
+./scripts/add-modpack.sh new-server --rcon-port=26600
 ```
 
-Range 25565-25664 allows up to 100 servers. Remember to also keep `RCON_PORT` values
-unique — a duplicate RCON port will make the second container fail to publish it.
+The managed range 26565-26664 allows up to 100 servers. Duplicate `RCON_PORT`
+values make the second container fail to publish its loopback port — game
+traffic never conflicts because mc-router routes it by hostname.
 
 ## Validation & Error Handling
 
@@ -244,8 +250,8 @@ ls config/modpacks/                     # check existing names
 ### "Port already in use"
 
 ```bash
-grep SERVER_PORT config/modpacks/*.env # find the conflict
-SERVER_PORT=25581                      # pick another port in the .env
+grep RCON_PORT config/modpacks/*.env # find the conflict
+RCON_PORT=26600                      # pick another port in the .env
 ```
 
 ### Modpack won't download

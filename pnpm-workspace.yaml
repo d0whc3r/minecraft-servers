@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+
+# Approved build scripts for workspace dependencies (pnpm >= 10 blocks them
+# by default). Kept here so both apps share one allowlist.
+allowBuilds:
+  esbuild: false
+  sharp: false

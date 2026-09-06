@@ -23,20 +23,20 @@ docker logs -f mc-my-hero-adventure
 
 ## Server Details
 
-| Setting         | Value                            |
-| --------------- | -------------------------------- |
-| **Port**        | 25576                            |
-| **Memory**      | 4GB                              |
-| **Type**        | CurseForge                       |
-| **Max Players** | 20 (hero training grounds)       |
-| **Difficulty**  | Normal                           |
-| **Mode**        | Survival                         |
-| **PVP**         | Enabled (hero vs villain combat) |
-| **Container**   | mc-my-hero-adventure             |
+| Setting         | Value                                  |
+| --------------- | -------------------------------------- |
+| **Route**       | `my-hero-adventure.<MC_ROUTER_DOMAIN>` |
+| **Memory**      | 4GB                                    |
+| **Type**        | CurseForge                             |
+| **Max Players** | 20 (hero training grounds)             |
+| **Difficulty**  | Normal                                 |
+| **Mode**        | Survival                               |
+| **PVP**         | Enabled (hero vs villain combat)       |
+| **Container**   | mc-my-hero-adventure                   |
 
 ## Connection
 
-- **Address**: `your-server-ip:25576`
+- **Address**: `my-hero-adventure.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `my-hero-adventure.192.168.1.10.nip.io`)
 - **Version**: 1.16.5
 - **Client**: Install My Hero Adventure from CurseForge Launcher
 
@@ -121,7 +121,7 @@ Players need to install the My Hero Adventure modpack to connect:
 1. **Install CurseForge App**: https://www.curseforge.com/download/app
 2. **Search for "My Hero Adventure"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25576`
+4. **Launch and connect** to the server route: `my-hero-adventure.<MC_ROUTER_DOMAIN>` (e.g. `my-hero-adventure.192.168.1.10.nip.io`)
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 
@@ -221,7 +221,7 @@ VIEW_DISTANCE=12 # Increase for better exploration
 docker logs mc-my-hero-adventure
 
 # Common issues:
-# - Port 25576 already in use
+# - Router port busy: change MC_ROUTER_PORT in .env
 # - Insufficient memory (need 4GB+)
 # - CurseForge API issues
 ```
@@ -238,7 +238,7 @@ MEMORY=6G
 ### Clients can't connect
 
 1. Ensure client has My Hero Adventure modpack installed
-2. Check firewall allows port 25576
+2. Verify the route `my-hero-adventure.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify server is running: `docker ps | grep my-hero-adventure`
 4. Check server logs for errors
 

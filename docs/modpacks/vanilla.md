@@ -34,7 +34,6 @@ TYPE=PAPER
 VERSION=26.2
 MEMORY=2G
 SERVER_NAME=Vanilla Server
-SERVER_PORT=25567
 MAX_PLAYERS=20
 DIFFICULTY=normal
 VIEW_DISTANCE=10
@@ -59,7 +58,7 @@ docker logs -f mc-vanilla
 
 ## Connecting
 
-- **Address**: `your-server-ip:25567`
+- **Address**: `vanilla.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `vanilla.192.168.1.10.nip.io`)
 - **Client**: Vanilla Minecraft Java Edition 26.2
 - **No mods required**: Pure vanilla experience
 
@@ -82,7 +81,7 @@ Edit `servers/vanilla/data/server.properties`:
 ```properties
 # Server Info
 motd="Vanilla Survival Server"
-server-port=25567
+server-port=25565 # internal; mc-router forwards players here
 max-players=20
 
 # Gameplay
@@ -268,8 +267,8 @@ docker exec -it mc-vanilla rcon-cli timings paste
 
 - Check server is running: `docker ps`
 - Verify version matches (26.2)
-- Check firewall: `sudo ufw allow 25567/tcp`
-- Confirm port forwarding if behind router
+- Check firewall: `sudo ufw allow 25565/tcp` (the mc-router entry port, `MC_ROUTER_PORT`)
+- Confirm the route `vanilla.<MC_ROUTER_DOMAIN>` resolves to this host and port forwarding points here
 
 ### Corrupted Chunks
 

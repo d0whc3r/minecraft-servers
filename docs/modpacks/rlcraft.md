@@ -38,7 +38,6 @@ VERSION=1.12.2
 MEMORY=6G
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/rlcraft
 SERVER_NAME=rlcraft
-SERVER_PORT=25566
 MAX_PLAYERS=15
 DIFFICULTY=hard
 VIEW_DISTANCE=8
@@ -64,7 +63,7 @@ docker logs -f mc-rlcraft
 
 ## Connecting
 
-- **Address**: `your-server-ip:25566`
+- **Address**: `rlcraft.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `rlcraft.192.168.1.10.nip.io`)
 - **Client**: Install RLCraft from CurseForge
 - **Difficulty**: Set to Hard for authentic experience
 

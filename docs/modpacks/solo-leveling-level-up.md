@@ -23,20 +23,20 @@ docker logs -f mc-solo-leveling-level-up
 
 ## Server Details
 
-| Setting         | Value                             |
-| --------------- | --------------------------------- |
-| **Port**        | 25575                             |
-| **Memory**      | 4GB                               |
-| **Type**        | CurseForge                        |
-| **Max Players** | 20 (good for small-medium groups) |
-| **Difficulty**  | Normal                            |
-| **Mode**        | Survival                          |
-| **PVP**         | Enabled (hunter battles)          |
-| **Container**   | mc-solo-leveling-level-up         |
+| Setting         | Value                                       |
+| --------------- | ------------------------------------------- |
+| **Route**       | `solo-leveling-level-up.<MC_ROUTER_DOMAIN>` |
+| **Memory**      | 4GB                                         |
+| **Type**        | CurseForge                                  |
+| **Max Players** | 20 (good for small-medium groups)           |
+| **Difficulty**  | Normal                                      |
+| **Mode**        | Survival                                    |
+| **PVP**         | Enabled (hunter battles)                    |
+| **Container**   | mc-solo-leveling-level-up                   |
 
 ## Connection
 
-- **Address**: `your-server-ip:25575`
+- **Address**: `solo-leveling-level-up.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `solo-leveling-level-up.192.168.1.10.nip.io`)
 - **Version**: 1.20.1
 - **Client**: Install Solo Leveling - Level Up from CurseForge Launcher
 
@@ -121,7 +121,7 @@ Players need to install the Solo Leveling - Level Up modpack to connect:
 1. **Install CurseForge App**: https://www.curseforge.com/download/app
 2. **Search for "Solo Leveling: Level Up"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25575`
+4. **Launch and connect** to the server route: `solo-leveling-level-up.<MC_ROUTER_DOMAIN>` (e.g. `solo-leveling-level-up.192.168.1.10.nip.io`)
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 
@@ -218,7 +218,7 @@ VIEW_DISTANCE=14 # Increase for better visuals
 docker logs mc-solo-leveling-level-up
 
 # Common issues:
-# - Port 25575 already in use
+# - Router port busy: change MC_ROUTER_PORT in .env
 # - Insufficient memory (need 4GB+)
 # - CurseForge API issues
 ```
@@ -235,7 +235,7 @@ MEMORY=6G
 ### Clients can't connect
 
 1. Ensure client has Solo Leveling - Level Up modpack installed
-2. Check firewall allows port 25575
+2. Verify the route `solo-leveling-level-up.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify server is running: `docker ps | grep solo-leveling-level-up`
 4. Check server logs for errors
 

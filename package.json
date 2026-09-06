@@ -2,7 +2,6 @@
   "name": "minecraft-servers",
   "version": "1.0.0",
   "description": "Minecraft server management system with automated testing suite",
-  "main": "index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/d0whc3r/minecraft-servers.git"
@@ -16,32 +15,27 @@
   "packageManager": "pnpm@12.3.4",
   "engines": {
     "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
+    "pnpm": ">=10.0.0"
   },
   "scripts": {
     "test": "bats tests/bats/",
-    "test:verbose": "bats --verbose tests/bats/",
-    "test:quick": "bats --filter 'US1-TC00[1-6]:' tests/bats/",
+    "test:quick": "bats tests/bats/config-validation.bats",
     "lint": "prettier --check .",
     "lint:fix": "prettier --write .",
     "validate:all": "pnpm run lint && pnpm run test",
     "prepare": "husky",
-    "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f",
-    "docker:clean": "docker-compose down -v --remove-orphans",
     "server:start": "./scripts/start-server.sh",
     "server:stop": "./scripts/stop-server.sh",
     "server:restart": "./scripts/restart-server.sh",
     "server:list": "./scripts/list-servers.sh",
     "server:health": "./scripts/health-check.sh --all",
+    "tui": "./scripts/tui.sh",
     "backup": "./scripts/backup.sh",
-    "backup:all": "./scripts/backup.sh --all",
     "restore": "./scripts/restore.sh",
-    "dev:setup": "pnpm install && pnpm run prepare",
-    "dev:clean": "rm -rf node_modules pnpm-lock.yaml && pnpm install",
-    "ci": "pnpm run lint && pnpm run test"
+    "dev:clean": "rm -rf node_modules && pnpm install",
+    "web:dev": "pnpm --filter @minecraft-servers/web dev",
+    "web:build": "pnpm --filter @minecraft-servers/web build",
+    "web:test": "pnpm --filter @minecraft-servers/web test"
   },
   "keywords": [
     "minecraft",
@@ -59,6 +53,7 @@
     "bats": "^1.13.0",
     "husky": "^9.1.7",
     "prettier": "^3.9.6",
+    "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-sh": "^0.19.0"
   },
   "prettier": {

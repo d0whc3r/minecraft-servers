@@ -98,13 +98,10 @@ This project follows a code of conduct to ensure a welcoming environment for all
 ### Running Tests
 
 ```bash
-# Run all BATS tests
+# Run all BATS tests (includes the slow server-startup E2E test)
 pnpm test
 
-# Run with verbose output
-pnpm run test:verbose
-
-# Run lightweight tests only (no Docker startup)
+# Fast validation suite only (no server startup)
 pnpm run test:quick
 ```
 
@@ -120,10 +117,13 @@ pnpm run test:quick
 
 The project uses GitHub Actions for continuous integration:
 
-- **Automated testing** on every push/PR
-- **Parallel test execution** for faster feedback
-- **Multi-environment testing** (different modpacks)
-- **Code quality checks** (linting, formatting)
+- **Code quality checks** (linting, formatting) on every push/PR
+- **Fast BATS validation** (scripts, configs, compose rendering — no server
+  startup) on every push/PR
+- **Full end-to-end testing** (real server startup per modpack, parallel
+  runners) available manually via the `E2E BATS Tests` workflow
+
+See [docs/CI_CD.md](docs/CI_CD.md) for details.
 
 ### Code Formatting
 

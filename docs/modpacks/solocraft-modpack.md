@@ -23,19 +23,19 @@ docker logs -f mc-solocraft-modpack
 
 ## Server Details
 
-| Setting         | Value                           |
-| --------------- | ------------------------------- |
-| **Port**        | 25570                           |
-| **Memory**      | 3GB                             |
-| **Type**        | Modrinth                        |
-| **Max Players** | 10 (optimized for small groups) |
-| **Difficulty**  | Normal                          |
-| **Mode**        | Survival                        |
-| **PVP**         | Disabled (friendly gameplay)    |
+| Setting         | Value                                  |
+| --------------- | -------------------------------------- |
+| **Route**       | `solocraft-modpack.<MC_ROUTER_DOMAIN>` |
+| **Memory**      | 3GB                                    |
+| **Type**        | Modrinth                               |
+| **Max Players** | 10 (optimized for small groups)        |
+| **Difficulty**  | Normal                                 |
+| **Mode**        | Survival                               |
+| **PVP**         | Disabled (friendly gameplay)           |
 
 ## Connection
 
-- **Address**: `your-server-ip:25570`
+- **Address**: `solocraft-modpack.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `solocraft-modpack.192.168.1.10.nip.io`)
 - **Version**: Check modpack page for exact version
 - **Client**: Install SoloCraft modpack from Modrinth Launcher
 
@@ -116,7 +116,7 @@ Players need to install the SoloCraft modpack to connect:
 1. **Install Modrinth App**: https://modrinth.com/app
 2. **Search for "SoloCraft"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25570`
+4. **Launch and connect** to the server route: `solocraft-modpack.<MC_ROUTER_DOMAIN>` (e.g. `solocraft-modpack.192.168.1.10.nip.io`)
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 
@@ -178,7 +178,7 @@ MAX_MEMORY=4G
 docker logs mc-solocraft-modpack
 
 # Common issues:
-# - Port 25570 already in use
+# - Router port busy: change MC_ROUTER_PORT in .env
 # - Insufficient memory
 # - Network issues downloading modpack
 ```
@@ -195,7 +195,7 @@ MEMORY=4G
 ### Clients can't connect
 
 1. Ensure client has SoloCraft modpack installed
-2. Check firewall allows port 25570
+2. Verify the route `solocraft-modpack.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify server is running: `docker ps | grep solocraft`
 4. Check server logs for errors
 

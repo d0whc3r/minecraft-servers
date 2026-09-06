@@ -36,7 +36,6 @@ VERSION=1.12.2
 MEMORY=6G
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/skyfactory-4
 SERVER_NAME=skyfactory4
-SERVER_PORT=25565
 MAX_PLAYERS=10
 DIFFICULTY=normal
 VIEW_DISTANCE=10
@@ -61,7 +60,7 @@ docker logs -f mc-skyfactory4
 
 ## Connecting
 
-- **Address**: `your-server-ip:25565`
+- **Address**: `skyfactory4.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `skyfactory4.192.168.1.10.nip.io`)
 - **Client**: Install SkyFactory 4 from CurseForge
 - **Version**: Must match server (1.12.2)
 

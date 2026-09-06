@@ -1,0 +1,60 @@
+# Web panel container: one admin UI for every Minecraft server.
+#
+#   cp .env.example .env      # set the admin credentials here
+#   docker compose up -d --build
+#   docker compose logs panel # with no password set, the generated one is here
+#
+# The panel joins `minecraft-network` (the same bridge the servers and
+# mc-router live on): game status pings go to `minecraft-router` and the RCON
+# console to each `mc-<server>` container by DNS — no host ports needed for
+# any of that. Only the web UI is published (default :3777).
+#
+# Trust note: the panel container mounts the Docker socket and the repo
+# checkout — it can manage every container and file on this host. That is the
+# job of an admin panel; keep the credentials safe and do not expose it
+# unprotected to the internet (see apps/web/README.md → Security).
+#
+# Requires the `minecraft-network` bridge (created automatically the first
+# time any server starts, or: docker network create minecraft-network).
+
+name: minecraft-panel
+
+services:
+  panel:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    image: mc-panel:latest
+    container_name: mc-panel
+    restart: unless-stopped
+    networks:
+      - minecraft-network
+    ports:
+      - "${PANEL_PORT:-3777}:4321"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4321
+      # Repo checkout (configs, scripts, worlds, backups) mounted at /repo.
+      MCPANEL_ROOT: /repo
+      # Admin credentials + session signing key persist here across updates.
+      MCPANEL_DATA_DIR: /data
+      MCPANEL_USER: ${MCPANEL_USER:-admin}
+      # Leave empty to auto-generate a password on first boot (printed once by
+      # `docker compose logs panel`), or pin your own from apps/web/.env.
+      MCPANEL_PASSWORD: ${MCPANEL_PASSWORD:-}
+      MCPANEL_PUBLIC_VIEW: ${MCPANEL_PUBLIC_VIEW:-true}
+      # Reach mc-router and the per-server RCON by container DNS.
+      MCPANEL_ROUTER_HOST: minecraft-router
+      MCPANEL_RCON_HOST: container
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ../..:/repo
+      - mc-panel-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  minecraft-network:
+    external: true
+
+volumes:
+  mc-panel-data:

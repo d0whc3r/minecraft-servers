@@ -1,0 +1,5 @@
+
+# Makefile artifacts (cross-builds, coverage, caches)
+/dist/
+/coverage/
+/.tmp/

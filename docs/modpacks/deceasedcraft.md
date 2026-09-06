@@ -25,19 +25,19 @@ docker logs -f mc-deceasedcraft
 
 ## Server Details
 
-| Setting         | Value              |
-| --------------- | ------------------ |
-| **Port**        | 25583              |
-| **RCON**        | 26583              |
-| **Memory**      | 6GB                |
-| **Type**        | CurseForge (Forge) |
-| **Max Players** | 20                 |
-| **Difficulty**  | Hard               |
-| **Mode**        | Survival           |
+| Setting         | Value                              |
+| --------------- | ---------------------------------- |
+| **Route**       | `deceasedcraft.<MC_ROUTER_DOMAIN>` |
+| **RCON**        | 26583                              |
+| **Memory**      | 6GB                                |
+| **Type**        | CurseForge (Forge)                 |
+| **Max Players** | 20                                 |
+| **Difficulty**  | Hard                               |
+| **Mode**        | Survival                           |
 
 ## Connection
 
-- **Address**: `your-server-ip:25583`
+- **Address**: `deceasedcraft.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `deceasedcraft.192.168.1.10.nip.io`)
 - **Version**: 1.20.1
 - **Client**: Install DeceasedCraft from the CurseForge launcher
 
@@ -96,7 +96,7 @@ docker logs -f mc-deceasedcraft
 
 ```bash
 docker logs mc-deceasedcraft
-# Common issues: port 25583 in use, insufficient memory, download failures
+# Common issues: insufficient memory, download failures
 ```
 
 ### Mod loading crash mentioning oculus/colorwheel
@@ -107,7 +107,7 @@ update re-adds them, keep `CF_EXCLUDE_MODS="oculus,colorwheel"` up to date.
 ### Clients can't connect
 
 1. Ensure the client has DeceasedCraft (same pack version) installed
-2. Check firewall allows port 25583
+2. Verify the route `deceasedcraft.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify the server is running: `docker ps | grep deceasedcraft`
 
 ## Resources

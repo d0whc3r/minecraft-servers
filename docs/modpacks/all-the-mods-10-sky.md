@@ -26,19 +26,19 @@ docker logs -f mc-all-the-mods-10-sky
 
 ## Server Details
 
-| Setting         | Value              |
-| --------------- | ------------------ |
-| **Port**        | 25585              |
-| **RCON**        | 26585              |
-| **Memory**      | 8GB                |
-| **Type**        | CurseForge (Forge) |
-| **Max Players** | 50                 |
-| **Difficulty**  | Normal             |
-| **Mode**        | Survival           |
+| Setting         | Value                                    |
+| --------------- | ---------------------------------------- |
+| **Route**       | `all-the-mods-10-sky.<MC_ROUTER_DOMAIN>` |
+| **RCON**        | 26585                                    |
+| **Memory**      | 8GB                                      |
+| **Type**        | CurseForge (Forge)                       |
+| **Max Players** | 50                                       |
+| **Difficulty**  | Normal                                   |
+| **Mode**        | Survival                                 |
 
 ## Connection
 
-- **Address**: `your-server-ip:25585`
+- **Address**: `all-the-mods-10-sky.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `all-the-mods-10-sky.192.168.1.10.nip.io`)
 - **Version**: 1.21.1
 - **Client**: Install "All the Mods 10: To the Sky ATM10SKY" from the CurseForge launcher
 
@@ -86,13 +86,13 @@ docker logs -f mc-all-the-mods-10-sky
 
 ```bash
 docker logs mc-all-the-mods-10-sky
-# Common issues: port 25585 in use, insufficient memory, download failures
+# Common issues: insufficient memory, download failures
 ```
 
 ### Clients can't connect
 
 1. Ensure the client has ATM10: To the Sky (not regular ATM10) installed
-2. Check firewall allows port 25585
+2. Verify the route `all-the-mods-10-sky.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify the server is running: `docker ps | grep all-the-mods-10-sky`
 
 ## Resources

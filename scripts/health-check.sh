@@ -137,17 +137,18 @@ check_container_running() {
   container_running "$container_name"
 }
 
-# Check if server is responding on configured port
-check_server_port() {
-  local server_name="$1"
-  local port
+# Check the shared mc-router entry point. A down router means players cannot
+# connect to any server, but the servers themselves are fine — reported as a
+# warning instead of failing every per-server health check.
+check_router_entry() {
+  load_router_settings
 
-  port=$(get_server_config "$server_name" "SERVER_PORT")
-  if [[ -z "$port" ]]; then
-    return 1
+  if check_port_open "$MC_ROUTER_PORT"; then
+    success "mc-router entry point responsive on port $MC_ROUTER_PORT"
+  else
+    warning "mc-router entry point NOT responding on port $MC_ROUTER_PORT - players cannot connect (try: ./scripts/router.sh start)"
   fi
-
-  check_port_open "$port"
+  return 0
 }
 
 # Check server process health via Docker logs
@@ -200,6 +201,9 @@ check_server_health() {
   local issues=()
   local details=()
 
+  # Settings feed the reachability check below
+  load_router_settings
+
   # Check if server is configured
   if ! server_exists "$server_name"; then
     echo "error:server_not_found"
@@ -221,15 +225,10 @@ check_server_health() {
       details+=("container:stopped")
     fi
 
-    # Check port connectivity (only if container is running)
+    # Game traffic is routed by mc-router; container health + logs cover the
+    # server itself and check_router_entry covers the shared entry point
     if check_container_running "$server_name"; then
-      if check_server_port "$server_name"; then
-        details+=("port:responsive")
-      else
-        health_status="unhealthy"
-        issues+=("port_not_responding")
-        details+=("port:unresponsive")
-      fi
+      details+=("port:routed_via_mc-router")
     else
       details+=("port:unknown")
     fi
@@ -304,6 +303,12 @@ check_server_health() {
 
 # Main execution
 main() {
+  # Shared entry point first: if mc-router is down every route is dark,
+  # regardless of individual server health
+  if [[ "$JSON_OUTPUT" == false ]]; then
+    check_router_entry
+  fi
+
   local servers
   servers=$(get_server_list)
   local overall_status=0

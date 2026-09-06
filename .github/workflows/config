@@ -1,42 +1,20 @@
-# BATS Test Pipeline Configuration
-# ================================
+# CI Pipeline Configuration
+# =========================
 #
-# This file serves as the single source of truth for pipeline configuration.
-# All workflows (.github/workflows/*.yml) read from this file to ensure consistency.
+# Single source of truth for pipeline settings. Workflows read this file
+# through scripts/ci/load-config.sh and fall back to inline defaults.
 #
 # Usage:
 # - Modify values here to change pipeline behavior
-# - Workflows will use these values with fallbacks to defaults
-# - Changes here affect: bats-tests.yml, code-quality.yml
-#
-# This file contains configuration overrides for the BATS test pipeline
-# Values here will override defaults in the workflow
+# - Changes here affect: bats-tests.yml, code-quality.yml, e2e-tests.yml
 
-# Test execution settings
-TEST_TIMEOUT_MINUTES=45
-PARALLEL_JOBS=1
+# E2E test execution settings (e2e-tests.yml)
+TEST_TIMEOUT_MINUTES=45 # bats timeout per matrix chunk, in minutes
+PARALLEL_JOBS=1         # parallel bats jobs inside a chunk
 
-# Docker settings
+# Docker settings (e2e-tests.yml)
 DOCKER_VERSION=28.5.2
 
-# Dependency versions
+# Dependency versions (all workflows)
 NODE_VERSION=22
-# PNPM_VERSION is now taken from package.json packageManager field
-
-# Chunking strategy
-# - small: 1-3 modpacks per chunk (better for many small modpacks)
-# - medium: 2-4 modpacks per chunk (balanced) - CURRENT
-# - large: 3-5 modpacks per chunk (better for fewer large modpacks)
-CHUNK_STRATEGY=medium
-
-# Cache settings
-CACHE_DOCKER_IMAGES=true
-CACHE_PNPM_STORE=true
-CACHE_NODE_MODULES=true
-
-# Artifact settings
-ARTIFACT_RETENTION_DAYS=7
-
-# Debug settings
-ENABLE_DEBUG_LOGS=false
-VERBOSE_TEST_OUTPUT=true
+# PNPM_VERSION is taken from package.json packageManager field

@@ -34,7 +34,7 @@ The `common.sh` file provides a reusable foundation for all scripts, including:
 - `get_config_file(server)` - Get path to server configuration file
 - `get_data_dir(server)` - Get path to server data directory
 - `get_backup_dir(server)` - Get path to server backup directory
-- `get_server_port(server)` - Extract port number from server config
+- `get_rcon_port(server)` - Extract the loopback RCON port from server config
 - `get_container_uptime(container)` - Get human-readable uptime for container
 
 ### Docker Compose Helpers
@@ -42,6 +42,13 @@ The `common.sh` file provides a reusable foundation for all scripts, including:
 - `docker_compose_up(server)` - Start server using docker compose
 - `docker_compose_down(server)` - Stop server using docker compose
 - `docker_compose_restart(server)` - Restart server using docker compose
+
+### Router Helpers
+
+- `load_router_settings()` - Load `MC_ROUTER_*` settings from `.env` with defaults
+- `get_route_host(server)` - Hostname players use for that server (`<server>.<MC_ROUTER_DOMAIN>`)
+- `router_running()` - Whether the mc-router container is up
+- `ensure_router()` - Start mc-router (mandatory infrastructure for every server)
 
 ### File Operations
 
@@ -118,6 +125,7 @@ All management scripts source `common.sh`:
 - `stop-all.sh` - Bulk server shutdown
 - `health-check.sh` - Health report (text or JSON output)
 - `auto-restart.sh` - Auto-restart daemon
+- `router.sh` - mc-router lifecycle and route table (start/stop/status/routes/logs)
 - `backup.sh` - Atomic backup with checksum
 - `restore.sh` - Verified restore operations
 - `add-modpack.sh` - Server configuration generator
@@ -173,7 +181,7 @@ source "$(dirname "$0")/common.sh"
 for server in $(list_available_servers); do
   container=$(get_container_name "$server")
   if container_running "$container"; then
-    port=$(get_server_port "$server")
+    port=$(get_rcon_port "$server")
     uptime=$(get_container_uptime "$container")
     success "$server is running on port $port (uptime: $uptime)"
   else
@@ -198,29 +206,41 @@ else
 fi
 ```
 
+## CI Helpers (`ci/`)
+
+The CI workflows keep their YAML thin: all pipeline logic lives in these
+scripts (see `docs/CI_CD.md`). They run on GitHub Actions runners and write to
+`$GITHUB_OUTPUT` / `$GITHUB_STEP_SUMMARY` when those variables are set, plain
+stdout otherwise, so they can also be tested locally.
+
+- `ci/load-config.sh` - Parse `.github/workflows/config` into workflow step outputs
+- `ci/generate-test-matrix.sh` - Build the E2E matrix: chunks of `CHUNK_SIZE`
+  (default 2) modpacks plus the Java/Docker tags each chunk needs
+- `ci/pull-minecraft-images.sh <modpacks...>` - Pre-pull the
+  `itzg/minecraft-server` tags required by the given modpacks
+- `ci/generate-summary.sh` - Write the E2E run summary (status, matrix,
+  artifacts) to the GitHub step summary
+- `ci/create-test-env.sh` - Create the `.env` docker compose consumes in tests
+- `ci/filter-modpacks.sh <regex>` - Pick the modpacks one E2E runner tests and
+  export them as `TEST_MODPACKS`
+
+They are validated like any other script: `US1-TC001`/`TC004` syntax-check and
+require the executable bit on `scripts/ci/*.sh` too.
+
 ## Package.json Scripts
 
 The project includes npm/pnpm scripts for development, testing, and deployment. These scripts provide convenient shortcuts for common operations.
 
 ### Testing Scripts
 
-- `pnpm test` - Run all BATS tests
-- `pnpm run test:verbose` - Run all tests with verbose output
-- `pnpm run test:quick` - Run lightweight tests 1-6 (used in pre-push hook)
+- `pnpm test` - Run all BATS tests (includes the slow E2E server-startup test)
+- `pnpm run test:quick` - Run the fast validation suite (`config-validation.bats`, no server startup; used in pre-push hook and CI)
 
 ### Code Quality Scripts
 
 - `lint` - Check code formatting with Prettier
 - `lint:fix` - Format code with Prettier
 - `pnpm run validate:all` - Run lint check and all tests
-
-### Docker Scripts
-
-- `pnpm run docker:build` - Build Docker images
-- `pnpm run docker:up` - Start all services in detached mode
-- `pnpm run docker:down` - Stop all services
-- `pnpm run docker:logs` - Follow logs from all services
-- `pnpm run docker:clean` - Stop services and remove volumes/orphaned containers
 
 ### Server Management Scripts
 
@@ -233,14 +253,13 @@ The project includes npm/pnpm scripts for development, testing, and deployment. 
 ### Backup Scripts
 
 - `pnpm run backup` - Create backup of a specific server
-- `pnpm run backup:all` - Create backups of all servers
 - `pnpm run restore` - Restore server from backup
+
+(For all servers at once: `./scripts/backup.sh --all`.)
 
 ### Development Scripts
 
-- `pnpm run dev:setup` - Install dependencies and setup husky hooks
 - `pnpm run dev:clean` - Clean node_modules and reinstall
-- `pnpm run ci` - Run full validation (equivalent to validate:all)
 
 ### Git Hooks
 
@@ -252,23 +271,20 @@ The project uses Husky for git hooks:
 ### Usage Examples
 
 ```bash
-# Development setup
-pnpm run dev:setup
+# Install dependencies (husky hooks install via the `prepare` script)
+pnpm install
 
 # Quick validation before committing
 pnpm run lint
 
-# Start development environment
-pnpm run docker:up
-
 # Check server status
 pnpm run server:list
 
-# Create backups
-pnpm run backup:all
+# Create backups of every server
+./scripts/backup.sh --all
 
-# Full CI validation
-pnpm run ci
+# Full validation (lint + all tests)
+pnpm run validate:all
 ```
 
 ### Script Categories

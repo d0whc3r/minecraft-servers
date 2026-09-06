@@ -1,0 +1,45 @@
+# mc-router - single entry point for all Minecraft servers
+# Players connect once (mc-router port) and are routed by hostname to the
+# right server: <server-name>.${MC_ROUTER_DOMAIN} -> that server's container.
+#
+# Managed by ./scripts/router.sh (start|stop|restart|status|routes|logs).
+# Routed backends are discovered automatically from the mc-router.* labels in
+# docker-compose.yml — no per-server configuration needed here.
+#
+# Requires: the minecraft-network bridge (created by the server scripts) and
+# read access to the Docker socket for service discovery.
+
+services:
+  mc-router:
+    image: itzg/mc-router:${MC_ROUTER_VERSION:-latest}
+    container_name: minecraft-router
+    restart: unless-stopped
+    ports:
+      # The one public port every player connects to
+      - '${MC_ROUTER_PORT:-25565}:25565'
+      # REST API (routes listing) - loopback only, used by scripts/router.sh
+      - '127.0.0.1:${MC_ROUTER_API_PORT:-8080}:8080'
+    volumes:
+      # Service discovery: mc-router watches container events and builds
+      # routes from the mc-router.host labels of running servers
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      # Discover backends from Docker container labels
+      IN_DOCKER: 'true'
+      # Serve the routes API on the container port published above
+      API_BINDING: ':8080'
+      # The image bundles tzdata: log timestamps match the host timezone
+      TZ: ${TZ:-UTC}
+    # The image runs as a non-root user; grant it access to the Docker socket.
+    # 999 is the docker group on native Linux installs (check yours with:
+    # stat -c '%g' /var/run/docker.sock); on Docker Desktop use 0.
+    group_add:
+      - '${MC_ROUTER_DOCKER_GID:-999}'
+    networks:
+      - minecraft-network
+
+networks:
+  minecraft-network:
+    name: minecraft-network
+    driver: bridge
+    external: true
