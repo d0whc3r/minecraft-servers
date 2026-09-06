@@ -61,3 +61,18 @@ Thumbs.db
 .editorconfig
 .dockerignore
 renovate.json
+
+# Go TUI source (formatted with gofmt) and its build output
+apps/tui/
+bin/
+
+# Web panel generated files
+apps/web/.astro/
+apps/web/.prettierrc.json
+
+# Broken leftovers from a corrupted node_modules (fs error -117)
+node_modules.broken/
+
+# Env templates (no parser)
+.env.example
+**/.env.example

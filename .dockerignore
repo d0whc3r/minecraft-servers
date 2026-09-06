@@ -37,3 +37,13 @@ logs/
 *.tmp
 *.swp
 *~
+
+# Node / pnpm artifacts (workspace + panel)
+node_modules/
+node_modules.broken/
+apps/web/dist/
+apps/web/data/
+apps/web/test-e2e-data/
+apps/web/test-results/
+apps/web/playwright-report/
+.agents/

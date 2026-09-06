@@ -30,3 +30,17 @@ logs/
 *~
 
 test-results/
+
+# TUI binary (built by scripts/tui.sh)
+/bin/
+
+# Web panel runtime data (credentials, session key)
+apps/web/data/
+apps/web/.astro/
+
+# Test artifacts
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/test-e2e-data/
+
+coverage/
