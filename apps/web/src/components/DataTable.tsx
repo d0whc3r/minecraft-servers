@@ -1,28 +1,54 @@
-// Generic client-side table built on TanStack Table v8: sortable headers
+// Generic client-side table built on TanStack Table v9: sortable headers
 // (shift-click multi-sorts), a global search input, per-column filters,
 // drag-and-drop column reordering and a column visibility menu.
 import {
+  columnFilteringFeature,
+  columnOrderingFeature,
+  columnVisibilityFeature,
+  createFilteredRowModel,
+  createSortedRowModel,
+  filterFn_equalsString,
+  filterFn_includesString,
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
+  globalFilteringFeature,
+  rowSortingFeature,
+  tableFeatures,
+  useTable,
   type ColumnDef,
   type ColumnFiltersState,
   type ColumnOrderState,
+  type ColumnVisibilityState,
   type RowData,
   type SortingState,
-  type VisibilityState,
 } from "@tanstack/react-table";
 import { useState } from "react";
 import { cn, inputClass } from "./ui";
 
-declare module "@tanstack/react-table" {
-  interface ColumnMeta<TData extends RowData, TValue> {
-    /** Human-readable label used in headers, the columns menu and filters. */
-    label?: string;
-  }
-}
+// V9 requires features, row models and fn registries to be declared up front;
+// string filter fn names ("includesString", "equalsString") only resolve
+// against the `filterFns` registry registered here.
+const features = tableFeatures({
+  columnFilteringFeature,
+  columnOrderingFeature,
+  columnVisibilityFeature,
+  globalFilteringFeature,
+  rowSortingFeature,
+  filteredRowModel: createFilteredRowModel(),
+  sortedRowModel: createSortedRowModel(),
+  filterFns: {
+    includesString: filterFn_includesString,
+    equalsString: filterFn_equalsString,
+  },
+  // Type-only slot replacing the v8 `ColumnMeta` declaration merge.
+  columnMeta: {} as { label?: string },
+});
+
+/** Column definition accepted by `DataTable` (carries the table's features). */
+export type DataTableColumn<TData extends RowData> = ColumnDef<
+  typeof features,
+  TData,
+  any
+>;
 
 /** Toolbar filter bound to a column declared in `columns`. */
 export interface TableFilter {
@@ -33,9 +59,9 @@ export interface TableFilter {
   options?: Array<{ value: string; label: string }>;
 }
 
-interface DataTableProps<TData> {
+interface DataTableProps<TData extends RowData> {
   data: TData[];
-  columns: ColumnDef<TData, any>[];
+  columns: DataTableColumn<TData>[];
   filters?: TableFilter[];
   initialSorting?: SortingState;
   searchPlaceholder?: string;
@@ -52,7 +78,7 @@ function columnLabel(column: {
   return column.columnDef.meta?.label ?? column.id;
 }
 
-export function DataTable<TData>({
+export function DataTable<TData extends RowData>({
   data,
   columns,
   filters = [],
@@ -65,11 +91,13 @@ export function DataTable<TData>({
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] =
+    useState<ColumnVisibilityState>({});
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data,
     columns,
     state: {
@@ -84,9 +112,6 @@ export function DataTable<TData>({
     onColumnFiltersChange: setColumnFilters,
     onColumnOrderChange: setColumnOrder,
     onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     globalFilterFn: "includesString",
   });
 

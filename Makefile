@@ -147,7 +147,7 @@ install: ## install workspace JS dependencies (pnpm)
 	pnpm install
 
 web-build: ## build the web panel
-	pnpm --filter mc-servers-web build
+	pnpm --filter @minecraft-servers/web build
 
 hooks: ## point git at the husky hooks
 	git config core.hooksPath .husky

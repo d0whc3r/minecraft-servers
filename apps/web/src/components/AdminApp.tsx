@@ -1,6 +1,5 @@
 // Admin area: login gate + server actions, live logs, RCON console, backups, system.
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
 import type {
   AuthMe,
   BackupFile,
@@ -15,7 +14,7 @@ import {
   startPolling,
   timeAgo,
 } from "../lib/client";
-import { DataTable, type TableFilter } from "./DataTable";
+import { DataTable, type DataTableColumn, type TableFilter } from "./DataTable";
 import {
   Button,
   buttonClass,
@@ -233,7 +232,7 @@ function ServersTab({ push }: { push: Push }) {
     [status],
   );
 
-  const columns = useMemo<ColumnDef<ServerStatus, any>[]>(
+  const columns = useMemo<DataTableColumn<ServerStatus>[]>(
     () => [
       {
         id: "server",
@@ -705,7 +704,7 @@ function BackupsTab({ push }: { push: Push }) {
     }
   };
 
-  const columns = useMemo<ColumnDef<BackupFile, any>[]>(
+  const columns = useMemo<DataTableColumn<BackupFile>[]>(
     () => [
       {
         id: "file",

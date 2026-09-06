@@ -1,9 +1,8 @@
 // Public dashboard: live status of every configured server.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
 import type { AuthMe, ServerStatus, StatusResponse } from "../types";
 import { api, formatUptime, startPolling } from "../lib/client";
-import { DataTable, type TableFilter } from "./DataTable";
+import { DataTable, type DataTableColumn, type TableFilter } from "./DataTable";
 import {
   Button,
   Chip,
@@ -304,7 +303,7 @@ function ServersTableView({
     [servers],
   );
 
-  const columns = useMemo<ColumnDef<ServerStatus, any>[]>(
+  const columns = useMemo<DataTableColumn<ServerStatus>[]>(
     () => [
       {
         id: "server",

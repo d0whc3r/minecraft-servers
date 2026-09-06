@@ -36,7 +36,7 @@ pnpm web:dev
 To serve it on your LAN:
 
 ```bash
-PORT=3777 HOST=0.0.0.0 pnpm web:start   # → http://<server-ip>:3777
+PORT=3777 HOST=0.0.0.0 pnpm --filter @minecraft-servers/web start   # → http://<server-ip>:3777
 ```
 
 ## Run in Docker (recommended)
@@ -88,7 +88,7 @@ manage every container and file on this host. Keep it off the public internet
   └──────────────────────────────────────────────────────┘
   ```
 
-  Launch it with `pnpm web:start` in a terminal (or read your service's log,
+  Launch it with `pnpm --filter @minecraft-servers/web start` in a terminal (or read your service's log,
   e.g. `journalctl` / `docker logs`) right after the first start to copy the
   password.
 
@@ -105,18 +105,18 @@ Pick whichever fits:
 ```bash
 # 1. Set explicit credentials through the environment (recommended).
 #    Restart the panel afterwards; the env value wins over auth.json.
-MCPANEL_USER=myadmin MCPANEL_PASSWORD='a long passphrase' pnpm web:start
+MCPANEL_USER=myadmin MCPANEL_PASSWORD='a long passphrase' pnpm --filter @minecraft-servers/web start
 
 # 2. Regenerate a random password: wipe the data dir and restart.
 #    A new password is printed to the console on the first request.
 #    (Also invalidates all current browser sessions.)
 rm -rf apps/web/data
-pnpm web:start
+pnpm --filter @minecraft-servers/web start
 
 # 3. Change the password but keep the session key (browser sessions
 #    stay signed in): regenerate only auth.json, then restart.
 rm apps/web/data/auth.json
-MCPANEL_PASSWORD='new-pass' pnpm web:start
+MCPANEL_PASSWORD='new-pass' pnpm --filter @minecraft-servers/web start
 ```
 
 Other useful facts:
@@ -220,7 +220,7 @@ pnpm --filter @minecraft-servers/web test:watch   # watch mode
 # E2E tests (Playwright, real browser)
 # Builds and boots the real panel on :4599 with throwaway credentials and an
 # isolated data dir; never touches production data or runs server actions.
-pnpm web:test:e2e
+pnpm --filter @minecraft-servers/web test:e2e
 ```
 
 - Unit tests cover: byte/uptime/time formatters, the auth module (bootstrap,
