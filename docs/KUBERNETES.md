@@ -74,11 +74,16 @@ helm upgrade --install minecraft-panel charts/web-panel -n minecraft \
   --set sharedEnv.MC_ROUTER_DOMAIN=mc.example.com
 ```
 
-> The image `ghcr.io/d0whc3r/minecraft-servers/panel` must exist in your
-> registry (built from `apps/web/Dockerfile`; set `image.repository` /
-> `image.tag` in the web-panel chart). It carries kubectl, helm, the charts
-> and the modpack catalog — that plus the cluster credentials is everything
-> the panel needs to start servers.
+> The image `ghcr.io/d0whc3r/minecraft-servers/panel` is published by the
+> **Docker Publish** workflow (`.github/workflows/docker-publish.yml`) on
+> every push to `master` that touches the panel, charts or modpack catalog;
+> it can also be run manually from the Actions tab. GHCR creates the first
+> package as **private**: flip it to public (Packages → panel → Package
+> settings) or set `imagePullSecrets` in the web-panel chart, or pulls fail
+> with 403. It carries kubectl, helm, the charts and the modpack catalog —
+> that plus the cluster credentials is everything the panel needs to start
+> servers. To use your own registry instead, set `image.repository` /
+> `image.tag` in the web-panel chart.
 
 ## How a server start works
 
