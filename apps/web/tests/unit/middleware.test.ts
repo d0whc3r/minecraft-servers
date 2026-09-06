@@ -30,8 +30,8 @@ afterEach(() => {
 });
 
 async function load() {
-  const mw = await import("../../src/middleware");
-  const auth = await import("../../src/lib/auth");
+  const mw = await import("@/middleware");
+  const auth = await import("@/lib/auth");
   const { token } = auth.createSessionToken();
   return { onRequest: mw.onRequest, token };
 }

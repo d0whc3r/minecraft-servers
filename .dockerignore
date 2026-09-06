@@ -6,9 +6,11 @@
 .env*
 !.env.template
 
-# Documentation
+# Documentation (except docs/modpacks: the panel image bakes it — the server
+# registry reads modpack titles/descriptions from it in kubernetes mode)
 README.md
-docs/
+docs/*
+!docs/modpacks
 .github/
 .specify/
 

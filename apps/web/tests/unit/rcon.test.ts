@@ -1,7 +1,7 @@
 // Unit tests for the Source RCON client against a fake RCON server.
 import net from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { rconCommand } from "../../src/lib/rcon";
+import { rconCommand } from "@/lib/rcon";
 
 const PASSWORD = "test-password";
 

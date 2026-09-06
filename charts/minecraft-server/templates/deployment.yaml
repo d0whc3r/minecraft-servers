@@ -1,0 +1,198 @@
+{{- if and .Values.backup.enabled (not .Values.existingSecret) (not .Values.secretEnv) -}}
+{{- fail "backup.enabled needs secretEnv (RCON_PASSWORD for save-off/save-all) or existingSecret" }}
+{{- end -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "minecraft-server.fullname" . }}
+  labels:
+    {{- include "minecraft-server.labels" . | nindent 4 }}
+spec:
+  # Minecraft state lives on RWO storage and one instance may touch the world:
+  # scale to 0 to stop, never roll two instances at once.
+  strategy:
+    type: Recreate
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "minecraft-server.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "minecraft-server.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "minecraft-server.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      volumes:
+        - name: data
+          {{- if and .Values.persistence.data.enabled (or .Values.persistence.data.existingClaim) }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.data.existingClaim }}
+          {{- else if .Values.persistence.data.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "minecraft-server.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: backups
+          {{- if and .Values.persistence.backups.enabled (or .Values.persistence.backups.existingClaim) }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.backups.existingClaim }}
+          {{- else if .Values.persistence.backups.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "minecraft-server.fullname" . }}-backups
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: mods
+          {{- if and .Values.persistence.mods.enabled (or .Values.persistence.mods.existingClaim) }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.mods.existingClaim }}
+          {{- else if .Values.persistence.mods.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "minecraft-server.fullname" . }}-mods
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      containers:
+        - name: minecraft
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            {{- if .Values.env }}
+            - configMapRef:
+                name: {{ include "minecraft-server.fullname" . }}
+            {{- end }}
+            {{- if .Values.existingSecret }}
+            - secretRef:
+                name: {{ .Values.existingSecret }}
+            {{- else if .Values.secretEnv }}
+            - secretRef:
+                name: {{ include "minecraft-server.fullname" . }}
+            {{- end }}
+          env:
+            # Chart wiring always wins over modpack values (k8s precedence:
+            # env entries beat envFrom), like docker-compose does with its
+            # explicit environment block.
+            - name: SERVER_PORT
+              value: {{ .Values.server.port | quote }}
+            - name: ENABLE_RCON
+              value: {{ .Values.rcon.enabled | quote }}
+            {{- if .Values.rcon.enabled }}
+            - name: RCON_PORT
+              value: {{ .Values.rcon.port | quote }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: minecraft
+              containerPort: {{ .Values.server.port }}
+              protocol: TCP
+            {{- if .Values.rcon.enabled }}
+            - name: rcon
+              containerPort: {{ .Values.rcon.port }}
+              protocol: TCP
+            {{- end }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: backups
+              mountPath: /backups
+            - name: mods
+              mountPath: /mods
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            exec:
+              command: [mc-health]
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          readinessProbe:
+            exec:
+              command: [mc-health]
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          startupProbe:
+            exec:
+              command: [mc-health]
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          stdin: true
+          tty: true
+        {{- if .Values.backup.enabled }}
+        - name: backup
+          image: "{{ .Values.backup.image.repository }}:{{ .Values.backup.image.tag }}"
+          imagePullPolicy: {{ .Values.backup.image.pullPolicy }}
+          envFrom:
+            {{- if .Values.env }}
+            - configMapRef:
+                name: {{ include "minecraft-server.fullname" . }}
+            {{- end }}
+            - secretRef:
+                name: {{ include "minecraft-server.secretName" . }}
+          env:
+            - name: RCON_HOST
+              value: 127.0.0.1
+            - name: RCON_PORT
+              value: {{ .Values.rcon.port | quote }}
+            - name: BACKUP_INTERVAL
+              value: {{ .Values.backup.interval | quote }}
+            - name: PRUNE_BACKUPS_DAYS
+              value: {{ .Values.backup.pruneDays | quote }}
+            - name: XDG_CONFIG_HOME
+              value: /tmp
+            {{- with .Values.backup.env }}
+            {{- range $key, $value := . }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+              readOnly: true
+            - name: backups
+              mountPath: /backups
+          resources:
+            {{- toYaml .Values.backup.resources | nindent 12 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

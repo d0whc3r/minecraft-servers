@@ -19,11 +19,15 @@ COPY apps/web/ apps/web/
 RUN pnpm --filter @minecraft-servers/web build
 
 # ---------------------------------------------------------------------------
-# Runtime: node + docker CLI/compose plugin. The panel shells out to the repo
-# management scripts (scripts/*.sh), which drive `docker compose` against the
-# socket mounted by docker-compose.yml.
+# Runtime: node + every CLI the two panel runtimes shell out to.
+#   docker runtime:     docker CLI + compose plugin (socket mounted)
+#   kubernetes runtime: kubectl + helm, driving the charts/ baked below with
+#                       the pod's ServiceAccount (see charts/web-panel)
 # ---------------------------------------------------------------------------
 FROM node:24-bookworm-slim
+ARG KUBECTL_VERSION=v1.32.5
+ARG HELM_VERSION=v3.17.3
+ARG TARGETARCH
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
  && install -m 0755 -d /etc/apt/keyrings \
@@ -34,7 +38,12 @@ RUN apt-get update \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
       docker-ce-cli docker-compose-plugin tzdata \
- && rm -rf /var/lib/apt/lists/*
+ && curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" \
+      -o /usr/local/bin/kubectl && chmod 0755 /usr/local/bin/kubectl \
+ && curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${TARGETARCH}.tar.gz" \
+      | tar xz -C /tmp --strip-components=1 "linux-${TARGETARCH}/helm" \
+ && install -m 0755 /tmp/helm /usr/local/bin/helm \
+ && rm -f /tmp/helm && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
@@ -43,12 +52,18 @@ ENV NODE_ENV=production \
     MCPANEL_DATA_DIR=/data
 
 # Mirror the monorepo layout (workspace root + apps/web) so pnpm's relative
-# node_modules symlinks keep resolving inside the image.
+# node_modules symlinks keep resolving inside the image. The repo-shaped
+# content the panel reads (charts, modpack catalog, docs metadata) is baked
+# in: on the docker runtime the host checkout is mounted over /repo anyway,
+# on the kubernetes runtime these are the panel's working files.
 WORKDIR /repo
 COPY --from=build /mono/node_modules /mono/node_modules
 COPY --from=build /mono/apps/web/node_modules /mono/apps/web/node_modules
 COPY --from=build /mono/apps/web/package.json /mono/apps/web/package.json
 COPY --from=build /mono/apps/web/dist /mono/apps/web/dist
+COPY charts/ /repo/charts/
+COPY config/modpacks/ /repo/config/modpacks/
+COPY docs/modpacks/ /repo/docs/modpacks/
 
 EXPOSE 3777
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \

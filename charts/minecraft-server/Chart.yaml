@@ -1,0 +1,21 @@
+apiVersion: v2
+name: minecraft-server
+description: >-
+  One Minecraft server (itzg/minecraft-server) per release: Deployment, Service
+  annotated for mc-router auto-discovery, ConfigMap/Secret with the server
+  configuration and persistent storage for world data and backups. Install one
+  release per server with the release name mc-<server>; the web panel does this
+  automatically when MCPANEL_RUNTIME=kubernetes.
+type: application
+version: 0.1.0
+appVersion: "latest"
+home: https://github.com/d0whc3r/minecraft-servers
+icon: https://raw.githubusercontent.com/itzg/docker-minecraft-server/master/docs/assets/logo.png
+sources:
+  - https://github.com/d0whc3r/minecraft-servers
+keywords:
+  - minecraft
+  - itzg
+  - mc-router
+maintainers:
+  - name: d0whc3r

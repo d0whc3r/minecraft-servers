@@ -1,7 +1,7 @@
 // Backup file helpers shared by the backup API routes.
 import fs from "node:fs";
 import path from "node:path";
-import { PROJECT_ROOT } from "./servers.js";
+import { PROJECT_ROOT } from "@/lib/servers.js";
 
 export function backupDirFor(server: string): string {
   return path.join(PROJECT_ROOT, "backups", server);

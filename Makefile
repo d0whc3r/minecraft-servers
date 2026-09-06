@@ -11,6 +11,7 @@ WEB     := web
 DIST    := dist
 COVER   := coverage
 TMP     := .tmp
+CHARTS  := charts/minecraft-server charts/mc-router charts/web-panel
 MODULE  := $(shell go -C $(TUI) list -m)
 
 GO := go -C $(TUI)
@@ -52,7 +53,7 @@ SHSTAMP   := $(TMP)/test-sh.cksum
 
 .PHONY: help all build build-one run release test test-sh test-bats vet fmt \
 	fmt-check lint check cover cover-html vuln outdated tidy install web-build \
-	hooks clean
+	helm-lint helm-template hooks clean
 
 help: ## list targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -148,6 +149,18 @@ install: ## install workspace JS dependencies (pnpm)
 
 web-build: ## build the web panel
 	pnpm --filter @minecraft-servers/web build
+
+helm-lint: ## lint the helm charts (needs helm)
+	helm lint $(CHARTS)
+
+helm-template: ## render the helm charts as a smoke test (needs helm)
+	helm lint --quiet $(CHARTS) && \
+	helm template mc-vanilla charts/minecraft-server \
+		--set env.EULA=TRUE --set secretEnv.RCON_PASSWORD=x \
+		--set router.host=vanilla.mc.local > /dev/null && \
+	helm template minecraft-router charts/mc-router > /dev/null && \
+	helm template minecraft-panel charts/web-panel \
+		--set sharedEnv.EULA=TRUE > /dev/null && echo "charts render OK"
 
 hooks: ## point git at the husky hooks
 	git config core.hooksPath .husky

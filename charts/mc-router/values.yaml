@@ -1,0 +1,59 @@
+# ===========================================================================
+# mc-router: the one public port every player connects to. Backends are
+# discovered in-cluster from the mc-router.itzg.me/* Service annotations set
+# by the minecraft-server chart — start a server and the route appears.
+# ===========================================================================
+
+replicaCount: 1
+
+image:
+  repository: itzg/mc-router
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: "" # resources end up named <release>-<name> unless fixed here
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+rbac:
+  # false -> Role: only Services in the router's own namespace are watched
+  #          (the default layout: router + servers in one namespace).
+  # true  -> ClusterRole: watch Services in every namespace.
+  watchAllNamespaces: false
+
+# Namespace to watch when watchAllNamespaces=false; empty = release namespace
+kubeNamespace: ""
+
+service:
+  # LoadBalancer exposes the port on the node/cluster ingress; use NodePort
+  # when there is no LB controller (set service.nodePort if you want it fixed).
+  type: LoadBalancer
+  port: 25565
+  # nodePort: ""
+  annotations: {}
+
+api:
+  # REST API listing the routes (equivalent of 127.0.0.1:8080 in docker).
+  enabled: true
+  port: 8080
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 32Mi
+  limits:
+    memory: 128Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+podAnnotations: {}
+podLabels: {}
+securityContext: {}
+podSecurityContext: {}

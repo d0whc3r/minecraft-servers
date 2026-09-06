@@ -3,8 +3,8 @@ import {
   verifySessionToken,
   sessionCookieName,
   isPublicView,
-} from "../../../lib/auth.js";
-import { json } from "../../../lib/api.js";
+} from "@/lib/auth.js";
+import { json } from "@/lib/api.js";
 
 export const prerender = false;
 

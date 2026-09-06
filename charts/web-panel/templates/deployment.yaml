@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "web-panel.fullname" . }}
+  labels:
+    {{- include "web-panel.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "web-panel.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "web-panel.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "web-panel.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: panel
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            # Kubernetes runtime: actions map to helm/kubectl instead of the
+            # docker CLI + repo scripts.
+            - name: MCPANEL_RUNTIME
+              value: kubernetes
+            - name: MCPANEL_ROOT
+              value: /repo
+            - name: MCPANEL_DATA_DIR
+              value: /data
+            # Namespace where mc-<server> releases are created/managed
+            - name: MCPANEL_K8S_NAMESPACE
+              value: {{ .Values.minecraft.namespace | default .Release.Namespace | quote }}
+            - name: MCPANEL_ROUTER_HOST
+              value: {{ .Values.router.host | default "minecraft-router" | quote }}
+            - name: MCPANEL_ROUTER_PORT
+              value: {{ .Values.router.port | quote }}
+            - name: MCPANEL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "web-panel.secretName" . }}
+                  key: MCPANEL_USER
+            {{- if .Values.admin.password }}
+            - name: MCPANEL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "web-panel.secretName" . }}
+                  key: MCPANEL_PASSWORD
+            {{- end }}
+            - name: MCPANEL_PUBLIC_VIEW
+              value: {{ .Values.admin.publicView | quote }}
+            - name: MCPANEL_TRUST_PROXY
+              value: {{ .Values.admin.trustProxy | quote }}
+            - name: MCPANEL_SECURE_COOKIES
+              value: {{ .Values.admin.secureCookies | quote }}
+            # helm insists on writable cache/config dirs
+            - name: HELM_CACHE_HOME
+              value: /tmp/helm/cache
+            - name: HELM_CONFIG_HOME
+              value: /tmp/helm/config
+            - name: HELM_DATA_HOME
+              value: /tmp/helm/data
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 3777
+              protocol: TCP
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: shared-env
+              subPath: .env
+              mountPath: /repo/.env
+              readOnly: true
+            {{- if .Values.modpacksConfigMap }}
+            - name: modpacks
+              mountPath: /repo/config/modpacks
+              readOnly: true
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /api/auth/me
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/auth/me
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-data" (include "web-panel.fullname" .)) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: shared-env
+          secret:
+            secretName: {{ include "web-panel.sharedEnvSecretName" . }}
+            items:
+              - key: .env
+                path: .env
+        {{- if .Values.modpacksConfigMap }}
+        - name: modpacks
+          configMap:
+            name: {{ .Values.modpacksConfigMap }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

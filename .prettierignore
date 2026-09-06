@@ -65,6 +65,9 @@ Thumbs.db
 .dockerignore
 renovate.json
 
+# Helm charts (templates are Go-templated YAML, not parseable standalone)
+charts/
+
 # Go TUI source (formatted with gofmt) and its build output
 apps/tui/
 bin/

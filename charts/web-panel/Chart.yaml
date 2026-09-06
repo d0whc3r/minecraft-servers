@@ -1,0 +1,17 @@
+apiVersion: v2
+name: web-panel
+description: >-
+  The minecraft-servers web panel (Astro/React) running inside the cluster.
+  With MCPANEL_RUNTIME=kubernetes it manages the mc-<server> Helm releases
+  itself: start/stop/restart from the dashboard, live logs, RCON console and
+  backups — no Docker socket needed.
+type: application
+version: 0.1.0
+appVersion: "latest"
+home: https://github.com/d0whc3r/minecraft-servers
+sources:
+  - https://github.com/d0whc3r/minecraft-servers
+keywords:
+  - minecraft
+  - panel
+  - dashboard

@@ -74,7 +74,7 @@ afterEach(() => {
 });
 
 async function loadServers() {
-  return import("../../src/lib/servers");
+  return import("@/lib/servers");
 }
 
 describe("server registry", () => {

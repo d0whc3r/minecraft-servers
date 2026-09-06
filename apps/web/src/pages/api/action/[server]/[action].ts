@@ -1,13 +1,13 @@
 import type { APIRoute } from "astro";
-import { runAction, type ActionType } from "../../../../lib/actions.js";
+import { runAction, type ActionType } from "@/lib/actions.js";
 import {
   json,
   apiError,
   guardAuth,
   guardCsrf,
   getServerParam,
-} from "../../../../lib/api.js";
-import { buildStatus } from "../../../../lib/status.js";
+} from "@/lib/api.js";
+import { buildStatus } from "@/lib/status.js";
 
 export const prerender = false;
 

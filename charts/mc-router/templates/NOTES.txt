@@ -1,0 +1,10 @@
+mc-router is the single entry point: players connect to
+<server>.<MC_ROUTER_DOMAIN> and the hostname picks the backend.
+
+Get the player-facing address:
+  kubectl -n {{ .Release.Namespace }} get svc {{ include "mc-router.fullname" . }}
+
+For type=LoadBalancer take EXTERNAL-IP (or a node IP with an open port).
+Routes are discovered automatically from the Services of the
+minecraft-server chart; check what the router sees on the API service
+({{ include "mc-router.fullname" . }}-api:{{ .Values.api.port }}/routes).

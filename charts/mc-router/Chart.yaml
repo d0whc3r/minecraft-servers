@@ -1,0 +1,17 @@
+apiVersion: v2
+name: mc-router
+description: >-
+  itzg/mc-router as the single entry point for every Minecraft server in the
+  cluster. Discovers backends in-cluster from Service annotations
+  (mc-router.itzg.me/externalServerName), so no per-server routing config is
+  needed: installing a mc-<server> release is enough to expose it.
+type: application
+version: 0.1.0
+appVersion: "latest"
+home: https://github.com/d0whc3r/minecraft-servers
+sources:
+  - https://github.com/itzg/mc-router
+  - https://github.com/d0whc3r/minecraft-servers
+keywords:
+  - minecraft
+  - mc-router

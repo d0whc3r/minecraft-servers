@@ -21,8 +21,9 @@ services:
       - '127.0.0.1:${MC_ROUTER_API_PORT:-8080}:8080'
     volumes:
       # Service discovery: mc-router watches container events and builds
-      # routes from the mc-router.host labels of running servers
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # routes from the mc-router.host labels of running servers. Override
+      # DOCKER_SOCKET in .env for rootless podman (e.g. /run/user/1000/podman/podman.sock)
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
     environment:
       # Discover backends from Docker container labels
       IN_DOCKER: 'true'
@@ -35,6 +36,11 @@ services:
     # stat -c '%g' /var/run/docker.sock); on Docker Desktop use 0.
     group_add:
       - '${MC_ROUTER_DOCKER_GID:-999}'
+    # Rootless podman mounts the socket owned by root (0600) inside the
+    # namespace, which the non-root image user cannot open. MC_ROUTER_USER=0:0
+    # fixes it: in a rootless container uid 0 maps to your own host user, so
+    # nothing gains real privileges. Empty keeps the image default (Docker).
+    user: '${MC_ROUTER_USER:-}'
     networks:
       - minecraft-network
 

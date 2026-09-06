@@ -21,7 +21,7 @@ afterEach(() => {
 });
 
 async function loadAuth() {
-  return import("../../src/lib/auth");
+  return import("@/lib/auth");
 }
 
 describe("ensureAuthConfigured / verifyCredentials", () => {

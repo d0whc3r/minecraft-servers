@@ -29,8 +29,8 @@ afterEach(() => {
 });
 
 async function load() {
-  const auth = await import("../../src/lib/auth");
-  const api = await import("../../src/lib/api");
+  const auth = await import("@/lib/auth");
+  const api = await import("@/lib/api");
   auth.ensureAuthConfigured();
   return { auth, api };
 }

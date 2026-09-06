@@ -13,15 +13,15 @@ import type {
   ServerStatus,
   StatusResponse,
   SystemInfo,
-} from "../types";
+} from "@/types";
 import {
   api,
   formatBytes,
   formatUptime,
   startPolling,
   timeAgo,
-} from "../lib/client";
-import { DataTable, type DataTableColumn, type TableFilter } from "./DataTable";
+} from "@/lib/client";
+import { DataTable, type DataTableColumn, type TableFilter } from "@/components/DataTable";
 import {
   Button,
   buttonClass,
@@ -36,7 +36,7 @@ import {
   StatusDot,
   STATE_LABELS,
   useToasts,
-} from "./ui";
+} from "@/components/ui";
 
 type Tab = "servers" | "backups" | "system";
 

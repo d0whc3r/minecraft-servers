@@ -1,20 +1,20 @@
-// Aggregates container state + game ping + usage stats into one snapshot.
-import { getRouterConfig, getServerRegistry, rconPassword } from "./servers.js";
+// Aggregates workload state + game ping + usage stats into one snapshot.
 import {
-  listContainers,
-  getStats,
-  type ContainerInfo,
-  type ContainerStats,
-} from "./docker.js";
-import { pingServer } from "./ping.js";
-import { rconCommand } from "./rcon.js";
-import type { ServerDef } from "./servers.js";
+  getRouterConfig,
+  getServerRegistry,
+  rconPassword,
+} from "@/lib/servers.js";
+import { backend } from "@/lib/backend.js";
+import type { ContainerInfo, ContainerStats } from "@/lib/docker.js";
+import { pingServer } from "@/lib/ping.js";
+import { rconCommand } from "@/lib/rcon.js";
+import type { ServerDef } from "@/lib/servers.js";
 import type {
   ServerState,
   ServerStatus,
   StatusResponse,
   StatusSummary,
-} from "../types.js";
+} from "@/types.js";
 
 const STATUS_CACHE_MS = 3_000;
 let cache: { at: number; data: StatusResponse } | null = null;
@@ -85,7 +85,10 @@ export async function buildStatus(): Promise<StatusResponse> {
   }
 
   const registry = getServerRegistry();
-  const [containers, stats] = await Promise.all([listContainers(), getStats()]);
+  const [containers, stats] = await Promise.all([
+    backend.listContainers(),
+    backend.getStats(),
+  ]);
 
   const probes = await Promise.all(
     [...registry.values()].map(async (def) => {

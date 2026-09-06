@@ -1,13 +1,14 @@
 import type { APIRoute } from "astro";
-import { runAction, isActionRunning } from "../../../../lib/actions.js";
-import { resolveBackupFile } from "../../../../lib/backups.js";
+import { runAction, isActionRunning } from "@/lib/actions.js";
+import { resolveBackupFile } from "@/lib/backups.js";
+import { isKubernetes } from "@/lib/runtime.js";
 import {
   json,
   apiError,
   guardAuth,
   guardCsrf,
   getServerParam,
-} from "../../../../lib/api.js";
+} from "@/lib/api.js";
 
 export const prerender = false;
 
@@ -27,7 +28,12 @@ export const POST: APIRoute = async (context) => {
     return apiError("Invalid request body", 400);
   }
   const file = body.file ?? "";
-  if (!resolveBackupFile(server, file)) {
+  // Kubernetes runtime: the archives live on the server's backups claim, not
+  // on the panel filesystem — name-shape validation only.
+  const valid = isKubernetes()
+    ? /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(file) && !file.includes("..")
+    : resolveBackupFile(server, file) !== null;
+  if (!valid) {
     return apiError("Invalid backup file", 404);
   }
   if (isActionRunning(server)) {

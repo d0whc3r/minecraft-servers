@@ -1,0 +1,20 @@
+{{ .Release.Name }} deployed ({{ .Values.replicaCount }} replica).
+
+1. Players connect through mc-router:
+{{- if .Values.router.host }}
+   {{ .Values.router.host }} (service port {{ .Values.service.port }})
+{{- else }}
+   set router.host so mc-router registers the route
+   (players would use "<server>.<MC_ROUTER_DOMAIN>")
+{{- end }}
+
+2. The server is ready when the probe passes:
+   kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+   kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "minecraft-server.fullname" . }} -c minecraft
+
+3. World data: claim {{ include "minecraft-server.fullname" . }}-data
+   Backups: claim {{ include "minecraft-server.fullname" . }}-backups
+
+Stop (keeps data + route): helm upgrade {{ .Release.Name }} . -n {{ .Release.Namespace }} --set replicaCount=0
+Uninstall:                 helm uninstall {{ .Release.Name }} -n {{ .Release.Namespace }}
+   (PVCs are kept; delete them manually to wipe worlds)

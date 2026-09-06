@@ -1,7 +1,7 @@
 // Shared helpers for the Astro API routes: JSON responses, auth guard, CSRF.
 import type { APIRoute } from "astro";
-import { verifySessionToken, sessionCookieName, isPublicView } from "./auth.js";
-import { getServerDef } from "./servers.js";
+import { verifySessionToken, sessionCookieName, isPublicView } from "@/lib/auth.js";
+import { getServerDef } from "@/lib/servers.js";
 
 export function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {

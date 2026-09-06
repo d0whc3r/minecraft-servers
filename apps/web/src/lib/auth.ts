@@ -3,7 +3,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { PROJECT_ROOT } from "./servers.js";
+import { PROJECT_ROOT } from "@/lib/servers.js";
 
 const PANEL_DATA_DIR = process.env.MCPANEL_DATA_DIR
   ? path.resolve(process.env.MCPANEL_DATA_DIR)

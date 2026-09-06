@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
-import { buildStatus } from "../../lib/status.js";
-import { json, apiError, guardAuth } from "../../lib/api.js";
+import { buildStatus } from "@/lib/status.js";
+import { json, apiError, guardAuth } from "@/lib/api.js";
 
 export const prerender = false;
 

@@ -1,6 +1,9 @@
-// Management actions: run the repo's own bash scripts with per-server locking.
+// Management actions: run the repo's own bash scripts (docker runtime) or the
+// helm/kubectl backend (kubernetes runtime), with per-server locking.
 import { execFile } from "node:child_process";
-import { PROJECT_ROOT } from "./servers.js";
+import { PROJECT_ROOT } from "@/lib/servers.js";
+import { RUNTIME } from "@/lib/runtime.js";
+import { runAction as k8sRunAction } from "@/lib/k8s.js";
 
 export type ActionType = "start" | "stop" | "restart" | "backup" | "restore";
 
@@ -63,6 +66,25 @@ export async function runAction(
   const existing = locks.get(server);
   if (existing)
     throw new Error("Another action is already running for this server");
+
+  if (RUNTIME === "kubernetes") {
+    if (
+      action !== "start" &&
+      action !== "stop" &&
+      action !== "restart" &&
+      action !== "backup" &&
+      action !== "restore"
+    )
+      throw new Error(`Unknown action: ${action}`);
+    // Same lock discipline: the promise is tracked until it settles, and the
+    // k8s backend never throws (it returns ok:false output).
+    const promise = k8sRunAction(action, server, backupFile).finally(() =>
+      locks.delete(server),
+    );
+    const tracked = promise.catch(() => undefined) as Promise<ActionResult>;
+    locks.set(server, tracked);
+    return promise;
+  }
 
   const spec = SCRIPTS[action];
   if (!spec) throw new Error(`Unknown action: ${action}`);

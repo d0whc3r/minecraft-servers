@@ -1,0 +1,19 @@
+The web panel is running in Kubernetes mode: it starts/stops the
+mc-<server> Helm releases itself.
+
+1. Open the panel:
+{{- if .Values.ingress.enabled }}
+   https://{{ .Values.ingress.host }}
+{{- else }}
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "web-panel.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+   -> http://localhost:{{ .Values.service.port }}
+{{- end }}
+
+2. Log in with user "{{ .Values.admin.user }}"{{- if .Values.admin.password }} and the configured password{{- else }}; the generated password is in the logs:
+   kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "web-panel.fullname" . }} | grep -i password{{ end }}.
+
+3. Start any modpack from the dashboard — each one becomes a Helm release
+   (mc-<server>) in namespace {{ .Values.minecraft.namespace | default .Release.Namespace }}.
+
+Make sure mc-router is installed so players can reach the servers:
+   helm upgrade --install minecraft-router charts/mc-router -n {{ .Values.minecraft.namespace | default .Release.Namespace }}

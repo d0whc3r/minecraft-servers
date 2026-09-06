@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
-import { getSystemInfo } from "../../lib/system.js";
-import { json, apiError, guardAuth } from "../../lib/api.js";
+import { getSystemInfo } from "@/lib/system.js";
+import { json, apiError, guardAuth } from "@/lib/api.js";
 
 export const prerender = false;
 

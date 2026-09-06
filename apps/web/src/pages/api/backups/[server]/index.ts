@@ -1,16 +1,19 @@
 // Backup listing for a server (backups/<server>/*.tar.gz + checksums).
+// Kubernetes runtime: the mc-<server>-backups claim is listed in-cluster.
 import path from "node:path";
 import fsp from "node:fs/promises";
 import type { APIRoute } from "astro";
-import { PROJECT_ROOT } from "../../../../lib/servers.js";
-import { backupDirFor } from "../../../../lib/backups.js";
+import { PROJECT_ROOT } from "@/lib/servers.js";
+import { backupDirFor } from "@/lib/backups.js";
+import { isKubernetes } from "@/lib/runtime.js";
+import { listBackups } from "@/lib/k8s.js";
 import {
   json,
   apiError,
   guardAuth,
   getServerParam,
-} from "../../../../lib/api.js";
-import type { BackupFile } from "../../../../types.js";
+} from "@/lib/api.js";
+import type { BackupFile } from "@/types.js";
 
 export const prerender = false;
 
@@ -19,6 +22,22 @@ export const GET: APIRoute = async (context) => {
   if (denied) return denied;
   const server = getServerParam(context);
   if (!server) return apiError("Unknown server", 404);
+
+  if (isKubernetes()) {
+    try {
+      const files = await listBackups(server);
+      return json({
+        server,
+        dir: `mc-${server}-backups`,
+        files,
+      });
+    } catch (err) {
+      return apiError(
+        `No se pudieron listar los backups: ${(err as Error).message}`,
+        500,
+      );
+    }
+  }
 
   const dir = backupDirFor(server);
   const files: BackupFile[] = [];

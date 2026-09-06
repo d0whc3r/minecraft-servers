@@ -1,0 +1,176 @@
+# ===========================================================================
+# Generic chart: one Helm release per Minecraft server.
+#
+# Naming contract used by the web panel and mc-router discovery:
+#   helm install mc-<server> charts/minecraft-server ...
+#   -> Deployment/Service/PVC named mc-<server>, Service port named
+#      "minecraft" annotated with the player-facing hostname.
+#
+# The panel (MCPANEL_RUNTIME=kubernetes) generates these values from the repo
+# config automatically: config/modpacks/<server>.env + shared .env map to
+# env/secretEnv/image.tag/resources below. Everything here can also be set by
+# hand for a standalone `helm install`.
+# ===========================================================================
+
+# 0 = stopped (world data, route annotations and the release stay in place)
+replicaCount: 1
+
+image:
+  repository: itzg/minecraft-server
+  # Image tag doubles as the JVM selector, matching docker-compose:
+  # java8/java11/java17/java21/java25... ("latest" tracks stable)
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}
+
+# ---------------------------------------------------------------------------
+# Server configuration -> container environment
+#
+# env lands in a ConfigMap, secretEnv in a Secret; both are loaded with
+# envFrom. Chart-level overrides below (SERVER_PORT, RCON_PORT, ENABLE_RCON)
+# always win so the wiring inside the cluster stays predictable.
+#
+# Full variable reference: https://docker-minecraft-server.readthedocs.io/en/latest/variables/
+# ---------------------------------------------------------------------------
+env: {}
+  # EULA: "TRUE"
+  # TYPE: PAPER
+  # VERSION: "1.21.1"
+  # MEMORY: 6G
+  # USE_AIKAR_FLAGS: "true"
+
+# Sensitive keys (RCON_PASSWORD, CF_API_KEY, ...) belong here, not in env.
+secretEnv: {}
+  # RCON_PASSWORD: "change-me"
+  # CF_API_KEY: "$2a$10$..."
+
+# Use an existing Secret (keys exposed as env vars) instead of rendering
+# secretEnv. Takes precedence when non-empty.
+existingSecret: ""
+
+# Chart-managed settings: fixed so the panel and probes can rely on them.
+server:
+  port: 25565
+
+rcon:
+  # Cluster-internal only (the panel console connects to
+  # mc-<server>.<namespace>.svc:port) — never exposed outside the cluster.
+  enabled: true
+  port: 25575
+
+# ---------------------------------------------------------------------------
+# Routing: mc-router discovers backends from Service annotations in-cluster.
+# ---------------------------------------------------------------------------
+router:
+  # Hostname players use: "<server>.<MC_ROUTER_DOMAIN>" (set by the panel).
+  host: ""
+  # "true" makes this server the catch-all for unknown hostnames.
+  default: false
+
+service:
+  type: ClusterIP
+  port: 25565
+  annotations: {}
+
+# Health probes run `mc-health` (ships with the itzg image, same check as the
+# docker-compose healthcheck). Startup allowance is generous: heavy modpacks
+# take many minutes to reach "Done!" on first boot while they generate world.
+probes:
+  startup:
+    periodSeconds: 10
+    failureThreshold: 90 # ~15 min
+  liveness:
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 5
+  readiness:
+    periodSeconds: 15
+    timeoutSeconds: 10
+    failureThreshold: 3
+
+# The panel fills memory from the modpack MEMORY value (request = limit so
+# Aikar flags and the JVM heap agree with the scheduler). CPU is left unset.
+resources: {}
+  # requests:
+  #   memory: 6Gi
+  # limits:
+  #   memory: 6Gi
+
+persistence:
+  # World data (server.properties, worlds, mods downloaded by the pack...)
+  data:
+    enabled: true
+    existingClaim: ""
+    size: 10Gi
+    storageClass: ""
+    accessModes: [ReadWriteOnce]
+  # Backup archives (panel backups land here; the mc-backup sidecar too)
+  backups:
+    enabled: true
+    existingClaim: ""
+    size: 10Gi
+    storageClass: ""
+    accessModes: [ReadWriteOnce]
+  # Hand-added jars under /mods. Off by default: an ephemeral dir matches the
+  # docker setup, where servers/<name>/mods is empty unless the admin uses it.
+  mods:
+    enabled: false
+    existingClaim: ""
+    size: 1Gi
+    storageClass: ""
+    accessModes: [ReadWriteOnce]
+
+# ---------------------------------------------------------------------------
+# Scheduled backups via the official itzg/mc-backup sidecar (same pod, shares
+# /data). Requires rcon.enabled and persistence.backups. The panel's manual
+# backup button works independently of this.
+# ---------------------------------------------------------------------------
+backup:
+  enabled: false
+  image:
+    repository: itzg/mc-backup
+    tag: latest
+    pullPolicy: IfNotPresent
+  # Time between backups (BACKUP_INTERVAL); "off" disables the loop.
+  interval: 24h
+  # Rolling retention (PRUNE_BACKUPS_DAYS)
+  pruneDays: 7
+  # Extra BACKUP_* settings (BACKUP_METHOD, EXCLUDES, RCON_* retries...)
+  env: {}
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 256Mi
+
+podAnnotations: {}
+podLabels: {}
+
+# itzg/minecraft-server runs as uid 1000; default (pod-level) is fine on most
+# clusters. Set runAsUser/fsGroup when your storage enforces ownership.
+securityContext: {}
+  # fsGroup: 1000
+
+podSecurityContext: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+priorityClassName: ""
+
+# Minecraft handles SIGTERM gracefully (saves + stops); give slow worlds time.
+terminationGracePeriodSeconds: 120
+
+extraVolumes: []
+extraVolumeMounts: []
+extraEnv: []

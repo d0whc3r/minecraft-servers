@@ -1,7 +1,7 @@
 // Unit tests for the Minecraft Server List Ping against a fake status server.
 import net from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { pingServer } from "../../src/lib/ping";
+import { pingServer } from "@/lib/ping";
 
 function encodeVarint(value: number): Buffer {
   const bytes: number[] = [];

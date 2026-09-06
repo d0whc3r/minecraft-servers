@@ -16,7 +16,7 @@ import {
   isPublicView,
   sessionCookieName,
   verifySessionToken,
-} from "./lib/auth.js";
+} from "@/lib/auth.js";
 
 /** API endpoints reachable without a session. */
 const PUBLIC_API = new Set([

@@ -1,0 +1,24 @@
+{{- $vols := list
+      (dict "vol" .Values.persistence.data "suffix" "data")
+      (dict "vol" .Values.persistence.backups "suffix" "backups")
+      (dict "vol" .Values.persistence.mods "suffix" "mods") -}}
+{{- range $entry := $vols -}}
+{{- if and $entry.vol.enabled (not $entry.vol.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "minecraft-server.fullname" $ }}-{{ $entry.suffix }}
+  labels:
+    {{- include "minecraft-server.labels" $ | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml $entry.vol.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ $entry.vol.size }}
+  {{- with $entry.vol.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+{{- end }}
+{{- end }}

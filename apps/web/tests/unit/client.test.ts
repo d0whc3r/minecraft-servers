@@ -1,6 +1,6 @@
 // Pure helper functions used by the React islands.
 import { describe, expect, it } from "vitest";
-import { formatBytes, formatUptime, timeAgo } from "../../src/lib/client";
+import { formatBytes, formatUptime, timeAgo } from "@/lib/client";
 
 describe("formatBytes", () => {
   it("returns a dash for zero/negative/invalid values", () => {

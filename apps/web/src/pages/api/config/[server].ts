@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
-import { getServerDef, maskSecrets } from "../../../lib/servers.js";
-import { json, apiError, guardAuth, getServerParam } from "../../../lib/api.js";
+import { getServerDef, maskSecrets } from "@/lib/servers.js";
+import { json, apiError, guardAuth, getServerParam } from "@/lib/api.js";
 
 export const prerender = false;
 

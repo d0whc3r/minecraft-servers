@@ -1,0 +1,274 @@
+# Kubernetes
+
+The same system — 28 modpacks behind one mc-router entry point, managed from
+the web panel — runs on Kubernetes with **only the Helm charts in `charts/`**.
+The panel gets `MCPANEL_RUNTIME=kubernetes` and does everything itself: when
+you press **Start** on a modpack it renders `config/modpacks/<server>.env`
+plus the shared `.env` into chart values and runs
+`helm upgrade --install mc-<server>` inside the cluster. No Docker socket, no
+bind mounts, no repo scripts.
+
+```
+                                   ┌────────────────────────────────┐
+                                   │      namespace: minecraft      │
+ players ──► <server>.<domain>     │                                │
+            ┌──────────────────┐   │  ┌──────────────────────────┐  │
+            │    mc-router     │───┼─►│  mc-vanilla (Deployment) │  │
+            │  Service :25565  │   │  │  PVC data + backups      │  │
+            └────────▲─────────┘   │  └──────────────────────────┘  │
+                     │ watches     │  ┌──────────────────────────┐  │
+                     │ Services    │  │  mc-dawncraft (release)  │  │
+   browser ──────────┼─────────────┼─►│  ...one per started pack │  │
+   (panel UI)        │             │  └──────────────────────────┘  │
+            ┌────────┴──────────┐  │                                │
+            │  minecraft-panel  │──┼─► helm upgrade --install       │
+            │  SA + RBAC        │  │    kubectl logs / exec / Jobs  │
+            └───────────────────┘  └────────────────────────────────┘
+```
+
+## Charts
+
+| Chart                     | Release            | Purpose                                                                                                                                   |
+| ------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `charts/minecraft-server` | `mc-<server>`      | One server per release: Deployment, Service (mc-router annotations), ConfigMap/Secret with the modpack env, PVCs for world + backups.     |
+| `charts/mc-router`        | `minecraft-router` | The single public port. Discovers backends in-cluster from Service annotations — installing a server release is the whole routing config. |
+| `charts/web-panel`        | `minecraft-panel`  | The web dashboard in kubernetes mode: RBAC to manage the `mc-*` releases, the shared `.env` as a Secret, optional Ingress.                |
+
+## Requirements
+
+- Kubernetes 1.25+ with `helm` and `kubectl` locally
+- A default **StorageClass** that can provision `ReadWriteOnce` volumes
+  (local-path, nfs-subdir, Longhorn, cloud CSI…)
+- **LoadBalancer** support for the router (or set
+  `service.type=NodePort` on the mc-router chart)
+- Optional: **metrics-server** for CPU/memory bars in the panel
+  (everything works without it; the bars just stay empty)
+- Optional: an **Ingress controller** if you want the panel off `port-forward`
+
+## Quick start
+
+```bash
+# 1. Configure the same .env the docker setup uses
+cp .env.example .env
+nano .env # EULA, CF_API_KEY, RCON_PASSWORD, MC_ROUTER_DOMAIN...
+
+# 2. Install router + panel (reads .env, creates values for you)
+./scripts/k8s-install.sh minecraft
+
+# 3. Open the panel
+kubectl -n minecraft port-forward svc/minecraft-panel 3777:3777
+# -> http://localhost:3777  (generated password: kubectl -n minecraft logs deploy/minecraft-panel | grep -i password)
+
+# 4. Start any modpack from the dashboard. That's it — the release appears:
+helm -n minecraft list
+```
+
+Equivalent manual install without the script:
+
+```bash
+helm upgrade --install minecraft-router charts/mc-router -n minecraft --create-namespace
+helm upgrade --install minecraft-panel charts/web-panel -n minecraft \
+  --set sharedEnv.EULA=TRUE \
+  --set sharedEnv.CF_API_KEY='$2a$10$...' \
+  --set sharedEnv.RCON_PASSWORD=change-me \
+  --set sharedEnv.MC_ROUTER_DOMAIN=mc.example.com
+```
+
+> The image `ghcr.io/d0whc3r/minecraft-servers/panel` must exist in your
+> registry (built from `apps/web/Dockerfile`; set `image.repository` /
+> `image.tag` in the web-panel chart). It carries kubectl, helm, the charts
+> and the modpack catalog — that plus the cluster credentials is everything
+> the panel needs to start servers.
+
+## How a server start works
+
+1. You click **Start** on a modpack in the panel.
+2. The panel merges `.env` (shared) with `config/modpacks/<server>.env` and
+   builds chart values:
+   - plain settings → ConfigMap (`env`), secrets (`PASSWORD`, `API_KEY`,
+     `TOKEN`, `SECRET` patterns) → Secret (`secretEnv`)
+   - `JAVA_VERSION` → image tag (`itzg/minecraft-server:java21`), like
+     docker-compose did
+   - `MEMORY` → resource request/limit (`6G` → `6Gi`)
+   - route `<server>.<MC_ROUTER_DOMAIN>` → `mc-router.itzg.me/externalServerName`
+     Service annotation
+3. `helm upgrade --install mc-<server> charts/minecraft-server` runs with a
+   values file; the release is the unit of management from then on.
+
+| Panel action | Kubernetes operation                                              |
+| ------------ | ----------------------------------------------------------------- |
+| Start        | `helm upgrade --install mc-<name> … --set replicaCount=1`         |
+| Stop         | same release with `--set replicaCount=0` (data + route preserved) |
+| Restart      | `kubectl rollout restart deployment/mc-<name>`                    |
+| Logs         | `kubectl logs deployment/mc-<name> -c minecraft` (+ `-f` SSE)     |
+| RCON         | direct TCP to `mc-<name>.<ns>.svc.cluster.local:25575`            |
+| Backup       | one-off Job: `tar czf /backups/…` + `sha256sum` (data claim)      |
+| Restore      | Job: checksum-verify → wipe data claim → extract (stops server)   |
+| Status/stats | deployments + `kubectl top` (if metrics-server is present)        |
+
+## Storage
+
+Each server release gets two PVCs by default (`persistence.data.size=10Gi`,
+`persistence.backups.size=10Gi`). The panel's backup button tars the **data
+claim** into the **backups claim**, so backup/restore works with plain RWO
+volumes and no node affinity games. Set `existingClaim` to reuse volumes, or
+disable a claim (falls back to `emptyDir`) — not recommended for data.
+
+## Backups on a schedule
+
+The minecraft-server chart can run the official `itzg/mc-backup` sidecar:
+
+```yaml
+# values for the mc-<server> release (or edit via a custom values file)
+backup:
+  enabled: true
+  interval: 6h
+  pruneDays: 7
+```
+
+Manual panel backups work regardless of this setting.
+
+## Namespace layout
+
+Everything lives in one namespace by default (`minecraft` in the examples):
+router, panel and servers. The web-panel chart supports
+`minecraft.namespace` to keep servers elsewhere — it renders the management
+Role in that namespace automatically (and `rbac.watchAllNamespaces: true`
+turns it into a ClusterRole for every namespace).
+
+## Values cheatsheet
+
+```yaml
+# web-panel
+admin: { user: admin, password: '' } # "" -> generated, in logs
+sharedEnv: { EULA: 'TRUE', CF_API_KEY: ... } # the servers' shared .env
+ingress: { enabled: true, className: nginx, host: panel.example.com, tlsSecret: panel-tls }
+router: { host: minecraft-router, port: 25565 }
+modpacksConfigMap: '' # ConfigMap with <server>.env keys to override the catalog
+resources: { requests: { cpu: 50m, memory: 128Mi }, limits: { memory: 512Mi } }
+
+# mc-router
+service: { type: LoadBalancer, port: 25565 } # NodePort also fine
+rbac: { watchAllNamespaces: false }
+
+# minecraft-server (set by the panel; tweak in a custom values file)
+replicaCount: 1 # 0 = stopped
+image: { tag: java21 }
+resources: { requests: { memory: 6Gi }, limits: { memory: 6Gi } }
+router: { host: dawncraft.mc.example.com, default: false }
+persistence: { data: { size: 10Gi }, backups: { size: 10Gi } }
+```
+
+## RBAC
+
+The panel's ServiceAccount is granted exactly what the actions need, scoped
+to the server namespace: CRUD on Deployments/Services/ConfigMaps/Secrets/PVCs
+(helm releases), pods get/log/exec (status, logs, downloads), and batch Jobs
+(backup/restore). mc-router's SA can only watch Services. Nothing is
+cluster-scoped unless you opt in with `rbac.watchAllNamespaces`.
+
+> The panel can start any modpack and run commands as the servers — treat its
+> credentials like the Docker-socket setup: keep the admin password safe, put
+> it behind TLS/Ingress auth, don't expose it to the internet.
+
+## Uninstall
+
+```bash
+helm -n minecraft uninstall minecraft-panel minecraft-router
+helm -n minecraft list -q | grep '^mc-' | xargs -r -n1 helm -n minecraft uninstall
+# PVCs (worlds, backups) survive; delete them explicitly to wipe everything:
+kubectl -n minecraft get pvc
+```
+
+## One-shot commands (kind)
+
+Everything from zero to a running panel, in order. Idempotent: safe to
+re-paste over an existing cluster.
+
+```bash
+cd /path/to/minecraft-servers
+
+# 1. cluster (skipped when it exists) + node DNS + CoreDNS refresh
+kind get clusters 2> /dev/null | grep -q '^kind-cluster$' || kind create cluster --name kind-cluster
+docker exec kind-cluster-control-plane sh -c 'printf "nameserver 8.8.8.8\nnameserver 1.1.1.1\n" > /etc/resolv.conf'
+kubectl -n kube-system rollout restart deployment/coredns
+kubectl -n kube-system rollout status deployment/coredns --timeout=120s
+
+# 2. panel image: build + load into the node
+docker build -f apps/web/Dockerfile --build-arg TARGETARCH=amd64 --network=host -t minecraft-panel:local .
+kind load docker-image minecraft-panel:local --name kind-cluster
+
+# 3. router + panel (reads .env; keep the PANEL_IMAGE_* vars on re-installs)
+PANEL_IMAGE_REPO=minecraft-panel PANEL_IMAGE_TAG=local ./scripts/k8s-install.sh minecraft
+
+# 4. open the panel in the background + credentials
+kubectl -n minecraft rollout status deployment/minecraft-panel --timeout=300s
+pkill -f "port-forward svc/minecraft-panel" 2> /dev/null
+sleep 1
+nohup kubectl -n minecraft port-forward svc/minecraft-panel 3777:3777 > /tmp/mcpanel-forward.log 2>&1 &
+sleep 3 && curl -s http://localhost:3777/api/auth/me
+kubectl -n minecraft logs deploy/minecraft-panel | grep -i password
+# -> http://localhost:3777 (user admin)
+```
+
+Full uninstall (deletes servers, worlds, backups, panel, router):
+
+```bash
+pkill -f "port-forward svc/minecraft-panel" 2> /dev/null
+helm -n minecraft list -q | grep '^mc-' | xargs -r -n1 helm -n minecraft uninstall
+helm -n minecraft uninstall minecraft-panel minecraft-router
+kubectl delete namespace minecraft
+# optional: remove the whole cluster
+# kind delete cluster --name kind-cluster
+```
+
+## Local clusters (kind)
+
+kind runs the whole cluster inside a single docker container. Two things a
+fresh node can't do out of the box:
+
+**1. The node can't pull images (DNS).** The kind node resolves registry
+hostnames through the container network's embedded DNS, and when that
+resolver is broken every pull fails with
+`lookup registry-1.docker.io ... connection refused` while pods sit in
+`Pending`/`ImagePullBackOff`. Point the node at public DNS and refresh
+CoreDNS (it snapshots the node resolver when its pods are created):
+
+```bash
+docker exec kind-cluster-control-plane sh -c \
+  'printf "nameserver 8.8.8.8\nnameserver 1.1.1.1\n" > /etc/resolv.conf'
+kubectl -n kube-system rollout restart deployment/coredns
+```
+
+The node fix doesn't survive a node restart — reapply it if you recreate the
+cluster.
+
+**2. The panel image isn't in any registry by default.** Build it and load it
+into the cluster, then point the release at it:
+
+```bash
+docker build -f apps/web/Dockerfile --build-arg TARGETARCH=amd64 --network=host \
+  -t minecraft-panel:local .
+kind load docker-image minecraft-panel:local --name <cluster-name>
+
+PANEL_IMAGE_REPO=minecraft-panel PANEL_IMAGE_TAG=local \
+  ./scripts/k8s-install.sh minecraft
+```
+
+(`TARGETARCH` is auto-detected by modern docker; passing it explicitly keeps
+the build portable across environments. The `web-panel` chart defaults to
+`ghcr.io/d0whc3r/minecraft-servers/panel:latest`; use your own registry and
+`--set image.repository/tag` if you publish the image instead.)
+
+Also expect the **first server start** to be slow: the node pulls
+`itzg/minecraft-server` (~1 GB) plus the modpack download on first boot.
+
+## Migration notes (docker → kubernetes)
+
+- The compose `minecraft-network` / labels become Service annotations; the
+  router discovers them in-cluster (`IN_KUBE_CLUSTER`) instead of watching
+  the Docker socket.
+- Per-server loopback RCON ports (26565-26664) are unnecessary: each server
+  has its own Service DNS name and the chart pins RCON to 25575 internally.
+- The panel's bash actions are replaced by helm/kubectl; the repo scripts
+  still work for any docker-based install of the same project.

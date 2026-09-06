@@ -2,9 +2,9 @@
 import os from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { PROJECT_ROOT } from "./servers.js";
-import { getDockerVersion } from "./docker.js";
-import type { SystemInfo } from "../types.js";
+import { PROJECT_ROOT } from "@/lib/servers.js";
+import { backend } from "@/lib/backend.js";
+import type { SystemInfo } from "@/types.js";
 
 const exec = promisify(execFile);
 
@@ -22,9 +22,9 @@ async function diskUsage(
 }
 
 export async function getSystemInfo(): Promise<SystemInfo> {
-  const [disk, dockerVersion] = await Promise.all([
+  const [disk, engineVersion] = await Promise.all([
     diskUsage(PROJECT_ROOT),
-    getDockerVersion(),
+    backend.getVersion(),
   ]);
   const cpus = os.cpus();
   return {
@@ -39,7 +39,7 @@ export async function getSystemInfo(): Promise<SystemInfo> {
     hostUptimeSec: Math.floor(os.uptime()),
     diskTotalBytes: disk.total,
     diskFreeBytes: disk.free,
-    dockerVersion,
+    dockerVersion: engineVersion,
     nodeVersion: process.version,
   };
 }

@@ -12,6 +12,7 @@ browser (web panel).
 - 🧩 **One template, many servers**: a single `docker-compose.yml` instantiated per server — no compose edits to add servers
 - 🌐 **One entry point**: [mc-router](docs/ROUTER.md) fronts every server and routes by hostname — a single port for all of them, no per-server ports
 - 🖥️ **Three ways to manage**: bash scripts, a [terminal dashboard](docs/TUI.md), and a [web panel](apps/web/README.md) with live logs and RCON console
+- ☸️ **Kubernetes**: the same stack as Helm charts — the [web panel](docs/KUBERNETES.md) starts/stops servers as `mc-<server>` releases, mc-router discovers them in-cluster
 - 💾 **Backups**: atomic backups with SHA256 verification and rolling retention
 - 🏥 **Monitoring**: Docker health checks plus scripts for health reports and auto-restart
 - 🎮 **CurseForge & Modrinth**: modpacks auto-download on first start (CurseForge needs an API key)
@@ -115,21 +116,22 @@ config/modpacks/<name>.env   server configuration
 
 ## Documentation
 
-| Doc                                                    | Contents                                      |
-| ------------------------------------------------------ | --------------------------------------------- |
-| [Quick Start](docs/QUICKSTART.md)                      | Detailed setup, first steps, daily operations |
-| [Modpack Catalog](docs/MODPACKS.md)                    | The 28 pre-configured servers: versions, RAM  |
-| [Web Panel](apps/web/README.md)                        | Browser dashboard + admin panel (Astro/React) |
-| [Terminal UI](docs/TUI.md)                             | Keyboard-driven dashboard (mc-tui)            |
-| [Router](docs/ROUTER.md)                               | The single entry point: domains, nip.io, API  |
-| [Architecture](docs/ARCHITECTURE.md)                   | How the template system works internally      |
-| [Environment Variables](docs/ENVIRONMENT_VARIABLES.md) | Full configuration reference per server       |
-| [Adding Modpacks](docs/ADDING_MODPACKS.md)             | Add custom CurseForge/Modrinth/Forge servers  |
-| [Backup & Restore](docs/BACKUP_RESTORE.md)             | Backup strategy, restore, disaster recovery   |
-| [Monitoring](docs/MONITORING.md)                       | Health checks and the auto-restart daemon     |
-| [Troubleshooting](docs/TROUBLESHOOTING.md)             | Common problems and fixes                     |
-| [CI/CD](docs/CI_CD.md)                                 | GitHub Actions workflows and testing          |
-| [Modpack Guides](docs/modpacks/)                       | One page per modpack with tuning tips         |
+| Doc                                                    | Contents                                          |
+| ------------------------------------------------------ | ------------------------------------------------- |
+| [Quick Start](docs/QUICKSTART.md)                      | Detailed setup, first steps, daily operations     |
+| [Modpack Catalog](docs/MODPACKS.md)                    | The 28 pre-configured servers: versions, RAM      |
+| [Web Panel](apps/web/README.md)                        | Browser dashboard + admin panel (Astro/React)     |
+| [Terminal UI](docs/TUI.md)                             | Keyboard-driven dashboard (mc-tui)                |
+| [Router](docs/ROUTER.md)                               | The single entry point: domains, nip.io, API      |
+| [Kubernetes](docs/KUBERNETES.md)                       | Helm charts: the panel starts servers as releases |
+| [Architecture](docs/ARCHITECTURE.md)                   | How the template system works internally          |
+| [Environment Variables](docs/ENVIRONMENT_VARIABLES.md) | Full configuration reference per server           |
+| [Adding Modpacks](docs/ADDING_MODPACKS.md)             | Add custom CurseForge/Modrinth/Forge servers      |
+| [Backup & Restore](docs/BACKUP_RESTORE.md)             | Backup strategy, restore, disaster recovery       |
+| [Monitoring](docs/MONITORING.md)                       | Health checks and the auto-restart daemon         |
+| [Troubleshooting](docs/TROUBLESHOOTING.md)             | Common problems and fixes                         |
+| [CI/CD](docs/CI_CD.md)                                 | GitHub Actions workflows and testing              |
+| [Modpack Guides](docs/modpacks/)                       | One page per modpack with tuning tips             |
 
 ## Contributing
 

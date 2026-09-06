@@ -1,0 +1,100 @@
+{{/*
+Management RBAC: exactly what the panel needs to drive the mc-<server>
+releases with helm/kubectl from inside the cluster:
+- helm release state lives in Secrets, releases render ConfigMaps/Secrets/
+  Services/Deployments/PVCs
+- logs, RCON-less status pings and one-off backup/restore Jobs use Pods
+  (log/exec) and batch/Jobs
+Scoped to the server namespace (default: the panel's own); flip
+rbac.watchAllNamespaces for a ClusterRole.
+*/}}
+{{- $sa := include "web-panel.serviceAccountName" . -}}
+{{- $labels := include "web-panel.labels" . -}}
+{{- $rules := list
+      (dict "apiGroups" (list "") "resources" (list "pods" "services" "configmaps" "secrets" "persistentvolumeclaims" "events") "verbs" (list "get" "list" "watch" "create" "update" "patch" "delete"))
+      (dict "apiGroups" (list "") "resources" (list "pods/log") "verbs" (list "get"))
+      (dict "apiGroups" (list "") "resources" (list "pods/exec") "verbs" (list "create" "get"))
+      (dict "apiGroups" (list "apps") "resources" (list "deployments") "verbs" (list "get" "list" "watch" "create" "update" "patch" "delete"))
+      (dict "apiGroups" (list "apps") "resources" (list "deployments/scale") "verbs" (list "get" "update" "patch"))
+      (dict "apiGroups" (list "batch") "resources" (list "jobs") "verbs" (list "create" "get" "list" "watch" "delete"))
+      (dict "apiGroups" (list "") "resources" (list "namespaces") "verbs" (list "get" "list")) -}}
+
+{{- if .Values.rbac.watchAllNamespaces }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "web-panel.fullname" . }}
+  labels:
+    {{- $labels | nindent 4 }}
+rules:
+  {{- toYaml $rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "web-panel.fullname" . }}
+  labels:
+    {{- $labels | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "web-panel.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $sa }}
+    namespace: {{ .Release.Namespace }}
+{{- else }}
+{{- $ns := .Values.minecraft.namespace | default .Release.Namespace -}}
+{{- if eq $ns .Release.Namespace }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "web-panel.fullname" . }}
+  labels:
+    {{- $labels | nindent 4 }}
+rules:
+  {{- toYaml $rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "web-panel.fullname" . }}
+  labels:
+    {{- $labels | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "web-panel.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $sa }}
+    namespace: {{ .Release.Namespace }}
+{{- else }}
+{{/* servers live in another namespace: bind the management Role there */}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "web-panel.fullname" . }}
+  namespace: {{ $ns }}
+  labels:
+    {{- $labels | nindent 4 }}
+rules:
+  {{- toYaml $rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "web-panel.fullname" . }}
+  namespace: {{ $ns }}
+  labels:
+    {{- $labels | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "web-panel.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $sa }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- end }}

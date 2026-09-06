@@ -22,7 +22,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { useState } from "react";
-import { cn, inputClass } from "./ui";
+import { cn, inputClass } from "@/components/ui";
 
 // V9 requires features, row models and fn registries to be declared up front;
 // string filter fn names ("includesString", "equalsString") only resolve

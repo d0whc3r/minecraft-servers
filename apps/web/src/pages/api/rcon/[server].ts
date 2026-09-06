@@ -1,13 +1,13 @@
 import type { APIRoute } from "astro";
-import { rconCommand } from "../../../lib/rcon.js";
-import { getServerDef, rconPassword } from "../../../lib/servers.js";
+import { rconCommand } from "@/lib/rcon.js";
+import { getServerDef, rconPassword } from "@/lib/servers.js";
 import {
   json,
   apiError,
   guardAuth,
   guardCsrf,
   getServerParam,
-} from "../../../lib/api.js";
+} from "@/lib/api.js";
 
 export const prerender = false;
 

@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { K8S_RCON_PORT, RUNTIME, rconServiceDns } from "@/lib/runtime.js";
 
 export interface ServerDef {
   name: string;
@@ -183,13 +184,24 @@ const DEFAULT_ROUTER: RouterConfig = {
 };
 
 /**
- * Host used for RCON connections. Native runs use the loopback publishing;
- * containerized panels (MCPANEL_RCON_HOST=container) reach each server
- * directly by its container name over the minecraft-network bridge.
+ * Host used for RCON connections.
+ * - Docker runtime: loopback publishing natively, container name when the
+ *   panel runs containerized (MCPANEL_RCON_HOST=container).
+ * - Kubernetes runtime: each server's in-cluster Service, which the
+ *   minecraft-server chart exposes with RCON on a fixed internal port.
  */
 export function rconHost(name: string): string {
+  if (RUNTIME === "kubernetes") return rconServiceDns(name);
   if (process.env.MCPANEL_RCON_HOST === "container") return `mc-${name}`;
   return process.env.MCPANEL_RCON_HOST || "127.0.0.1";
+}
+
+/** RCON port for a server, runtime-aware (see rconHost). */
+export function rconPortFor(serverEnvPort: number | null): number | null {
+  // The chart pins RCON to a fixed internal port; the per-server ports in the
+  // configs only made sense as docker host publishings.
+  if (RUNTIME === "kubernetes") return K8S_RCON_PORT;
+  return serverEnvPort;
 }
 
 export function getRouterConfig(): RouterConfig {
@@ -231,7 +243,9 @@ function buildRegistry() {
       memory: env.MEMORY ?? "?",
       type,
       connect: `${slug}.${router.domain}`,
-      rconPort: serverEnv.RCON_PORT ? Number(serverEnv.RCON_PORT) : null,
+      rconPort: rconPortFor(
+        serverEnv.RCON_PORT ? Number(serverEnv.RCON_PORT) : null,
+      ),
       rconHost: rconHost(name),
       maxPlayers: env.MAX_PLAYERS ? Number(env.MAX_PLAYERS) : 20,
       description: doc.description ?? "",

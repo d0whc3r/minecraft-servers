@@ -1,0 +1,127 @@
+# ===========================================================================
+# Web panel in-cluster (kubernetes runtime).
+#
+# The panel image ships the charts/ directory and the modpack catalog; on
+# "start" it runs `helm upgrade --install mc-<server> charts/minecraft-server`
+# inside the cluster with values generated from config/modpacks/<server>.env
+# plus the sharedEnv below. RBAC is scoped to exactly that job.
+#
+# Install the mc-router chart first (or in another namespace; see router.host).
+# ===========================================================================
+
+replicaCount: 1
+
+image:
+  # Built from the repo root: docker build -f apps/web/Dockerfile .
+  repository: ghcr.io/d0whc3r/minecraft-servers/panel
+  tag: "" # defaults to .Chart.appVersion
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+rbac:
+  # false -> the panel may only manage servers in its own namespace (default;
+  #          set minecraft.namespace to "" to keep everything co-located).
+  # true  -> ClusterRole: manage servers in every namespace.
+  watchAllNamespaces: false
+
+# ---------------------------------------------------------------------------
+# Where the mc-<server> releases are created.
+# ---------------------------------------------------------------------------
+minecraft:
+  # Empty = the panel's own namespace. If you point it somewhere else, the
+  # chart renders the management Role in that namespace too (and the namespace
+  # must exist before starting servers).
+  namespace: ""
+
+service:
+  type: ClusterIP
+  port: 3777
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  host: "" # panel.example.com
+  tlsSecret: ""
+  annotations: {}
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "3600" (SSE log stream)
+
+# ---------------------------------------------------------------------------
+# Admin credentials. Leave password empty to have the panel generate one on
+# first boot and print it in the logs (kubectl logs deploy/minecraft-panel).
+# ---------------------------------------------------------------------------
+admin:
+  user: admin
+  password: ""
+  # Show every server's status publicly, actions behind login
+  publicView: true
+  # Set true only behind a reverse proxy that overwrites X-Forwarded-For
+  trustProxy: false
+  # Secure cookies (enable together with TLS)
+  secureCookies: false
+
+# ---------------------------------------------------------------------------
+# Shared .env for the servers (EULA / CF_API_KEY / RCON_PASSWORD /
+# MC_ROUTER_DOMAIN...). Rendered into a Secret mounted at /repo/.env — this is
+# the same file servers read in the docker setup.
+# ---------------------------------------------------------------------------
+sharedEnv:
+  EULA: "TRUE"
+  MC_ROUTER_DOMAIN: mc.local
+  MC_ROUTER_PORT: "25565"
+  # CF_API_KEY: "$2a$10$..."
+  # RCON_PASSWORD: "change-me"
+
+# Or reference an existing Secret with the same keys mounted as /repo/.env
+existingSharedEnvSecret: ""
+
+# ---------------------------------------------------------------------------
+# Reach mc-router for player-list pings (status dashboard).
+# Same namespace: leave empty -> "minecraft-router". Cross-namespace, set the
+# FQDN, e.g. "minecraft-router.other-ns.svc.cluster.local".
+# ---------------------------------------------------------------------------
+router:
+  host: ""
+  port: 25565
+
+# Override the modpack catalog without rebuilding the image: a ConfigMap with
+# one key <server>.env per server, mounted over /repo/config/modpacks
+modpacksConfigMap: ""
+
+persistence:
+  # Panel state: admin password hash + sessions
+  enabled: true
+  existingClaim: ""
+  size: 256Mi
+  storageClass: ""
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+podAnnotations: {}
+podLabels: {}
+# The node image ships uid/gid 1000 ("node"); fsGroup keeps the /data claim
+# writable. Override freely.
+securityContext: {}
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+extraEnv: []

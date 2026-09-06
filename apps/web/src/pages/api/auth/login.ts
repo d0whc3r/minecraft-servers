@@ -9,8 +9,8 @@ import {
   clearAttempts,
   isPublicView,
   ensureAuthConfigured,
-} from "../../../lib/auth.js";
-import { json, apiError, clientIp } from "../../../lib/api.js";
+} from "@/lib/auth.js";
+import { json, apiError, clientIp } from "@/lib/api.js";
 
 export const prerender = false;
 

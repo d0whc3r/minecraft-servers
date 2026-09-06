@@ -27,7 +27,7 @@ afterEach(() => {
 });
 
 async function loadBackups() {
-  return import("../../src/lib/backups");
+  return import("@/lib/backups");
 }
 
 describe("resolveBackupFile", () => {

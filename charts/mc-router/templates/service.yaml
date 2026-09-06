@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mc-router.fullname" . }}
+  labels:
+    {{- include "mc-router.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    # The single port every player connects to; the hostname picks the server.
+    - name: minecraft
+      port: {{ .Values.service.port }}
+      targetPort: minecraft
+      protocol: TCP
+      {{- if and (eq .Values.service.type "NodePort") .Values.service.nodePort }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "mc-router.selectorLabels" . | nindent 4 }}
+{{- if .Values.api.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mc-router.fullname" . }}-api
+  labels:
+    {{- include "mc-router.labels" . | nindent 4 }}
+spec:
+  # Cluster-internal only: the routes API is administrative.
+  type: ClusterIP
+  ports:
+    - name: api
+      port: {{ .Values.api.port }}
+      targetPort: api
+      protocol: TCP
+  selector:
+    {{- include "mc-router.selectorLabels" . | nindent 4 }}
+{{- end }}

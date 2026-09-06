@@ -1,8 +1,8 @@
 // Public dashboard: live status of every configured server.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { AuthMe, ServerStatus, StatusResponse } from "../types";
-import { api, formatUptime, startPolling } from "../lib/client";
-import { DataTable, type DataTableColumn, type TableFilter } from "./DataTable";
+import type { AuthMe, ServerStatus, StatusResponse } from "@/types";
+import { api, formatUptime, startPolling } from "@/lib/client";
+import { DataTable, type DataTableColumn, type TableFilter } from "@/components/DataTable";
 import {
   Button,
   Chip,
@@ -16,7 +16,7 @@ import {
   inputClass,
   MONO,
   STATE_LABELS,
-} from "./ui";
+} from "@/components/ui";
 
 type Filter = "all" | "running" | "stopped" | "alerts";
 type View = "cards" | "table";

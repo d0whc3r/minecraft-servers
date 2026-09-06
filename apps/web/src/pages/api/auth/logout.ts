@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
-import { sessionCookieName, isPublicView } from "../../../lib/auth.js";
-import { json } from "../../../lib/api.js";
+import { sessionCookieName, isPublicView } from "@/lib/auth.js";
+import { json } from "@/lib/api.js";
 
 export const prerender = false;
 

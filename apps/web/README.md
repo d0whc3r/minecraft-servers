@@ -174,6 +174,20 @@ Other useful facts:
 | `MCPANEL_ROOT`           | (auto)          | Repo root override if auto-detection fails                                                                               |
 | `MCPANEL_HOST_ROOT`      | (unset)         | Repo path **on the host** — needed for start/stop from the containerized panel ([why](#starting-servers-from-the-panel)) |
 | `MCPANEL_DATA_DIR`       | `apps/web/data` | Where `auth.json` and `secret.key` live                                                                                  |
+| `MCPANEL_RUNTIME`        | `docker`        | `kubernetes` → actions use helm/kubectl instead of the repo scripts ([Kubernetes](../../docs/KUBERNETES.md))             |
+| `MCPANEL_K8S_NAMESPACE`  | `default`       | (kubernetes runtime) namespace where the `mc-<server>` releases are managed                                              |
+| `MCPANEL_CHARTS_DIR`     | `<root>/charts` | (kubernetes runtime) location of the `minecraft-server` chart                                                            |
+| `MCPANEL_K8S_JOB_IMAGE`  | `alpine:3.20`   | (kubernetes runtime) image for one-off backup/restore Jobs                                                               |
+
+## Kubernetes runtime
+
+With `MCPANEL_RUNTIME=kubernetes` (the `charts/web-panel` chart sets it
+automatically) the panel drives the cluster instead of Docker: every
+start/stop from the UI maps to `helm upgrade --install mc-<server>` /
+`--set replicaCount=0` of `charts/minecraft-server`, logs come from
+`kubectl logs`, backups/restore run as short Jobs mounting the server's PVCs,
+and RCON goes to the server's in-cluster Service. Full guide:
+[docs/KUBERNETES.md](../../docs/KUBERNETES.md).
 
 ## How it works
 

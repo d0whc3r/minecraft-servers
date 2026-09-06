@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mc-router.fullname" . }}
+  labels:
+    {{- include "mc-router.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "mc-router.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mc-router.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "mc-router.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: mc-router
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # In-cluster discovery replaces the docker-socket label watching of
+          # the docker-compose setup: mc-router watches Services carrying the
+          # mc-router.itzg.me/externalServerName annotation.
+          env:
+            - name: IN_KUBE_CLUSTER
+              value: "true"
+            {{- if .Values.api.enabled }}
+            - name: API_BINDING
+              value: ":{{ .Values.api.port }}"
+            {{- end }}
+            {{- if .Values.rbac.watchAllNamespaces }}
+            # blank = watch every namespace (ClusterRole)
+            - name: KUBE_NAMESPACE
+              value: ""
+            {{- else }}
+            # must match the Role scope above, or the watch is cluster-wide
+            # and the API server rejects it as forbidden
+            - name: KUBE_NAMESPACE
+              value: {{ .Values.kubeNamespace | default .Release.Namespace | quote }}
+            {{- end }}
+          ports:
+            - name: minecraft
+              containerPort: 25565
+              protocol: TCP
+            {{- if .Values.api.enabled }}
+            - name: api
+              containerPort: {{ .Values.api.port }}
+              protocol: TCP
+            {{- end }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            tcpSocket:
+              port: minecraft
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            tcpSocket:
+              port: minecraft
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
