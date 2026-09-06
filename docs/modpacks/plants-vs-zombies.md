@@ -27,7 +27,7 @@ docker logs -f mc-plants-vs-zombies
 
 | Setting         | Value                                                                |
 | --------------- | -------------------------------------------------------------------- |
-| **Port**        | 25579                                                                |
+| **Route**       | `plants-vs-zombies.<MC_ROUTER_DOMAIN>`                               |
 | **RCON Port**   | 26579                                                                |
 | **Memory**      | 4GB                                                                  |
 | **Type**        | CurseForge (AUTO_CURSEFORGE)                                         |
@@ -36,7 +36,7 @@ docker logs -f mc-plants-vs-zombies
 
 ## Connection
 
-- **Address**: `your-server-ip:25579`
+- **Address**: `plants-vs-zombies.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `plants-vs-zombies.192.168.1.10.nip.io`)
 - **Version**: 26.1.2
 - **Client**: Install Plants vs. Zombies+ from the CurseForge launcher
 
@@ -51,7 +51,6 @@ JAVA_VERSION=java25
 TYPE=AUTO_CURSEFORGE
 VERSION=26.1.2
 MEMORY=4G
-SERVER_PORT=25579
 SERVER_NAME=plants-vs-zombies
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/plants-vs-zombies
 CF_SLUG=plants-vs-zombies

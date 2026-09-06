@@ -34,7 +34,7 @@ The `common.sh` file provides a reusable foundation for all scripts, including:
 - `get_config_file(server)` - Get path to server configuration file
 - `get_data_dir(server)` - Get path to server data directory
 - `get_backup_dir(server)` - Get path to server backup directory
-- `get_server_port(server)` - Extract port number from server config
+- `get_rcon_port(server)` - Extract the loopback RCON port from server config
 - `get_container_uptime(container)` - Get human-readable uptime for container
 
 ### Docker Compose Helpers
@@ -42,6 +42,13 @@ The `common.sh` file provides a reusable foundation for all scripts, including:
 - `docker_compose_up(server)` - Start server using docker compose
 - `docker_compose_down(server)` - Stop server using docker compose
 - `docker_compose_restart(server)` - Restart server using docker compose
+
+### Router Helpers
+
+- `load_router_settings()` - Load `MC_ROUTER_*` settings from `.env` with defaults
+- `get_route_host(server)` - Hostname players use for that server (`<server>.<MC_ROUTER_DOMAIN>`)
+- `router_running()` - Whether the mc-router container is up
+- `ensure_router()` - Start mc-router (mandatory infrastructure for every server)
 
 ### File Operations
 
@@ -118,6 +125,7 @@ All management scripts source `common.sh`:
 - `stop-all.sh` - Bulk server shutdown
 - `health-check.sh` - Health report (text or JSON output)
 - `auto-restart.sh` - Auto-restart daemon
+- `router.sh` - mc-router lifecycle and route table (start/stop/status/routes/logs)
 - `backup.sh` - Atomic backup with checksum
 - `restore.sh` - Verified restore operations
 - `add-modpack.sh` - Server configuration generator
@@ -173,7 +181,7 @@ source "$(dirname "$0")/common.sh"
 for server in $(list_available_servers); do
   container=$(get_container_name "$server")
   if container_running "$container"; then
-    port=$(get_server_port "$server")
+    port=$(get_rcon_port "$server")
     uptime=$(get_container_uptime "$container")
     success "$server is running on port $port (uptime: $uptime)"
   else

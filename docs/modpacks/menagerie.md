@@ -36,7 +36,6 @@ CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/menagerie
 CF_EXCLUDE_MODS=fog
 MEMORY=6G
 SERVER_NAME=menagerie
-SERVER_PORT=25577
 MAX_PLAYERS=20
 DIFFICULTY=normal
 VIEW_DISTANCE=10
@@ -64,7 +63,7 @@ docker logs -f mc-menagerie
 
 ## Connecting
 
-- **Address**: `your-server-ip:25577`
+- **Address**: `menagerie.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `menagerie.192.168.1.10.nip.io`)
 - **Client**: Install Menagerie from CurseForge
 - **Version**: Must match server (auto-detected from modpack)
 

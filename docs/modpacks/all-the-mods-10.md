@@ -23,20 +23,20 @@ docker logs -f mc-all-the-mods-10
 
 ## Server Details
 
-| Setting         | Value                          |
-| --------------- | ------------------------------ |
-| **Port**        | 25578                          |
-| **Memory**      | 8GB                            |
-| **Type**        | CurseForge                     |
-| **Max Players** | 50 (massive community support) |
-| **Difficulty**  | Normal                         |
-| **Mode**        | Survival                       |
-| **PVP**         | Enabled (modded battles)       |
-| **Container**   | mc-all-the-mods-10             |
+| Setting         | Value                                |
+| --------------- | ------------------------------------ |
+| **Route**       | `all-the-mods-10.<MC_ROUTER_DOMAIN>` |
+| **Memory**      | 8GB                                  |
+| **Type**        | CurseForge                           |
+| **Max Players** | 50 (massive community support)       |
+| **Difficulty**  | Normal                               |
+| **Mode**        | Survival                             |
+| **PVP**         | Enabled (modded battles)             |
+| **Container**   | mc-all-the-mods-10                   |
 
 ## Connection
 
-- **Address**: `your-server-ip:25578`
+- **Address**: `all-the-mods-10.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `all-the-mods-10.192.168.1.10.nip.io`)
 - **Version**: 1.21.1
 - **Client**: Install All The Mods 10 from CurseForge Launcher
 
@@ -122,7 +122,7 @@ Players need to install the All The Mods 10 modpack to connect:
 1. **Install CurseForge App**: https://www.curseforge.com/download/app
 2. **Search for "All The Mods 10"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25578`
+4. **Launch and connect** to the server route: `all-the-mods-10.<MC_ROUTER_DOMAIN>` (e.g. `all-the-mods-10.192.168.1.10.nip.io`)
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 
@@ -219,7 +219,7 @@ VIEW_DISTANCE=14 # Increase for better visuals
 docker logs mc-all-the-mods-10
 
 # Common issues:
-# - Port 25578 already in use
+# - Router port busy: change MC_ROUTER_PORT in .env
 # - Insufficient memory (need 8GB+)
 # - CurseForge API issues
 ```
@@ -236,7 +236,7 @@ MEMORY=12G
 ### Clients can't connect
 
 1. Ensure client has All The Mods 10 modpack installed
-2. Check firewall allows port 25578
+2. Verify the route `all-the-mods-10.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify server is running: `docker ps | grep all-the-mods-10`
 4. Check server logs for errors
 

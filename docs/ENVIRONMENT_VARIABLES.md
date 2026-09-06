@@ -17,24 +17,72 @@ Environment variables are defined in `config/modpacks/<server-name>.env` files. 
 ./scripts/start-server.sh vanilla
 ```
 
+## Configuration Layers
+
+Variables live in two layers, and knowing which file to touch is most of the story:
+
+| Layer      | File                                                      | Applies to             | Typical contents                                                                       |
+| ---------- | --------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------- |
+| Shared     | `.env` (repo root, gitignored — copy from `.env.example`) | Every server container | `EULA`, `CF_API_KEY`, `RCON_PASSWORD`, `ENABLE_RCON`, `TZ`, all `MC_ROUTER_*` settings |
+| Per server | `config/modpacks/<server-name>.env`                       | One server             | `TYPE`, `VERSION`, `MEMORY`, `SERVER_NAME`, `RCON_PORT`, gameplay settings             |
+
+How the layers combine at `./scripts/start-server.sh <name>`:
+
+1. **Container environment**: docker compose loads `.env` first, then
+   `config/modpacks/<name>.env` — the server config **overrides** shared values.
+2. **Compose file interpolation** (ports, the `mc-router.*` labels, image tag):
+   the start scripts export the per-server values from the server config
+   (`RCON_PORT`, `JAVA_VERSION`, `SERVER_NAME`, `MC_ROUTER_DEFAULT`)
+   and the shared router settings from `.env` (`load_router_settings` in
+   `scripts/common.sh`).
+
+How traffic works now that every server is behind mc-router:
+
+- **Game traffic**: there is **no per-server game port at all** — `SERVER_PORT`
+  no longer exists. Players connect once to `MC_ROUTER_PORT` and the route
+  `<SERVER_NAME>.<MC_ROUTER_DOMAIN>` picks the server.
+- **RCON**: the only per-server port. Each server needs a unique `RCON_PORT`
+  from the managed range **26565-26664**, and the mapping is bound to
+  `127.0.0.1` — host-local admin only. Uniqueness matters: two servers sharing
+  an `RCON_PORT` collide on the host even bound to loopback.
+- **Server discovery**: the route comes from the `mc-router.host` label in
+  `docker-compose.yml`, built from `SERVER_NAME` + `MC_ROUTER_DOMAIN` at
+  container creation. After changing either, recreate the container for the new
+  route to appear (`./scripts/stop-server.sh <name> && ./scripts/start-server.sh <name>`).
+
 ## Required Variables
 
 These must be defined in every server configuration:
 
-| Variable      | Description                                                                  | Example                                                              |
-| ------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `TYPE`        | Server type                                                                  | `VANILLA`, `PAPER`, `FORGE`, `FABRIC`, `AUTO_CURSEFORGE`, `MODRINTH` |
-| `VERSION`     | Minecraft version **CRITICAL for MODRINTH: Must match modpack's MC version** | `1.20.4`, `1.19.2`, `1.21.1`, `LATEST`                               |
-| `MEMORY`      | Java heap memory                                                             | `2G`, `4G`, `8G`                                                     |
-| `SERVER_PORT` | External port (must be unique)                                               | `25565`, `25566`, etc.                                               |
-| `SERVER_NAME` | Display name                                                                 | `My Server`                                                          |
+| Variable      | Description                                                                                              | Example                                                              |
+| ------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `TYPE`        | Server type                                                                                              | `VANILLA`, `PAPER`, `FORGE`, `FABRIC`, `AUTO_CURSEFORGE`, `MODRINTH` |
+| `VERSION`     | Minecraft version **CRITICAL for MODRINTH: Must match modpack's MC version**                             | `1.20.4`, `1.19.2`, `1.21.1`, `LATEST`                               |
+| `MEMORY`      | Java heap memory                                                                                         | `2G`, `4G`, `8G`                                                     |
+| `RCON_PORT`   | The only per-server port: loopback admin console, unique per server (managed range 26565-26664)          | `26565`, `26567`, etc.                                               |
+| `SERVER_NAME` | Server slug; must match the config file name. Builds the player route `<SERVER_NAME>.<MC_ROUTER_DOMAIN>` | `vanilla`                                                            |
 
 ### RCON Ports
 
-Each server needs a unique `RCON_PORT` (the Docker port mapping uses it directly). The
-project convention is **`SERVER_PORT + 1000`** — e.g. the `vanilla` server uses game port
-`25567` and RCON port `26567`. `ENABLE_RCON` and `RCON_PASSWORD` are shared defaults from
-`.env`.
+Each server needs a unique `RCON_PORT` — it is the **only** per-server port
+(the Docker mapping publishes it bound to `127.0.0.1`). `add-modpack.sh`
+auto-assigns it from the managed range **26565-26664**. `ENABLE_RCON` and
+`RCON_PASSWORD` are shared defaults from `.env`.
+
+### MC-ROUTER (routing)
+
+These live in the root `.env` (shared) and control `docker-compose.router.yml`.
+The router is mandatory infrastructure — it always runs and every player
+connection goes through it. Full guide: [docs/ROUTER.md](ROUTER.md).
+
+| Variable               | Scope  | Default    | Description                                                        |
+| ---------------------- | ------ | ---------- | ------------------------------------------------------------------ |
+| `MC_ROUTER_DOMAIN`     | `.env` | `mc.local` | Route suffix: `<server>.<MC_ROUTER_DOMAIN>` (prefer `<ip>.nip.io`) |
+| `MC_ROUTER_PORT`       | `.env` | `25565`    | Public port of the router (the only port players need)             |
+| `MC_ROUTER_API_PORT`   | `.env` | `8080`     | Routes API, published on `127.0.0.1` only                          |
+| `MC_ROUTER_DOCKER_GID` | `.env` | `999`      | Group with Docker socket access (`0` on Docker Desktop)            |
+| `MC_ROUTER_VERSION`    | `.env` | `latest`   | `itzg/mc-router` image tag                                         |
+| `MC_ROUTER_DEFAULT`    | server | unset      | Set `true` on ONE server to catch unknown hostnames                |
 
 ### CRITICAL: VERSION for Modrinth Modpacks
 
@@ -261,8 +309,8 @@ curl -s "https://api.modrinth.com/v2/project/cobbleverse" | grep game_versions
 TYPE=PAPER
 VERSION=26.2
 MEMORY=4G
-SERVER_PORT=25565
 SERVER_NAME=My Vanilla Server
+RCON_PORT=26565
 MAX_PLAYERS=20
 DIFFICULTY=normal
 MODE=survival
@@ -276,8 +324,8 @@ TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/all-the-mods-10
 VERSION=1.21.1
 MEMORY=8G
-SERVER_PORT=25566
 SERVER_NAME=all-the-mods-10
+RCON_PORT=26566
 MAX_PLAYERS=10
 ```
 
@@ -287,8 +335,8 @@ MAX_PLAYERS=10
 TYPE=PAPER
 VERSION=LATEST
 MEMORY=2G
-SERVER_PORT=25567
 SERVER_NAME=Creative Build
+RCON_PORT=26567
 MODE=creative
 PVP=false
 DIFFICULTY=peaceful
@@ -302,8 +350,8 @@ ALLOW_FLIGHT=true
 TYPE=PAPER
 VERSION=26.2
 MEMORY=4G
-SERVER_PORT=25568
 SERVER_NAME=Private Server
+RCON_PORT=26568
 ENABLE_WHITELIST=true
 WHITELIST=player1,player2,player3
 ONLINE_MODE=false
@@ -349,7 +397,6 @@ TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/rlcraft
 VERSION=1.12.2
 MEMORY=6G
-SERVER_PORT=25566
 SERVER_NAME=rlcraft
 RCON_PORT=26566
 ```

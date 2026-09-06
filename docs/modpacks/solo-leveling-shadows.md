@@ -23,20 +23,20 @@ docker logs -f mc-solo-leveling-shadows
 
 ## Server Details
 
-| Setting         | Value                        |
-| --------------- | ---------------------------- |
-| **Port**        | 25574                        |
-| **Memory**      | 6GB                          |
-| **Type**        | CurseForge                   |
-| **Max Players** | 30 (large community support) |
-| **Difficulty**  | Normal                       |
-| **Mode**        | Survival                     |
-| **PVP**         | Enabled (hunter battles)     |
-| **Container**   | mc-solo-leveling-shadows     |
+| Setting         | Value                                      |
+| --------------- | ------------------------------------------ |
+| **Route**       | `solo-leveling-shadows.<MC_ROUTER_DOMAIN>` |
+| **Memory**      | 6GB                                        |
+| **Type**        | CurseForge                                 |
+| **Max Players** | 30 (large community support)               |
+| **Difficulty**  | Normal                                     |
+| **Mode**        | Survival                                   |
+| **PVP**         | Enabled (hunter battles)                   |
+| **Container**   | mc-solo-leveling-shadows                   |
 
 ## Connection
 
-- **Address**: `your-server-ip:25574`
+- **Address**: `solo-leveling-shadows.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `solo-leveling-shadows.192.168.1.10.nip.io`)
 - **Version**: 1.20.1
 - **Client**: Install Solo Leveling - Shadows from CurseForge Launcher
 
@@ -122,7 +122,7 @@ Players need to install the Solo Leveling - Shadows modpack to connect:
 1. **Install CurseForge App**: https://www.curseforge.com/download/app
 2. **Search for "Solo Leveling - Shadows"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25574`
+4. **Launch and connect** to the server route: `solo-leveling-shadows.<MC_ROUTER_DOMAIN>` (e.g. `solo-leveling-shadows.192.168.1.10.nip.io`)
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 
@@ -229,7 +229,7 @@ Unlock powerful monarch classes later:
 docker logs mc-solo-leveling-shadows
 
 # Common issues:
-# - Port 25574 already in use
+# - Router port busy: change MC_ROUTER_PORT in .env
 # - Insufficient memory (need 6GB+)
 # - CurseForge API issues
 ```
@@ -246,7 +246,7 @@ MEMORY=8G
 ### Clients can't connect
 
 1. Ensure client has Solo Leveling - Shadows modpack installed
-2. Check firewall allows port 25574
+2. Verify the route `solo-leveling-shadows.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify server is running: `docker ps | grep solo-leveling-shadows`
 4. Check server logs for errors
 

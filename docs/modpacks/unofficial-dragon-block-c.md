@@ -23,20 +23,20 @@ docker logs -f mc-unofficial-dragon-block-c
 
 ## Server Details
 
-| Setting         | Value                            |
-| --------------- | -------------------------------- |
-| **Port**        | 25572                            |
-| **Memory**      | 4GB                              |
-| **Type**        | CurseForge                       |
-| **Max Players** | 20 (supports epic group battles) |
-| **Difficulty**  | Normal                           |
-| **Mode**        | Survival                         |
-| **PVP**         | Enabled (Dragon Ball combat)     |
-| **Container**   | mc-unofficial-dragon-block-c     |
+| Setting         | Value                                          |
+| --------------- | ---------------------------------------------- |
+| **Route**       | `unofficial-dragon-block-c.<MC_ROUTER_DOMAIN>` |
+| **Memory**      | 4GB                                            |
+| **Type**        | CurseForge                                     |
+| **Max Players** | 20 (supports epic group battles)               |
+| **Difficulty**  | Normal                                         |
+| **Mode**        | Survival                                       |
+| **PVP**         | Enabled (Dragon Ball combat)                   |
+| **Container**   | mc-unofficial-dragon-block-c                   |
 
 ## Connection
 
-- **Address**: `your-server-ip:25572`
+- **Address**: `unofficial-dragon-block-c.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `unofficial-dragon-block-c.192.168.1.10.nip.io`)
 - **Version**: 1.7.10
 - **Client**: Install Unofficial Dragon Block C from CurseForge Launcher
 
@@ -122,7 +122,7 @@ Players need to install the Unofficial Dragon Block C modpack to connect:
 1. **Install CurseForge App**: https://www.curseforge.com/download/app
 2. **Search for "Unofficial Dragon Block C"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25572`
+4. **Launch and connect** to the server route: `unofficial-dragon-block-c.<MC_ROUTER_DOMAIN>` (e.g. `unofficial-dragon-block-c.192.168.1.10.nip.io`)
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 
@@ -224,7 +224,7 @@ WHITELIST=player1,player2,player3
 docker logs mc-unofficial-dragon-block-c
 
 # Common issues:
-# - Port 25572 already in use
+# - Router port busy: change MC_ROUTER_PORT in .env
 # - Insufficient memory (need 4GB+)
 # - CurseForge API issues
 ```
@@ -241,7 +241,7 @@ MEMORY=6G
 ### Clients can't connect
 
 1. Ensure client has Unofficial Dragon Block C modpack installed
-2. Check firewall allows port 25572
+2. Verify the route `unofficial-dragon-block-c.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify server is running: `docker ps | grep unofficial-dragon-block-c`
 4. Check server logs for errors
 

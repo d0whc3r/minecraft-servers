@@ -27,19 +27,19 @@ docker logs -f mc-pixelmon
 
 ## Server Details
 
-| Setting         | Value               |
-| --------------- | ------------------- |
-| **Port**        | 25582               |
-| **RCON**        | 26582               |
-| **Memory**      | 6GB                 |
-| **Type**        | Modrinth (NeoForge) |
-| **Max Players** | 20                  |
-| **Difficulty**  | Normal              |
-| **Mode**        | Survival            |
+| Setting         | Value                         |
+| --------------- | ----------------------------- |
+| **Route**       | `pixelmon.<MC_ROUTER_DOMAIN>` |
+| **RCON**        | 26582                         |
+| **Memory**      | 6GB                           |
+| **Type**        | Modrinth (NeoForge)           |
+| **Max Players** | 20                            |
+| **Difficulty**  | Normal                        |
+| **Mode**        | Survival                      |
 
 ## Connection
 
-- **Address**: `your-server-ip:25582`
+- **Address**: `pixelmon.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `pixelmon.192.168.1.10.nip.io`)
 - **Version**: 1.21.1
 - **Client**: Install "The Pixelmon Modpack" from the Modrinth app or CurseForge launcher
 
@@ -98,13 +98,13 @@ Server operators:
 
 ```bash
 docker logs mc-pixelmon
-# Common issues: port 25582 in use, insufficient memory, download failures
+# Common issues: insufficient memory, download failures
 ```
 
 ### Clients can't connect
 
 1. Ensure the client has The Pixelmon Modpack (same generation) installed
-2. Check firewall allows port 25582
+2. Verify the route `pixelmon.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify the server is running: `docker ps | grep mc-pixelmon`
 
 ## Resources

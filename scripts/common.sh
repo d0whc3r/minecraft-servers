@@ -50,6 +50,12 @@ debug() {
   fi
 }
 
+# Aliases kept for the scripts that call the log_* naming (add-modpack.sh,
+# health-check.sh, validate-config.sh)
+log_error() { error "$1"; }
+log_info() { info "$1"; }
+log_success() { success "$1"; }
+
 # ============================================================================
 # VALIDATION FUNCTIONS
 # ============================================================================
@@ -159,6 +165,36 @@ get_container_name() {
   echo "mc-${server_name}"
 }
 
+# Get human-readable uptime for a container (e.g. "3d 4h", "2h 15m", "8m")
+# Args: $1 - container name
+# Returns: uptime string (stdout)
+get_container_uptime() {
+  local container_name="$1"
+  local started
+  started=$(docker inspect --format='{{.State.StartedAt}}' "$container_name" 2> /dev/null || echo "")
+  if [ -z "$started" ]; then
+    echo "N/A"
+    return 0
+  fi
+
+  local started_epoch now_epoch secs days hours mins
+  started_epoch=$(date -d "$started" +%s 2> /dev/null || echo 0)
+  now_epoch=$(date +%s)
+  secs=$((now_epoch - started_epoch))
+  [ "$secs" -lt 0 ] && secs=0
+  days=$((secs / 86400))
+  hours=$(((secs % 86400) / 3600))
+  mins=$(((secs % 3600) / 60))
+
+  if [ "$days" -gt 0 ]; then
+    echo "${days}d ${hours}h"
+  elif [ "$hours" -gt 0 ]; then
+    echo "${hours}h ${mins}m"
+  else
+    echo "${mins}m"
+  fi
+}
+
 # Get config file path from server name
 # Args: $1 - server name
 # Returns: config file path (stdout)
@@ -187,6 +223,56 @@ get_backup_dir() {
 # DOCKER COMPOSE HELPERS
 # ============================================================================
 
+# Read a variable from an env file (quotes stripped; empty when unset)
+# Args: $1 - env file path, $2 - variable name
+# Returns: value (stdout)
+get_env_value() {
+  local file="$1" key="$2"
+  grep -m1 "^${key}=" "$file" 2> /dev/null | cut -d= -f2- | tr -d ' "' || true
+}
+
+# Load the MC_ROUTER_* settings from the root .env with code defaults
+load_router_settings() {
+  MC_ROUTER_DOMAIN="${MC_ROUTER_DOMAIN:-$(get_env_value .env MC_ROUTER_DOMAIN)}"
+  MC_ROUTER_DOMAIN="${MC_ROUTER_DOMAIN:-mc.local}"
+  MC_ROUTER_PORT="${MC_ROUTER_PORT:-$(get_env_value .env MC_ROUTER_PORT)}"
+  MC_ROUTER_PORT="${MC_ROUTER_PORT:-25565}"
+  MC_ROUTER_API_PORT="${MC_ROUTER_API_PORT:-$(get_env_value .env MC_ROUTER_API_PORT)}"
+  MC_ROUTER_API_PORT="${MC_ROUTER_API_PORT:-8080}"
+  MC_ROUTER_DOCKER_GID="${MC_ROUTER_DOCKER_GID:-$(get_env_value .env MC_ROUTER_DOCKER_GID)}"
+  MC_ROUTER_DOCKER_GID="${MC_ROUTER_DOCKER_GID:-999}"
+  export MC_ROUTER_DOMAIN MC_ROUTER_PORT MC_ROUTER_API_PORT MC_ROUTER_DOCKER_GID
+}
+
+# Hostname players use to reach a server through mc-router
+# Args: $1 - server name (load_router_settings must have run)
+# Returns: route hostname (stdout)
+get_route_host() {
+  echo "${1}.${MC_ROUTER_DOMAIN}"
+}
+
+# Check if the mc-router container is running
+# Returns: 0 if running, 1 if not
+router_running() {
+  container_running "minecraft-router"
+}
+
+# Start mc-router (mandatory infrastructure: without it no server is
+# reachable). Safe to call repeatedly.
+# Returns: 0 on success or when already running, 1 on failure
+ensure_router() {
+  load_router_settings
+
+  if router_running; then
+    debug "mc-router already running"
+    return 0
+  fi
+
+  ensure_network
+  info "Starting mc-router (players connect via <server>.${MC_ROUTER_DOMAIN})..."
+  docker compose -p minecraft-router -f docker-compose.router.yml up -d
+}
+
 # Start server using docker compose
 # Args: $1 - server name
 # Returns: 0 on success, 1 on failure
@@ -195,17 +281,14 @@ docker_compose_up() {
   local config_file
   config_file=$(get_config_file "$server_name")
 
-  # Load SERVER_PORT from config file for docker compose port mapping
-  # We need this in the environment for ${SERVER_PORT} substitution in docker-compose.yml
-  export SERVER_PORT=$(grep "^SERVER_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "')
+  # Load per-server values needed for docker compose substitution
+  export JAVA_VERSION=$(get_env_value "$config_file" JAVA_VERSION)
+  export RCON_PORT=$(get_env_value "$config_file" RCON_PORT)
+  export MC_ROUTER_DEFAULT=$(get_env_value "$config_file" MC_ROUTER_DEFAULT)
+  export SERVER_NAME="$server_name"
 
-  # Load JAVA_VERSION from config file for docker compose image selection
-  # We need this in the environment for ${JAVA_VERSION:-latest} substitution in docker-compose.yml
-  export JAVA_VERSION=$(grep "^JAVA_VERSION=" "$config_file" | cut -d= -f2 | tr -d ' "' || echo "")
-
-  # Load RCON_PORT from config file for docker compose port mapping
-  # We need this in the environment for ${RCON_PORT} substitution in docker-compose.yml
-  export RCON_PORT=$(grep "^RCON_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "' || echo "")
+  # Router settings feed the mc-router.* labels in docker-compose.yml
+  load_router_settings
 
   # Set dynamic environment variables for docker compose substitution
   export CONTAINER_NAME="mc-${server_name}"
@@ -214,9 +297,8 @@ docker_compose_up() {
   export SERVER_BACKUP_DIR="$(pwd)/backups/${server_name}"
   export SERVER_CONFIG_FILE="$config_file"
 
-  debug "Starting server with docker compose -p mc-${server_name}"
-  debug "Port mapping: ${SERVER_PORT}:25565"
-  docker compose -p "mc-${server_name}" up -d 2>&1
+  debug "Starting server with docker compose -p mc-${server_name} (RCON on 127.0.0.1:${RCON_PORT})"
+  docker compose -p "mc-${server_name}" -f docker-compose.yml up -d 2>&1
 }
 
 # Stop server using docker compose
@@ -237,14 +319,12 @@ docker_compose_restart() {
   local config_file
   config_file=$(get_config_file "$server_name")
 
-  # Load SERVER_PORT from config file for docker compose port mapping
-  export SERVER_PORT=$(grep "^SERVER_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "')
-
-  # Load JAVA_VERSION from config file for docker compose image selection
-  export JAVA_VERSION=$(grep "^JAVA_VERSION=" "$config_file" | cut -d= -f2 | tr -d ' "' || echo "")
-
-  # Load RCON_PORT from config file for docker compose port mapping
-  export RCON_PORT=$(grep "^RCON_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "' || echo "")
+  # Load per-server values needed for docker compose substitution
+  export JAVA_VERSION=$(get_env_value "$config_file" JAVA_VERSION)
+  export RCON_PORT=$(get_env_value "$config_file" RCON_PORT)
+  export MC_ROUTER_DEFAULT=$(get_env_value "$config_file" MC_ROUTER_DEFAULT)
+  export SERVER_NAME="$server_name"
+  load_router_settings
 
   # Set dynamic environment variables
   export CONTAINER_NAME="mc-${server_name}"
@@ -338,22 +418,23 @@ ensure_network() {
   fi
 }
 
-# Get server port from config
+# Get server RCON port from config (the only per-server port: loopback admin)
 # Args: $1 - server name
 # Returns: port number (stdout)
-get_server_port() {
+get_rcon_port() {
   local server_name="$1"
   local config_file
   config_file=$(get_config_file "$server_name")
 
   if [ -f "$config_file" ]; then
-    grep "^SERVER_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "' || echo "unknown"
+    grep "^RCON_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "' || echo "unknown"
   else
     echo "unknown"
   fi
 }
 
-# Check for port conflicts across all server configs
+# Check for RCON port conflicts across all server configs. Each server needs a
+# unique RCON_PORT because the loopback binding happens on the shared host.
 # Returns: 0 if no conflicts, 1 if conflicts found
 check_port_conflicts() {
   local port_list=()
@@ -368,10 +449,10 @@ check_port_conflicts() {
     server_name=$(basename "$config_file" .env)
 
     local port
-    port=$(grep "^SERVER_PORT=" "$config_file" 2> /dev/null | cut -d= -f2 | tr -d ' "')
+    port=$(grep "^RCON_PORT=" "$config_file" 2> /dev/null | cut -d= -f2 | tr -d ' "')
 
     if [ -z "$port" ]; then
-      warning "Server $server_name has no SERVER_PORT defined"
+      warning "Server $server_name has no RCON_PORT defined"
       has_conflict=true
       continue
     fi
@@ -399,7 +480,7 @@ check_port_conflicts() {
   return 0
 }
 
-# Find next available port
+# Find next available RCON port (managed range 26565-26664)
 # Returns: available port number (stdout)
 find_available_port() {
   local used_ports=()
@@ -409,15 +490,15 @@ find_available_port() {
     [ -f "$config_file" ] || continue
 
     local port
-    port=$(grep "^SERVER_PORT=" "$config_file" 2> /dev/null | cut -d= -f2 | tr -d ' "')
+    port=$(grep "^RCON_PORT=" "$config_file" 2> /dev/null | cut -d= -f2 | tr -d ' "')
 
     if [ -n "$port" ]; then
       used_ports+=("$port")
     fi
   done
 
-  # Find first available port in range 25565-25664
-  for port in {25565..25664}; do
+  # Find first available port in range 26565-26664
+  for port in {26565..26664}; do
     local port_used=false
     for used_port in "${used_ports[@]}"; do
       if [ "$port" = "$used_port" ]; then
@@ -432,7 +513,7 @@ find_available_port() {
     fi
   done
 
-  error "No available ports in range 25565-25664"
+  error "No available ports in range 26565-26664"
   return 1
 }
 

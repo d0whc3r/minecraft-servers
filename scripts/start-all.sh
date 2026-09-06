@@ -37,6 +37,9 @@ FAILED=0
 declare -a STARTED_SERVERS
 declare -a FAILED_SERVERS
 
+# Router settings for the per-server route hostnames
+load_router_settings
+
 # Iterate through each config file
 for config in "${CONFIG_FILES[@]}"; do
   SERVER_NAME=$(basename "$config" .env)
@@ -45,8 +48,7 @@ for config in "${CONFIG_FILES[@]}"; do
 
   # Use start-server.sh script for each server
   if ./scripts/start-server.sh "$SERVER_NAME" > /dev/null 2>&1; then
-    PORT=$(get_server_port "$SERVER_NAME")
-    STARTED_SERVERS+=("${SERVER_NAME} (port ${PORT})")
+    STARTED_SERVERS+=("${SERVER_NAME} ($(get_route_host "$SERVER_NAME"))")
     ((STARTED++))
   else
     FAILED_SERVERS+=("${SERVER_NAME}")

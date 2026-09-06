@@ -23,18 +23,18 @@ docker logs -f mc-cobbleverse
 
 ## Server Details
 
-| Setting         | Value             |
-| --------------- | ----------------- |
-| **Port**        | 25568             |
-| **Memory**      | 6GB               |
-| **Type**        | Modrinth (Fabric) |
-| **Max Players** | 20                |
-| **Difficulty**  | Normal            |
-| **Mode**        | Survival          |
+| Setting         | Value                            |
+| --------------- | -------------------------------- |
+| **Route**       | `cobbleverse.<MC_ROUTER_DOMAIN>` |
+| **Memory**      | 6GB                              |
+| **Type**        | Modrinth (Fabric)                |
+| **Max Players** | 20                               |
+| **Difficulty**  | Normal                           |
+| **Mode**        | Survival                         |
 
 ## Connection
 
-- **Address**: `your-server-ip:25568`
+- **Address**: `cobbleverse.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `cobbleverse.192.168.1.10.nip.io`)
 - **Version**: 1.21.1 (check modpack page for exact version)
 - **Client**: Install Cobbleverse modpack from Modrinth Launcher
 
@@ -101,7 +101,7 @@ Players need to install the Cobbleverse modpack to connect:
 1. **Install Modrinth App**: https://modrinth.com/app
 2. **Search for "Cobbleverse"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25568`
+4. **Launch and connect** to the server route: `cobbleverse.<MC_ROUTER_DOMAIN>` (e.g. `cobbleverse.192.168.1.10.nip.io`)
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 
@@ -163,7 +163,7 @@ MAX_MEMORY=8G
 docker logs mc-cobbleverse
 
 # Common issues:
-# - Port 25568 already in use
+# - Router port busy: change MC_ROUTER_PORT in .env
 # - Insufficient memory
 # - Network issues downloading modpack
 ```
@@ -182,7 +182,7 @@ VIEW_DISTANCE=8
 ### Clients can't connect
 
 1. Ensure client has Cobbleverse modpack installed
-2. Check firewall allows port 25568
+2. Verify the route `cobbleverse.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify server is running: `docker ps | grep cobbleverse`
 4. Check server logs for errors
 

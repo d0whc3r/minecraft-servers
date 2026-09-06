@@ -23,21 +23,21 @@ docker logs -f mc-amazing-fps-booster
 
 ## Server Details
 
-| Setting         | Value                          |
-| --------------- | ------------------------------ |
-| **Port**        | 25573                          |
-| **Memory**      | 2GB                            |
-| **Type**        | CurseForge                     |
-| **Max Players** | 10 (optimized for performance) |
-| **Difficulty**  | Normal                         |
-| **Mode**        | Survival                       |
-| **PVP**         | Enabled                        |
-| **Container**   | mc-amazing-fps-booster         |
-| **Autopause**   | Enabled (resource saving)      |
+| Setting         | Value                                    |
+| --------------- | ---------------------------------------- |
+| **Route**       | `amazing-fps-booster.<MC_ROUTER_DOMAIN>` |
+| **Memory**      | 2GB                                      |
+| **Type**        | CurseForge                               |
+| **Max Players** | 10 (optimized for performance)           |
+| **Difficulty**  | Normal                                   |
+| **Mode**        | Survival                                 |
+| **PVP**         | Enabled                                  |
+| **Container**   | mc-amazing-fps-booster                   |
+| **Autopause**   | Enabled (resource saving)                |
 
 ## Connection
 
-- **Address**: `your-server-ip:25573`
+- **Address**: `amazing-fps-booster.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `amazing-fps-booster.192.168.1.10.nip.io`)
 - **Version**: 1.20.6
 - **Client**: Install Amazing FPS Booster from CurseForge Launcher
 
@@ -119,7 +119,7 @@ Players need to install the Amazing FPS Booster modpack to connect:
 1. **Install CurseForge App**: https://www.curseforge.com/download/app
 2. **Search for "Amazing FPS Booster"** in the app
 3. **Install the modpack**
-4. **Launch and connect** to `your-server-ip:25573`
+4. **Launch and connect** to the server route: `amazing-fps-booster.<MC_ROUTER_DOMAIN>` (e.g. `amazing-fps-booster.192.168.1.10.nip.io`)
 
 ⚠️ **Important**: Client and server must use the same modpack version.
 
@@ -223,7 +223,7 @@ AUTOPAUSE_TIMEOUT_INIT=600
 docker logs mc-amazing-fps-booster
 
 # Common issues:
-# - Port 25573 already in use
+# - Router port busy: change MC_ROUTER_PORT in .env
 # - Insufficient memory (need 2GB+)
 # - CurseForge API issues
 ```
@@ -241,7 +241,7 @@ docker logs mc-amazing-fps-booster
 ### Clients can't connect
 
 1. Ensure client has Amazing FPS Booster modpack installed
-2. Check firewall allows port 25573
+2. Verify the route `amazing-fps-booster.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify server is running: `docker ps | grep amazing-fps-booster`
 4. Check server logs for errors
 

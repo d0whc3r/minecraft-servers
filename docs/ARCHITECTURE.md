@@ -25,11 +25,12 @@ services:
     env_file:
       - .env # 1) shared defaults
       - ${SERVER_CONFIG_FILE} # 2) per-server overrides (config/modpacks/<name>.env)
+    labels:
+      - 'mc-router.host=${SERVER_NAME}.${MC_ROUTER_DOMAIN}' # player route
     ports:
-      - '${SERVER_PORT:-25565}:25565' # game port
-      - '${RCON_PORT:-25575}:${RCON_PORT:-25575}' # RCON port
+      - '127.0.0.1:${RCON_PORT:-25575}:${RCON_PORT:-25575}' # RCON, loopback only
     environment:
-      SERVER_PORT: 25565 # inside the container it is always 25565
+      SERVER_PORT: 25565 # inside the container it is always 25565; mc-router routes to it
     volumes:
       - ${SERVER_DATA_DIR:-./data}:/data
       - ${SERVER_MODS_DIR:-./mods}:/mods
@@ -46,8 +47,8 @@ services:
       start_period: 5m
 ```
 
-The substitution variables (`CONTAINER_NAME`, `SERVER_CONFIG_FILE`, `SERVER_PORT`,
-`RCON_PORT`, `JAVA_VERSION`, `SERVER_*_DIR`) are computed by `scripts/common.sh` for each
+The substitution variables (`CONTAINER_NAME`, `SERVER_CONFIG_FILE`, `SERVER_NAME`,
+`MC_ROUTER_DOMAIN`, `RCON_PORT`, `JAVA_VERSION`, `SERVER_*_DIR`) are computed by `scripts/common.sh` for each
 server before invoking `docker compose -p mc-<name> up -d`.
 
 **Benefits**:
@@ -68,16 +69,18 @@ Configuration is layered. Later sources override earlier ones:
 │   CF_API_KEY, ENABLE_RCON, RCON_PASSWORD, USE_AIKAR_FLAGS, ...
 │
 config/modpacks/<name>.env (per server, committed)
-    TYPE, VERSION, MEMORY, SERVER_PORT, SERVER_NAME, RCON_PORT,
+    TYPE, VERSION, MEMORY, SERVER_NAME, RCON_PORT,
     modpack source (CF_PAGE_URL / MODRINTH_MODPACK), gameplay tuning, ...
 │
 docker compose substitution (computed by scripts/common.sh, never edited)
-    CONTAINER_NAME, SERVER_CONFIG_FILE, SERVER_PORT, RCON_PORT*,
-    JAVA_VERSION, SERVER_DATA_DIR, SERVER_MODS_DIR, SERVER_BACKUP_DIR
+    CONTAINER_NAME, SERVER_CONFIG_FILE, SERVER_NAME, MC_ROUTER_DOMAIN,
+    RCON_PORT, JAVA_VERSION, SERVER_DATA_DIR, SERVER_MODS_DIR, SERVER_BACKUP_DIR
 ```
 
-\* `RCON_PORT` is read from the server config file; the project convention is
-`SERVER_PORT + 1000` (e.g. `vanilla`: game `25567`, RCON `26567`).
+\* `RCON_PORT` is read from the server config file — the only per-server port
+(unique, managed range 26565-26664, bound to `127.0.0.1`). Game traffic has no
+per-server port: mc-router (docker-compose.router.yml) routes every player by
+hostname to the container's internal port 25565.
 
 Note the split: variables consumed by **docker compose itself** (ports, image tag,
 container name, volume paths) are exported into the environment by the scripts, while
@@ -89,17 +92,18 @@ variables consumed by **the container** (Minecraft settings) flow through the tw
 All management scripts share `scripts/common.sh`, which provides validation, colored
 output, Docker/Compose helpers, and the naming conventions:
 
-| Concept         | Value                               |
-| --------------- | ----------------------------------- |
-| Server name     | `^[a-z0-9-]+$`                      |
-| Config file     | `config/modpacks/<name>.env`        |
-| Container name  | `mc-<name>`                         |
-| Compose project | `mc-<name>`                         |
-| Data dir        | `servers/<name>/data`               |
-| Mods dir        | `servers/<name>/mods`               |
-| Backups dir     | `backups/<name>`                    |
-| Game port       | `SERVER_PORT` (unique, 25565–25664) |
-| RCON port       | `RCON_PORT` (convention: +1000)     |
+| Concept         | Value                                                                                                                                                                                                  |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Server name     | `^[a-z0-9-]+$`                                                                                                                                                                                         |
+| Config file     | `config/modpacks/<name>.env`                                                                                                                                                                           |
+| Container name  | `mc-<name>`                                                                                                                                                                                            |
+| Compose project | `mc-<name>`                                                                                                                                                                                            |
+| Data dir        | `servers/<name>/data`                                                                                                                                                                                  |
+| Mods dir        | `servers/<name>/mods`                                                                                                                                                                                  |
+| Backups dir     | `backups/<name>`                                                                                                                                                                                       |
+| Player route    | `<name>.<MC_ROUTER_DOMAIN>` via mc-router                                                                                                                                                              |
+| RCON port       | `RCON_PORT` (unique, 26565–26664, loopback)                                                                                                                                                            |
+| Exposed ports   | **only** `MC_ROUTER_PORT` (router) reaches the network — server RCON and the router API bind to `127.0.0.1`; servers have no game port and need no `expose:` to be reachable through the shared bridge |
 
 **Exit code contract** (consistent across scripts):
 
@@ -150,7 +154,8 @@ minecraft-servers/
         │  validate name, config, Docker daemon
         ▼
 scripts/common.sh::docker_compose_up
-        │  export CONTAINER_NAME, SERVER_PORT, JAVA_VERSION, SERVER_*_DIR, SERVER_CONFIG_FILE
+        │  export CONTAINER_NAME, SERVER_NAME, MC_ROUTER_DOMAIN, RCON_PORT, JAVA_VERSION,
+        │  SERVER_*_DIR, SERVER_CONFIG_FILE
         ▼
 docker compose -p mc-<name> up -d
         │  .env + config/modpacks/<name>.env  →  container environment
@@ -174,9 +179,9 @@ Persistent data in servers/<name>/data  (bind-mounted /data)
 `add-modpack.sh` generates a ready-to-start configuration:
 
 1. **Name validation**: `^[a-z0-9-]+$`, uniqueness check
-2. **Port assignment**: first free port in 25565–25664 (or `--port=`)
+2. **RCON port assignment**: first free loopback port in 26565–26664 (or `--rcon-port=`)
 3. **Template copy**: built-in templates (see [Adding Modpacks](ADDING_MODPACKS.md)) or minimal Paper config
-4. **Variable injection**: `SERVER_NAME`, `SERVER_PORT`, `RCON_PORT` (+1000)
+4. **Variable injection**: `SERVER_NAME`, `RCON_PORT`, router settings (`MC_ROUTER_DOMAIN`, ...)
 5. **Directory creation**: `servers/<name>/{data,mods}`, `backups/<name>`
 
 Modpack types map to `itzg/minecraft-server` server types:
@@ -194,7 +199,7 @@ Modpack types map to `itzg/minecraft-server` server types:
 ```
 Layer 1: Container status        (Docker)
 Layer 2: Docker health           (mc-health inside container)
-Layer 3: Port connectivity       (SERVER_PORT reachable)
+Layer 3: Router entry point      (mc-router reachable)
 Layer 4: Log analysis            (recent errors/crashes)
 Layer 5: Disk space              (usage warnings)
 ```
@@ -212,7 +217,7 @@ writes a SHA256 checksum, restarts the server, and prunes old archives (rolling 
 
 ## Security Considerations
 
-- **Network**: dedicated external bridge `minecraft-network`; only game + RCON ports published
+- **Network**: dedicated external bridge `minecraft-network`; no per-server published ports — servers reach each other over the bridge, and the only network-facing port is the router's
 - **Volumes**: per-server isolated data directories (no shared writable state)
 - **Secrets**: `RCON_PASSWORD` and `CF_API_KEY` live only in `.env` (git-ignored)
 - **Integrity**: SHA256 checksums on every backup
@@ -221,7 +226,10 @@ writes a SHA256 checksum, restarts the server, and prunes old archives (rolling 
 
 ## Scalability
 
-- **Ports**: 25565–25664 → up to 100 servers (auto-assignment skips used ports)
+- **Ports**: one public game port shared by every server (mc-router,
+  `MC_ROUTER_PORT`, default 25565); the only per-server ports are loopback
+  RCON consoles in 26565–26664 → up to 100 servers (auto-assignment skips
+  used ports)
 - **Host resources**: the real limit — sum of `MEMORY` values, CPU, and disk I/O
 - **Isolation**: one Compose project per server means any server can be
   started/stopped/rebuilt without touching the others
@@ -234,7 +242,7 @@ writes a SHA256 checksum, restarts the server, and prunes old archives (rolling 
 | Bad config          | `validate-config.sh`               | Fix `<name>.env`, restart                  |
 | Data corruption     | Server won't start / checksum fail | `restore.sh` from last good backup         |
 | Docker daemon down  | All scripts fail fast (`exit 1`)   | Restart Docker; `start-all.sh`             |
-| Port conflict       | Pre-flight validation (`exit 4`)   | Change `SERVER_PORT`, restart              |
+| Port conflict       | Pre-flight validation (`exit 4`)   | Change `RCON_PORT`, restart                |
 
 ## Operational Patterns
 

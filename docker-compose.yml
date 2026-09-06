@@ -15,12 +15,18 @@ services:
     env_file:
       - .env
       - ${SERVER_CONFIG_FILE}
+    # Route announcements for mc-router (docker-compose.router.yml): players
+    # connect to ${SERVER_NAME}.${MC_ROUTER_DOMAIN} and mc-router forwards the
+    # session to this container over minecraft-network. Game ports are NEVER
+    # published; set MC_ROUTER_DEFAULT=true in a server config to catch
+    # unknown hostnames.
+    labels:
+      - 'mc-router.host=${SERVER_NAME:-unknown}.${MC_ROUTER_DOMAIN:-mc.local}'
+      - 'mc-router.default=${MC_ROUTER_DEFAULT:-false}'
     ports:
-      # Map external port (SERVER_PORT) to internal port 25565
-      # Minecraft server ALWAYS listens on 25565 inside the container
-      - '${SERVER_PORT:-25565}:25565'
-      # Map RCON port if enabled (RCON_PORT external to internal RCON port)
-      - '${RCON_PORT:-25575}:${RCON_PORT:-25575}'
+      # RCON only, and bound to loopback: unique port per server, never
+      # exposed to the network. Game traffic always goes via mc-router.
+      - '127.0.0.1:${RCON_PORT:-25575}:${RCON_PORT:-25575}'
     environment:
       # Override SERVER_PORT to always be 25565 internally
       # The external port mapping handles the actual port exposure

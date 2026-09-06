@@ -26,19 +26,19 @@ docker logs -f mc-cursed-walking
 
 ## Server Details
 
-| Setting         | Value              |
-| --------------- | ------------------ |
-| **Port**        | 25584              |
-| **RCON**        | 26584              |
-| **Memory**      | 8GB                |
-| **Type**        | CurseForge (Forge) |
-| **Max Players** | 20                 |
-| **Difficulty**  | Hard               |
-| **Mode**        | Survival           |
+| Setting         | Value                               |
+| --------------- | ----------------------------------- |
+| **Route**       | `cursed-walking.<MC_ROUTER_DOMAIN>` |
+| **RCON**        | 26584                               |
+| **Memory**      | 8GB                                 |
+| **Type**        | CurseForge (Forge)                  |
+| **Max Players** | 20                                  |
+| **Difficulty**  | Hard                                |
+| **Mode**        | Survival                            |
 
 ## Connection
 
-- **Address**: `your-server-ip:25584`
+- **Address**: `cursed-walking.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `cursed-walking.192.168.1.10.nip.io`)
 - **Version**: 1.20.1
 - **Client**: Install Cursed Walking from the CurseForge launcher
 
@@ -91,13 +91,13 @@ docker logs -f mc-cursed-walking
 
 ```bash
 docker logs mc-cursed-walking
-# Common issues: port 25584 in use, insufficient memory, download failures
+# Common issues: insufficient memory, download failures
 ```
 
 ### Clients can't connect
 
 1. Ensure the client has Cursed Walking (same pack version) installed
-2. Check firewall allows port 25584
+2. Verify the route `cursed-walking.<MC_ROUTER_DOMAIN>` resolves to this host (nip.io/DNS) and mc-router is running (`./scripts/router.sh status`)
 3. Verify the server is running: `docker ps | grep cursed-walking`
 
 ## Resources

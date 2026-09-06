@@ -37,7 +37,8 @@ nano .env
 ### 2. Start Vanilla Server
 
 ```bash
-# Start the vanilla server (Paper 26.2, port 25567)
+# Start the vanilla server (Paper 26.2; auto-starts mc-router, the shared
+# entry point players connect to)
 ./scripts/start-server.sh vanilla
 
 # Monitor startup (takes ~2 minutes first time)
@@ -53,7 +54,9 @@ docker logs -f mc-vanilla
 2. Click **Multiplayer** → **Add Server**
 3. Enter:
    - **Server Name**: My Vanilla Server
-   - **Server Address**: `your-server-ip:25567`
+   - **Server Address**: `vanilla.<your-ip>.nip.io` — set
+     `MC_ROUTER_DOMAIN=<your-ip>.nip.io` in `.env` and LAN players need zero
+     DNS/hosts setup ([docs/ROUTER.md](ROUTER.md))
 4. Click **Done** and **Join Server**
 
 🎉 **You're in!** Your first server is running.
@@ -73,8 +76,9 @@ World data persists in `./servers/vanilla/data/` on your host.
 
 ```
 minecraft-servers/
-├── docker-compose.yml       # Single template service
-├── .env                     # Shared settings
+├── docker-compose.yml        # Server template (route labels, loopback RCON)
+├── docker-compose.router.yml # mc-router: the one port players connect to
+├── .env                      # Shared settings (incl. MC_ROUTER_DOMAIN)
 ├── config/modpacks/
 │   └── vanilla.env          # Vanilla config
 ├── servers/
@@ -120,22 +124,29 @@ docker logs -f mc-vanilla
 
 Available servers (full table in the [README](../README.md#pre-configured-modpacks)):
 
-| Server Name           | Version | Memory | Port  | Notes                          |
-| --------------------- | ------- | ------ | ----- | ------------------------------ |
-| `vanilla`             | 26.2    | 2G     | 25567 | Paper, light — good first test |
-| `skyfactory4`         | 1.12.2  | 6G     | 25565 | Skyblock, needs Java 8 image   |
-| `rlcraft`             | 1.12.2  | 6G     | 25566 | Hardcore survival              |
-| `cobbleverse`         | 1.21.1  | 6G     | 25568 | Pokémon-style adventure        |
-| `slimes-adventure`    | 1.21.1  | 4G     | 25569 | Exploration                    |
-| `solocraft-modpack`   | 1.20.1  | 3G     | 25570 | Solo-leveling-style survival   |
-| `all-the-mods-10`     | 1.21.1  | 8G     | 25578 | Heavy kitchen-sink pack        |
-| `all-the-mods-10-sky` | 1.21.1  | 8G     | 25585 | ATM10 skyblock variant         |
-| `better-mc-bmc4`      | 1.20.1  | 6G     | 25580 | Enhanced vanilla+ (top pack)   |
-| `cursed-walking`      | 1.20.1  | 8G     | 25584 | Zombie survival                |
-| `deceasedcraft`       | 1.20.1  | 6G     | 25583 | Urban zombie apocalypse        |
-| `pixelmon`            | 1.21.1  | 6G     | 25582 | Classic Pokémon mod            |
-| `prominence-2`        | 1.20.1  | 6G     | 25581 | RPG adventure                  |
-| …                     |         |        |       | 21 total — see README          |
+| Server Name              | Version | Memory | Notes                              |
+| ------------------------ | ------- | ------ | ---------------------------------- |
+| `vanilla`                | 26.2    | 2G     | Paper, light — good first test     |
+| `skyfactory4`            | 1.12.2  | 6G     | Skyblock, needs Java 8 image       |
+| `stoneblock4`            | 1.21.1  | 8G     | Skyblock-in-a-cave (2025 top pick) |
+| `rlcraft`                | 1.12.2  | 6G     | Hardcore survival                  |
+| `cobbleverse`            | 1.21.1  | 6G     | Pokémon-style adventure            |
+| `cobblemon`              | 1.21.1  | 6G     | Official Cobblemon pack            |
+| `slimes-adventure`       | 1.21.1  | 4G     | Exploration                        |
+| `solocraft-modpack`      | 1.20.1  | 3G     | Solo-leveling-style survival       |
+| `all-the-mods-10`        | 1.21.1  | 8G     | Heavy kitchen-sink pack            |
+| `all-the-mods-10-sky`    | 1.21.1  | 8G     | ATM10 skyblock variant             |
+| `all-the-mods-11`        | 26.1.2  | 8G     | Next-gen ATM (beta, Java 25)       |
+| `better-mc-bmc4`         | 1.20.1  | 6G     | Enhanced vanilla+ (top pack)       |
+| `better-mc-bmc5`         | 1.21.1  | 8G     | BMC4 successor (NeoForge)          |
+| `cursed-walking`         | 1.20.1  | 8G     | Zombie survival                    |
+| `dawncraft`              | 1.18.2  | 8G     | RPG soulslike adventure            |
+| `deceasedcraft`          | 1.20.1  | 6G     | Urban zombie apocalypse            |
+| `homestead`              | 1.20.1  | 6G     | Cozy survival                      |
+| `zombie-invade-100-days` | 1.20.1  | 6G     | Horde siege survival               |
+| `pixelmon`               | 1.21.1  | 6G     | Classic Pokémon mod                |
+| `prominence-2`           | 1.20.1  | 6G     | RPG adventure                      |
+| …                        |         |        | 28 total — see README              |
 
 > CurseForge modpacks require `CF_API_KEY` in `.env`. First start downloads the whole
 > modpack — give it 5–10 minutes and watch `docker logs -f mc-<name>`.
@@ -143,8 +154,8 @@ Available servers (full table in the [README](../README.md#pre-configured-modpac
 ### Custom Servers
 
 ```bash
-# Add a new server from a template (auto-assigns a free port)
-./scripts/add-modpack.sh my-custom --modpack=vanilla --port=25580
+# Add a new server from a template (auto-assigns its loopback RCON port)
+./scripts/add-modpack.sh my-custom --modpack=vanilla
 
 # Customize configuration
 nano config/modpacks/my-custom.env
@@ -216,7 +227,7 @@ nano servers/vanilla/data/server.properties
 ### Make Yourself Admin
 
 ```bash
-# Grant operator permissions (uses the server's RCON port: SERVER_PORT + 1000)
+# Grant operator permissions (rcon-cli runs inside the container)
 docker exec mc-vanilla rcon-cli op YourMinecraftUsername
 ```
 
@@ -230,7 +241,7 @@ docker logs mc-vanilla
 
 # Common issues:
 # - EULA not accepted: set EULA=TRUE in .env
-# - Port in use: change SERVER_PORT in config/modpacks/vanilla.env
+# - Router port busy: change MC_ROUTER_PORT in .env (see docs/ROUTER.md)
 # - Out of memory: increase MEMORY in config/modpacks/vanilla.env
 # - CurseForge download failing: check CF_API_KEY in .env
 ```
@@ -241,11 +252,14 @@ docker logs mc-vanilla
 # Check server is running
 docker ps --filter "name=mc-vanilla"
 
-# Check port is open
-sudo ss -tulnp | grep 25567
+# Check the router entry point is listening (the only public game port)
+sudo ss -tulnp | grep ':25565'
 
-# Open firewall (if needed)
-sudo ufw allow 25567/tcp
+# Open firewall for the router (if needed)
+sudo ufw allow 25565/tcp
+
+# Check the route is registered
+./scripts/router.sh status
 ```
 
 ### Performance Issues

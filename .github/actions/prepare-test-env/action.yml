@@ -69,9 +69,7 @@ runs:
         cat << EOF > .env
         # CI Environment - Auto-generated
         EULA=${EULA:-TRUE}
-        NETWORK_NAME=${NETWORK_NAME:-minecraft-network}
-        BASE_PORT=${BASE_PORT:-25565}
-        COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-minecraft-servers}
+        MC_ROUTER_DOMAIN=${MC_ROUTER_DOMAIN:-mc.local}
         ENABLE_RCON=${ENABLE_RCON:-true}
         RCON_PASSWORD=${RCON_PASSWORD:-minecraft}
         RCON_PORT=${RCON_PORT:-25575}

@@ -7,7 +7,7 @@ This document describes the health monitoring and auto-restart capabilities of t
 The system provides comprehensive health monitoring for Minecraft servers with automatic restart capabilities. Health checks monitor:
 
 - Container status (running/stopped)
-- Network connectivity (port responsiveness)
+- mc-router entry point (the one port players use)
 - Server logs (error detection)
 - Disk space (low space warnings)
 - Docker health checks (built into containers)
@@ -36,14 +36,17 @@ The `scripts/health-check.sh` script provides detailed health status for servers
 
 - **healthy**: Server is running and all checks pass
 - **warning**: Server is running but has issues (log errors, low disk space)
-- **unhealthy**: Server has critical issues (not running, port not responding)
+- **unhealthy**: Server has critical issues (not running)
 
 ### Health Check Components
 
-1. **Container Status**: Checks if Docker container is running
-2. **Port Connectivity**: Tests if server responds on configured port
+1. **Router Entry Point**: Tests that the shared mc-router port answers (warns — if it is down no route works, but servers themselves may be fine)
+2. **Container Status**: Checks if Docker container is running
 3. **Log Analysis**: Scans recent logs for errors/crashes
 4. **Disk Space**: Monitors available space (>90% usage = warning)
+
+Game traffic has no per-server port: reachability per server is the mc-router
+route (`<server>.<MC_ROUTER_DOMAIN>`), so the old per-server port probe is gone.
 
 ## Auto-Restart System
 
@@ -115,7 +118,7 @@ Output includes:
 
 - Server name
 - Status (running/stopped)
-- Port
+- Connect address (the mc-router route hostname)
 - Memory allocation
 - Uptime
 - Health status (healthy/unhealthy/starting/N/A)
@@ -184,11 +187,12 @@ fi
 - Check if restart-server.sh exists and is executable
 - Verify Docker daemon is running
 
-**Port not responding**
+**Route not answering**
 
 - Server may be starting up (takes 5+ minutes for large modpacks)
 - Check server logs for startup errors
-- Verify port configuration in server .env file
+- Check the router is up and the route is registered: `./scripts/router.sh status`
+- Verify the client resolves `<server>.<MC_ROUTER_DOMAIN>` to this host
 
 **Log errors detected**
 
@@ -208,10 +212,9 @@ docker inspect mc-rlcraft | jq '.[].State.Health'
 # Check server logs for errors
 docker logs --tail 100 mc-rlcraft | grep -i error
 
-# Test port connectivity manually
-telnet localhost 25565
-# or
-nc -zv localhost 25565
+# Test the router entry point manually (the only public game port)
+MC_ROUTER_PORT=$(grep '^MC_ROUTER_PORT=' .env | cut -d= -f2)
+nc -zv localhost "${MC_ROUTER_PORT:-25565}"
 ```
 
 ## Configuration

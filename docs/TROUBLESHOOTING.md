@@ -65,22 +65,23 @@ Run the validation script to check your setup:
 
 **Solutions:**
 
-1. Check what's using the port:
+1. Check what's using the server's RCON port (the only per-server port — game
+   traffic never touches a per-server port; 25565 belongs to mc-router):
 
    ```bash
    # Linux/macOS
-   lsof -i :25565
-   netstat -tulpn | grep :25565
-   
-   # Windows
-   netstat -ano | findstr :25565
+   RCON_PORT=$(grep ^RCON_PORT config/modpacks/server-name.env | cut -d= -f2)
+   lsof -i :"$RCON_PORT"
+   netstat -tulpn | grep :"$RCON_PORT"
    ```
 
-2. Change server port in config:
+2. Game traffic has no per-server port: mc-router routes players by hostname
+   (`<server>.<MC_ROUTER_DOMAIN>`). Only the RCON port is per-server — change
+   it in the config if it collides:
 
    ```bash
    # Edit config/modpacks/server-name.env
-   SERVER_PORT=25566 # Use different port
+   RCON_PORT=26600 # Use unused port in 26565-26664
    ```
 
 3. Use auto-port assignment when adding server:
@@ -207,7 +208,7 @@ Run the validation script to check your setup:
 
    ```bash
    # Edit config/modpacks/server-name.env
-   SERVER_PORT=25566 # Choose unused port
+   RCON_PORT=26600 # Choose unused port (26565-26664)
    ```
 
 3. Use auto-assignment for new servers:
@@ -313,7 +314,7 @@ Run the validation script to check your setup:
 
 3. Common causes:
    - **Server not fully started**: Wait longer (large modpacks take 5-10 minutes)
-   - **Port not responding**: Check SERVER_PORT in config matches container port
+   - **Route not answering**: mc-router is down or the route is stale — `./scripts/router.sh status`
    - **Resource constraints**: Check memory, CPU, disk space
 
 #### Auto-restart not working
@@ -440,7 +441,10 @@ Run the validation script to check your setup:
 **Solutions:**
 
 1. Check port forwarding on router/firewall
-2. Verify server port is accessible:
+2. Verify the router entry point is accessible (the only public game port;
+   players are then routed by hostname, so the client address must be
+   `<server>.<MC_ROUTER_DOMAIN>` — a bare IP:port reaches mc-router, which
+   needs the hostname to pick a server):
 
    ```bash
    # From external machine
@@ -458,9 +462,9 @@ Run the validation script to check your setup:
    sudo pfctl -s rules
    ```
 
-4. Ensure Docker port mapping is correct:
+4. Ensure each server's only published port is its loopback RCON mapping:
    ```bash
-   docker port mc-servername
+   docker port mc-servername # 265XX/tcp -> 127.0.0.1:265XX, nothing else
    ```
 
 ### File System Issues
@@ -550,8 +554,9 @@ docker inspect mc-servername | jq '.[] | {Name: .Name, State: .State, Config: .C
 # Check server configuration
 cat config/modpacks/server-name.env
 
-# Test server connectivity
+# Test the router entry point, then confirm the route exists
 telnet localhost 25565
+./scripts/router.sh status
 
 # Check server files
 ls -la servers/server-name/

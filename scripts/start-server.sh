@@ -63,12 +63,23 @@ ensure_directory "backups/${SERVER_NAME}"
 # Ensure network exists
 ensure_network
 
+# Start mc-router (mandatory: players reach every server through it)
+if ensure_router; then
+  ROUTER_STARTED=true
+else
+  ROUTER_STARTED=false
+fi
+
 # Display startup information
 info ""
 info "Starting Minecraft server: ${YELLOW}${SERVER_NAME}${NC}"
 success "Loading config from: $CONFIG_FILE"
 success "Container name: $CONTAINER_NAME"
-success "Port: ${SERVER_PORT:-auto}"
+success "Players connect via: $(get_route_host "$SERVER_NAME")"
+if [ "$ROUTER_STARTED" = false ]; then
+  warning "mc-router failed to start - the route will not answer until it is up"
+  warning "Check: docker logs minecraft-router (or ./scripts/router.sh logs)"
+fi
 info ""
 
 # Start server

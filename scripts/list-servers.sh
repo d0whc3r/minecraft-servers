@@ -39,11 +39,11 @@ if [ "$FORMAT" == "json" ]; then
     STATUS=$(docker inspect --format='{{.State.Status}}' "$container" 2> /dev/null || echo "unknown")
 
     if [ "$STATUS" == "running" ]; then
-      PORT=$(docker port "$container" 25565 2> /dev/null | cut -d: -f2 || echo "N/A")
+      ROUTE=$(docker inspect --format '{{index .Config.Labels "mc-router.host"}}' "$container" 2> /dev/null || echo "")
       UPTIME=$(docker inspect --format='{{.State.StartedAt}}' "$container" 2> /dev/null || echo "unknown")
       HEALTH=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}N/A{{end}}' "$container" 2> /dev/null || echo "N/A")
     else
-      PORT="N/A"
+      ROUTE=$(docker inspect --format '{{index .Config.Labels "mc-router.host"}}' "$container" 2> /dev/null || echo "")
       UPTIME="N/A"
       HEALTH="N/A"
     fi
@@ -51,7 +51,7 @@ if [ "$FORMAT" == "json" ]; then
     echo "    {"
     echo "      \"name\": \"$SERVER_NAME\","
     echo "      \"status\": \"$STATUS\","
-    echo "      \"port\": \"$PORT\","
+    echo "      \"route\": \"$ROUTE\","
     echo "      \"uptime\": \"$UPTIME\","
     echo "      \"health\": \"$HEALTH\""
     echo -n "    }"
@@ -63,11 +63,19 @@ if [ "$FORMAT" == "json" ]; then
   exit 0
 fi
 
-# Table output (default)
+# The mc-router hostname players connect to (game ports are never published;
+# RCON stays loopback-only and is not a player-facing address)
+get_connect_address() {
+  local container="$1"
+  local route
+  route=$(docker inspect --format '{{index .Config.Labels "mc-router.host"}}' "$container" 2> /dev/null || true)
+  echo "${route:-N/A}"
+}
+
 echo ""
 echo -e "${BLUE}Minecraft Servers Status${NC}"
 echo "================================================================================"
-printf "%-15s %-12s %-8s %-8s %-12s %-10s\n" "Name" "Status" "Port" "Memory" "Uptime" "Health"
+printf "%-15s %-12s %-12s %-8s %-12s %-10s\n" "Name" "Status" "Connect" "Memory" "Uptime" "Health"
 echo "--------------------------------------------------------------------------------"
 
 RUNNING=0
@@ -91,8 +99,8 @@ for container in $CONTAINERS; do
     STATUS_COLOR="${GREEN}running${NC}"
     ((RUNNING++))
 
-    # Get additional info for running containers
-    PORT=$(docker port "$container" 25565 2> /dev/null | cut -d: -f2 || echo "N/A")
+    # The mc-router hostname players connect to (static, from labels)
+    PORT=$(get_connect_address "$container")
 
     # Get memory from config
     MEMORY=$(grep "^MEMORY=" "config/modpacks/${SERVER_NAME}.env" 2> /dev/null | cut -d= -f2 | tr -d ' "' || echo "N/A")
@@ -111,14 +119,15 @@ for container in $CONTAINERS; do
   else
     STATUS_COLOR="${RED}stopped${NC}"
     ((STOPPED++))
-    PORT="-"
+    # Route hostname is static (from labels) even when stopped
+    PORT=$(get_connect_address "$container")
     MEMORY="-"
     UPTIME="-"
     HEALTH="-"
   fi
 
   # Print with echo -e to interpret color codes
-  echo -e "$(printf "%-24s" "$SERVER_NAME")$(printf "%-20s" "$STATUS_COLOR")$(printf "%-8s" "$PORT")$(printf "%-8s" "$MEMORY")$(printf "%-12s" "$UPTIME")$(printf "%-18s" "$HEALTH")"
+  echo -e "$(printf "%-24s" "$SERVER_NAME")$(printf "%-20s" "$STATUS_COLOR")$(printf "%-12s" "$PORT")$(printf "%-8s" "$MEMORY")$(printf "%-12s" "$UPTIME")$(printf "%-18s" "$HEALTH")"
 done
 
 echo "================================================================================"

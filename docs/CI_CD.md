@@ -88,10 +88,8 @@ The BATS test suite defines its test environment directly in the workflow's `env
 # Minecraft EULA (required)
 EULA=TRUE
 
-# Docker Configuration
-NETWORK_NAME=minecraft-network
-BASE_PORT=25565
-COMPOSE_PROJECT_NAME=minecraft-servers
+# Router (hostname-based routing; players use <server>.<MC_ROUTER_DOMAIN>)
+MC_ROUTER_DOMAIN=mc.local
 
 # CurseForge API (from GitHub secret)
 CF_API_KEY=${{ secrets.CF_API_KEY }}
