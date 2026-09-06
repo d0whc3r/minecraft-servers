@@ -1,5 +1,5 @@
 name: 'Prepare Test Environment'
-description: 'Prepare the test environment with cached Docker images and test data'
+description: 'Create the CI .env and select the modpacks this runner will test'
 
 inputs:
   modpack-filter:
@@ -10,100 +10,14 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Cache Minecraft Server Images
-      uses: actions/cache@v6
-      with:
-        path: |
-          /tmp/docker-images
-        key: minecraft-server-images-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}
-        restore-keys: |
-          minecraft-server-images-${{ runner.os }}-
-
-    - name: Load Cached Minecraft Images
-      shell: bash
-      run: |
-        set -e
-
-        echo "🔄 Loading cached Minecraft images..."
-
-        # Load all cached images
-        if [ -d "/tmp/docker-images" ] && [ "$(ls -A /tmp/docker-images)" ]; then
-          for tar_file in /tmp/docker-images/*.tar; do
-            if [ -f "$tar_file" ]; then
-              echo "📤 Loading $(basename "$tar_file" .tar)..."
-              docker load -i "$tar_file"
-              echo "✅ Loaded $(basename "$tar_file" .tar)"
-            fi
-          done
-          echo "🎯 Cached images loaded successfully"
-        else
-          echo "⚠️  No cached images found, will download as needed"
-        fi
-
-    - name: Cache Server Data Directories
-      uses: actions/cache@v6
-      with:
-        path: |
-          servers/*/data
-          servers/*/mods
-        key: server-data-${{ runner.os }}-${{ hashFiles('config/modpacks/*.env') }}
-        restore-keys: |
-          server-data-${{ runner.os }}-
-          server-data-
-
     - name: Create .env file for Docker Compose
       shell: bash
-      run: |
-        set -e
-
-        echo "📝 Creating .env file..."
-
-        # Debug: Show which environment variables are available
-        echo "🔍 Environment variables check:"
-        echo "  EULA: ${EULA:-NOT_SET}"
-        echo "  CF_API_KEY: ${CF_API_KEY:0:10}..." # Show first 10 chars for security
-        echo "  ENABLE_RCON: ${ENABLE_RCON:-NOT_SET}"
-
-        # Create .env file with required variables for Docker Compose
-        # Use heredoc for most variables, handle CF_API_KEY separately to avoid expansion issues
-        cat << EOF > .env
-        # CI Environment - Auto-generated
-        EULA=${EULA:-TRUE}
-        MC_ROUTER_DOMAIN=${MC_ROUTER_DOMAIN:-mc.local}
-        ENABLE_RCON=${ENABLE_RCON:-true}
-        RCON_PASSWORD=${RCON_PASSWORD:-minecraft}
-        RCON_PORT=${RCON_PORT:-25575}
-        BROADCAST_RCON_TO_OPS=${BROADCAST_RCON_TO_OPS:-false}
-        TZ=${TZ:-UTC}
-        ENABLE_ROLLING_LOGS=${ENABLE_ROLLING_LOGS:-true}
-        USE_AIKAR_FLAGS=${USE_AIKAR_FLAGS:-true}
-        ONLINE_MODE=${ONLINE_MODE:-false}
-        ALLOW_FLIGHT=${ALLOW_FLIGHT:-true}
-        EOF
-
-        # Handle CF_API_KEY separately to avoid shell expansion of special characters
-        echo "CF_API_KEY=${CF_API_KEY:-dummy_key}" >> .env
-
-        echo "✅ .env file created"
+      run: ./scripts/ci/create-test-env.sh
 
     - name: Filter modpacks for this runner
       shell: bash
       id: filter-modpacks
-      run: |
-        # Get all modpack configs and filter based on input pattern
-        if [ -n "${{ inputs.modpack-filter }}" ] && [ "${{ inputs.modpack-filter }}" != ".*" ]; then
-          # Filter modpacks using the provided pattern
-          MODPACKS=$(find config/modpacks -name "*.env" -type f | grep -E "${{ inputs.modpack-filter }}" | sed 's|config/modpacks/||' | sed 's|\.env$||' | tr '\n' ' ')
-        else
-          # Use all modpacks if no filter
-          MODPACKS=$(find config/modpacks -name "*.env" -type f | sed 's|config/modpacks/||' | sed 's|\.env$||' | tr '\n' ' ')
-        fi
-
-        echo "modpacks=$MODPACKS" >> $GITHUB_OUTPUT
-        echo "count=$(echo $MODPACKS | wc -w)" >> $GITHUB_OUTPUT
-
-        # Set environment variable for BATS tests
-        echo "TEST_MODPACKS=$MODPACKS" >> $GITHUB_ENV
+      run: ./scripts/ci/filter-modpacks.sh '${{ inputs.modpack-filter }}'
 
     - name: Display test configuration
       shell: bash
@@ -112,10 +26,3 @@ runs:
         echo "Modpack filter: ${{ inputs.modpack-filter }}"
         echo "Selected modpacks: ${{ steps.filter-modpacks.outputs.modpacks }}"
         echo "Modpack count: ${{ steps.filter-modpacks.outputs.count }}"
-        echo "TEST_MODPACKS environment variable set for BATS tests"
-
-        # Show cache status
-        echo ""
-        echo "📊 Cache Status:"
-        echo "🐳 Docker images cached: $(docker images itzg/minecraft-server --format "table {{.Repository}}:{{.Tag}}" | wc -l) images"
-        echo "📁 Server data cache: $(find servers -name "data" -type d 2>/dev/null | wc -l) directories"

@@ -19,24 +19,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Load configuration
+      - name: Load pipeline configuration
         id: config
-        run: |
-          # Load configuration from .github/workflows/config
-          if [ -f ".github/workflows/config" ]; then
-            echo "Loading configuration from .github/workflows/config"
-            while IFS='=' read -r key value; do
-              # Skip comments and empty lines
-              [[ $key =~ ^[[:space:]]*# ]] && continue
-              [[ -z "$key" ]] && continue
-              # Remove whitespace
-              key=$(echo "$key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-              value=$(echo "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-              echo "$key=$value" >> $GITHUB_OUTPUT
-            done < .github/workflows/config
-          else
-            echo "Configuration file not found, using defaults"
-          fi
+        run: ./scripts/ci/load-config.sh
 
       - name: Setup Dependencies
         uses: ./.github/actions/setup-deps

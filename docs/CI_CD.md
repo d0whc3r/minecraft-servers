@@ -1,36 +1,29 @@
 # CI/CD Pipeline Configuration
 
-This document explains how to configure and use the CI/CD pipelines for the Minecraft Multi-Server System.
+This document explains how the CI/CD pipelines for the Minecraft Multi-Server
+System work and how to configure them.
 
 ## Pipeline Configuration
 
 ### Configuration File (`.github/workflows/config`)
 
-All pipeline settings are centralized in `.github/workflows/config` - the single source of truth for CI/CD configuration.
+All pipeline settings are centralized in `.github/workflows/config` - the
+single source of truth for CI/CD configuration. Every workflow loads it through
+`scripts/ci/load-config.sh` and falls back to inline defaults when the file is
+missing.
 
 **Key Settings:**
 
 ```bash
-# Test execution settings
-TEST_TIMEOUT_MINUTES=45 # Test timeout per job
-PARALLEL_JOBS=1         # Parallel jobs per runner
+# E2E test execution settings (e2e-tests.yml)
+TEST_TIMEOUT_MINUTES=45 # bats timeout per matrix chunk, in minutes
+PARALLEL_JOBS=1         # parallel bats jobs inside a chunk
 
-# Docker settings
-DOCKER_VERSION=28.5.2 # Docker version to use
+# Docker settings (e2e-tests.yml)
+DOCKER_VERSION=28.5.2
 
-# Dependency versions
-NODE_VERSION=22 # Node.js version
-
-# Chunking strategy
-CHUNK_STRATEGY=medium # small/medium/large chunking
-
-# Cache settings
-CACHE_DOCKER_IMAGES=true # Enable Docker image caching
-CACHE_PNPM_STORE=true    # Enable pnpm caching
-CACHE_NODE_MODULES=true  # Enable node_modules caching
-
-# Artifact settings
-ARTIFACT_RETENTION_DAYS=7 # How long to keep test artifacts
+# Dependency versions (all workflows)
+NODE_VERSION=22
 ```
 
 **How to Modify:**
@@ -38,12 +31,21 @@ ARTIFACT_RETENTION_DAYS=7 # How long to keep test artifacts
 1. Edit `.github/workflows/config`
 2. Commit and push changes
 3. All workflows will automatically use new values
-4. No need to update multiple workflow files
 
-**Affected Workflows:**
+### CI Helper Scripts (`scripts/ci/`)
 
-- `bats-tests.yml` - Uses all configuration values
-- `code-quality.yml` - Uses Node.js version
+The workflow YAML files stay thin: the actual logic lives in versioned shell
+scripts under `scripts/ci/` (validated by the BATS suite like any other
+script).
+
+| Script                     | Purpose                                                        |
+| -------------------------- | -------------------------------------------------------------- |
+| `load-config.sh`           | Parse `.github/workflows/config` into `$GITHUB_OUTPUT`         |
+| `generate-test-matrix.sh`  | Build the E2E job matrix (chunks of modpacks + Java versions)  |
+| `pull-minecraft-images.sh` | Pre-pull the `itzg/minecraft-server` tags a chunk needs        |
+| `generate-summary.sh`      | Write the run summary to `$GITHUB_STEP_SUMMARY`                |
+| `create-test-env.sh`       | Create the `.env` docker compose consumes during tests         |
+| `filter-modpacks.sh`       | Select the modpacks one E2E runner will test (`TEST_MODPACKS`) |
 
 ## GitHub Actions Workflows
 
@@ -51,56 +53,63 @@ ARTIFACT_RETENTION_DAYS=7 # How long to keep test artifacts
 
 **Purpose:** Fast code quality validation without Docker.
 
-**Triggers:**
-
-- Push to `master` branch
-- Pull requests to `master` branch
-- Manual workflow dispatch
+**Triggers:** push to `master`, pull requests to `master`, manual dispatch.
 
 **What it does:**
 
 - Runs `pnpm run lint` (Prettier code formatting check)
-- No Docker required
-- Fast execution (~30 seconds)
+- Fast execution (~1 minute)
 
-### 2. BATS Test Suite (`bats-tests.yml`)
+### 2. BATS Tests (`bats-tests.yml`)
 
-**Purpose:** Comprehensive testing with real Minecraft server startup.
+**Purpose:** Fast validation of scripts, modpack configs and compose files.
+Runs on every push/PR so regressions are caught before merge.
 
-**Triggers:**
-
-- Push to `master` branch
-- Pull requests to `master` branch
+**Triggers:** push to `master`, pull requests to `master`, manual dispatch.
 
 **What it does:**
 
-- Parallel test execution across multiple runners
-- Real Docker containers with Minecraft servers
-- Full server startup validation
-- Environment variables automatically injected
+- Runs `tests/bats/config-validation.bats` (`US1-TC001`–`TC006`, `TC008`–`TC010`):
+  script syntax, config invariants (TYPE/MEMORY/VERSION/RCON_PORT/SERVER_NAME),
+  argument validation, server detection, compose rendering and `common.sh`
+  API checks
+- No Minecraft containers are started and no images are downloaded (the only
+  Docker usage renders the compose files with the CLI)
+- Single job, ~2 minutes
+
+### 3. E2E BATS Tests (`e2e-tests.yml`)
+
+**Purpose:** Full end-to-end validation: every modpack is started for real and
+must reach `Done!` in its logs.
+
+**Triggers:** manual dispatch only (`workflow_dispatch`) — each runner downloads
+modpacks and boots containers, which consumes hours of CI time across the
+matrix.
+
+**What it does:**
+
+- `prepare-matrix`: chunks the modpacks (2 per runner) and computes the Java
+  versions each chunk needs (`scripts/ci/generate-test-matrix.sh`)
+- `test`: per chunk — setup deps/docker, create `.env`, filter modpacks,
+  pre-pull the required images, run `tests/bats/server-startup.bats`
+  (`US1-TC007`), upload logs as artifacts
+- `summarize`: collects artifacts and publishes a run summary
+  (`scripts/ci/generate-summary.sh`)
 
 ## Environment Variables in CI
 
-The BATS test suite defines its test environment directly in the workflow's `env` block
-(`.github/workflows/bats-tests.yml`):
+The E2E workflow defines its test environment in the job's `env` block
+(`.github/workflows/e2e-tests.yml`); `scripts/ci/create-test-env.sh` turns it
+into the `.env` docker compose reads:
 
 ```bash
-# Minecraft EULA (required)
 EULA=TRUE
-
-# Router (hostname-based routing; players use <server>.<MC_ROUTER_DOMAIN>)
 MC_ROUTER_DOMAIN=mc.local
-
-# CurseForge API (from GitHub secret)
-CF_API_KEY=${{ secrets.CF_API_KEY }}
-
-# RCON Configuration
+CF_API_KEY=${{ secrets.CF_API_KEY }} # from GitHub secrets
 ENABLE_RCON=true
 RCON_PASSWORD=minecraft
 RCON_PORT=25575
 BROADCAST_RCON_TO_OPS=false
-
-# Default Settings
 TZ=UTC
 ENABLE_ROLLING_LOGS=true
 USE_AIKAR_FLAGS=true
@@ -108,14 +117,14 @@ ONLINE_MODE=false
 ALLOW_FLIGHT=true
 ```
 
-If you add a variable to `.env.example` that tests depend on, mirror it in the workflow's
-`env` block.
+If you add a variable to `.env.example` that tests depend on, mirror it in the
+workflow's `env` block **and** in `scripts/ci/create-test-env.sh`.
 
 ## Required GitHub Secrets
 
 ### CF_API_KEY
 
-**Required for:** BATS test suite (CurseForge modpack downloads)
+**Required for:** E2E test suite (CurseForge modpack downloads)
 
 **How to set it:**
 
@@ -136,43 +145,34 @@ If you add a variable to `.env.example` that tests depend on, mirror it in the w
 
 ## Test Execution Details
 
-### Parallel Test Execution
-
-The BATS test suite uses a matrix strategy to run tests in parallel:
-
-- **Matrix Generation:** Automatically determines optimal chunk size based on modpack count
-- **Chunking:** Divides modpacks into groups of 1-3 servers per runner
-- **Parallel Execution:** Each chunk runs on a separate GitHub Actions runner
-- **Result Aggregation:** All results are collected and summarized
-
-### Test Output Visibility
-
-The tests now provide enhanced output visibility:
-
-- **Real-time Progress:** Server logs shown every 5 seconds during startup
-- **Clear Status Indicators:** Emojis and formatted messages for easy reading
-- **Detailed Error Reporting:** Full container logs on failures
-- **Test Artifacts:** All logs saved for download and analysis
-
 ### Test Categories
 
 1. **US1-TC001:** Script syntax validation (fast, no Docker)
-2. **US1-TC002:** Configuration file validation
-3. **US1-TC003:** Error handling for invalid inputs
-4. **US1-TC004:** Script accessibility checks
-5. **US1-TC005:** Dynamic modpack detection
-6. **US1-TC006:** Modpack name extraction
-7. **US1-TC007:** Full server startup and readiness (slow, requires Docker)
+2. **US1-TC002:** Configuration file validation (fast, no Docker)
+3. **US1-TC003:** Error handling for invalid inputs (fast, no Docker)
+4. **US1-TC004:** Script accessibility checks (fast, no Docker)
+5. **US1-TC005:** Dynamic modpack detection (fast, no Docker)
+6. **US1-TC006:** Modpack name extraction (fast, no Docker)
+7. **US1-TC007:** Full server startup and readiness (slow, Docker, manual E2E)
+8. **US1-TC008:** Compose files render router-only wiring (fast)
+9. **US1-TC009:** `router.sh` argument validation (fast, no Docker)
+10. **US1-TC010:** `common.sh` cross-script API completeness (fast, no Docker)
+
+### Test Output Visibility
+
+- **Real-time progress:** server logs shown every 5 seconds during E2E startup
+- **Detailed error reporting:** full container logs on failures
+- **Test artifacts:** E2E logs uploaded per chunk and linked in the run summary
 
 ## Local Development vs CI
 
-| Aspect          | Local Development     | CI Pipeline          |
-| --------------- | --------------------- | -------------------- |
-| **Linting**     | `pnpm run lint`       | `code-quality.yml`   |
-| **Quick Tests** | `pnpm run test:quick` | Pre-push hook        |
-| **Full Tests**  | `pnpm run test`       | `bats-tests.yml`     |
-| **Environment** | Local `.env` file     | Workflow `env` block |
-| **CF_API_KEY**  | Manual `.env` setup   | GitHub secret        |
+| Aspect          | Local Development     | CI Pipeline                      |
+| --------------- | --------------------- | -------------------------------- |
+| **Linting**     | `pnpm run lint`       | `code-quality.yml`               |
+| **Quick Tests** | `pnpm run test:quick` | `bats-tests.yml` + pre-push hook |
+| **Full Tests**  | `pnpm run test`       | `e2e-tests.yml` (manual)         |
+| **Environment** | Local `.env` file     | Workflow `env` block             |
+| **CF_API_KEY**  | Manual `.env` setup   | GitHub secret                    |
 
 ## Troubleshooting
 
@@ -184,129 +184,36 @@ The tests now provide enhanced output visibility:
 - Check that it's in the correct repository
 - Verify the secret value is correct
 
-#### "Container creation timeout"
+#### "Container creation timeout" (E2E)
 
 - Check Docker resource limits in GitHub Actions
 - Verify modpack configurations are valid
 - Look at test artifacts for detailed logs
 
-#### "Modpack download failures"
+#### "Modpack download failures" (E2E)
 
 - Verify CF_API_KEY is valid and has proper permissions
 - Check if CurseForge API is accessible
 - Ensure modpack URLs in config files are correct
 
-### Debug Mode
-
-To enable debug output in tests:
-
-```bash
-# Local testing with debug
-DEBUG=true pnpm run test
-
-# Or set in environment
-export DEBUG=true
-pnpm run test
-```
-
 ### Test Artifacts
 
-Failed test runs upload artifacts containing:
+Failed E2E runs upload artifacts containing:
 
 - Container logs for each tested server
 - Test execution logs
 - Configuration files used
-- Error details and stack traces
 
 Download these from the GitHub Actions run page under "Artifacts".
 
-## Performance Optimization
+## Cost Notes
 
-### Current Optimizations
+The heavy part of testing is starting real servers (modpack downloads + boot
+time). To keep CI minutes low:
 
-- **Parallel Execution:** Tests run across multiple GitHub Actions runners
-- **Docker Image Caching:** Multiple Minecraft server images cached (latest, java8, java11, java17, java21)
-- **Server Data Caching:** Generated server data directories cached between runs
-- **Dependency Caching:** pnpm store and node_modules cached
-- **Smart Chunking:** Optimal distribution of modpacks per runner
-- **Early Failure Detection:** Tests stop on critical errors
-
-## Caching Strategy
-
-The CI/CD pipeline implements a comprehensive caching strategy to minimize execution time and bandwidth usage:
-
-### Docker Image Caching
-
-**Cached Images:**
-
-- `itzg/minecraft-server:latest`
-- `itzg/minecraft-server:java8`
-- `itzg/minecraft-server:java11`
-- `itzg/minecraft-server:java17`
-- `itzg/minecraft-server:java21`
-
-**Cache Mechanism:**
-
-- Images are pulled once and saved to `/tmp/docker-images/*.tar`
-- Cache key based on `docker-compose.yml` hash
-- Images loaded from cache on subsequent runs
-- Fallback to registry pull if cache miss
-
-### Server Data Caching
-
-**What Gets Cached:**
-
-- `servers/*/data/` - World files, configurations, logs
-- `servers/*/mods/` - Downloaded mod files
-
-**Cache Strategy:**
-
-- Cache key based on modpack configuration files hash
-- Shared across all runners (not runner-specific)
-- Persists generated world data between test runs
-- Reduces download time for CurseForge/Modrinth mods
-
-**Cache Invalidation:**
-
-- Cache updates when modpack configs change
-- Manual cache clearing via GitHub Actions cache management
-
-### Dependency Caching
-
-**pnpm Dependencies:**
-
-- `~/.pnpm-store` - Global package store
-- `node_modules` - Project dependencies
-- Cache key based on `pnpm-lock.yaml` hash
-
-### Cache Performance Impact
-
-**Typical Speed Improvements:**
-
-- **First run:** 5-10 minutes (full setup)
-- **Cached runs:** 2-4 minutes (90% faster)
-- **Image loading:** ~30 seconds vs 2-3 minutes from registry
-- **Server data:** Skip mod downloads and world generation
-
-### Cache Management
-
-**Automatic Cache Keys:**
-
-```
-minecraft-server-images-{os}-{compose-hash}
-server-data-{os}-{modpack-configs-hash}
-pnpm-{os}-{lockfile-hash}
-```
-
-**Manual Cache Clearing:**
-
-1. Go to GitHub repository → Actions → Caches
-2. Delete specific cache entries as needed
-3. Or push an empty commit to force cache refresh
-
-### Future Improvements
-
-- **Test Result Caching:** Skip unchanged modpacks
-- **Selective Testing:** Only test modified modpack configurations
-- **Resource Pooling:** Reuse containers between tests
-- **Network Optimization:** Local Docker registries for faster pulls
+- The fast suite (`bats-tests.yml`) gates every push/PR in ~2 minutes
+- The E2E suite is manual-only and chunks modpacks 2 per runner with
+  `max-parallel: 2`
+- No cross-run caching of Docker images or server data: pulls are explicit
+  (`scripts/ci/pull-minecraft-images.sh`) and every E2E run starts from a
+  clean data directory, which avoids stale-world false positives

@@ -1,0 +1,116 @@
+name: E2E BATS Tests
+
+# Suite pesado: arranca cada modpack de verdad y espera a que esté "Done!"
+# (tests/bats/server-startup.bats). Solo manual: cada job descarga modpacks
+# y levanta contenedores, lo que consume horas de runner repartidas en
+# chunks de 2 modpacks. La suite rápida (push/PR) vive en bats-tests.yml.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Chunking de modpacks + versiones de Java necesarias
+  prepare-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate-matrix.outputs.matrix }}
+      total-modpacks: ${{ steps.generate-matrix.outputs.total-modpacks }}
+      java-versions: ${{ steps.generate-matrix.outputs.java-versions }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Generate test matrix
+        id: generate-matrix
+        run: ./scripts/ci/generate-test-matrix.sh
+
+  test:
+    needs: prepare-matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.prepare-matrix.outputs.matrix) }}
+    env:
+      # Environment variables consumed by scripts/ci/create-test-env.sh
+      EULA: TRUE
+      MC_ROUTER_DOMAIN: mc.local
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      ENABLE_RCON: true
+      RCON_PASSWORD: minecraft
+      RCON_PORT: 25575
+      BROADCAST_RCON_TO_OPS: false
+      TZ: UTC
+      ENABLE_ROLLING_LOGS: true
+      USE_AIKAR_FLAGS: true
+      ONLINE_MODE: false
+      ALLOW_FLIGHT: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Load pipeline configuration
+        id: config
+        run: ./scripts/ci/load-config.sh
+
+      - name: Setup Dependencies
+        uses: ./.github/actions/setup-deps
+        with:
+          node-version: ${{ steps.config.outputs.NODE_VERSION || '22' }}
+
+      - name: Setup Docker Environment
+        uses: ./.github/actions/setup-docker
+        with:
+          docker-version: ${{ steps.config.outputs.DOCKER_VERSION || '28.5.2' }}
+
+      - name: Prepare Test Environment
+        uses: ./.github/actions/prepare-test-env
+        with:
+          modpack-filter: ${{ matrix.pattern }}
+
+      - name: Pull required Minecraft images
+        run: ./scripts/ci/pull-minecraft-images.sh ${{ matrix.modpacks }}
+
+      - name: Run E2E BATS tests
+        uses: ./.github/actions/run-bats-tests
+        with:
+          test-pattern: 'tests/bats/server-startup.bats'
+          timeout: ${{ steps.config.outputs.TEST_TIMEOUT_MINUTES || '45' }}
+          parallel-jobs: ${{ steps.config.outputs.PARALLEL_JOBS || '1' }}
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-chunk-${{ matrix.chunk }}
+          path: |
+            *.log
+            test-results/
+          retention-days: 7
+
+  # Recolecta resultados y publica un resumen en el run
+  summarize:
+    needs: [prepare-matrix, test]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Download test artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: test-artifacts
+          continue-on-error: true
+
+      - name: Generate summary report
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+          TOTAL_MODPACKS: ${{ needs.prepare-matrix.outputs.total-modpacks }}
+          JAVA_VERSIONS: ${{ needs.prepare-matrix.outputs.java-versions }}
+          MATRIX_JSON: ${{ needs.prepare-matrix.outputs.matrix }}
+        run: ./scripts/ci/generate-summary.sh

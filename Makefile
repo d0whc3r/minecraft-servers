@@ -45,8 +45,8 @@ PLATFORMS := \
 # Go sources relative to $(TUI) (the module root is the main package).
 GOSRC := . ./internal
 
-# Bash side: every management script plus its bats suite.
-SHFILES   := $(wildcard scripts/*.sh)
+# Bash side: every management script (incl. CI helpers) plus its bats suite.
+SHFILES   := $(wildcard scripts/*.sh) $(wildcard scripts/ci/*.sh)
 BATSFILES := $(wildcard tests/bats/*.bats)
 SHSTAMP   := $(TMP)/test-sh.cksum
 
@@ -92,12 +92,13 @@ test: ## go tests with the race detector
 test-sh: $(SHSTAMP) ## bash side: syntax checks + fast bats cases (no docker, cached)
 	@cat $(SHSTAMP)
 
-# US1-TC00[1-6] are the no-docker bats cases; US1-TC007 (real server start)
-# is deliberately excluded — run `make test-bats` for the full suite.
+# config-validation.bats is the no-server-startup suite (its only Docker use
+# renders the compose files with the CLI); server-startup.bats (real server
+# starts) is deliberately excluded — run `make test-bats` for the full suite.
 $(SHSTAMP): Makefile $(SHFILES) $(BATSFILES)
 	@mkdir -p "$(TMP)"
 	@for f in $(SHFILES); do bash -n "$$f" || exit 1; done
-	pnpm exec bats --filter 'US1-TC00[1-6]:' tests/bats/
+	pnpm exec bats tests/bats/config-validation.bats
 	@cksum $(SHFILES) $(BATSFILES) Makefile > $@
 
 test-bats: ## full bats suite (slow: starts real servers, needs docker)
