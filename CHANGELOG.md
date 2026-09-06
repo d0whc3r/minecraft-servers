@@ -50,6 +50,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **CI pipeline split by cost**: the fast BATS suite (`tests/bats/config-validation.bats`,
+  no server startup) now runs on every push/PR in `bats-tests.yml`; the heavy
+  end-to-end startup test (`tests/bats/server-startup.bats`, `US1-TC007`) moved
+  to a manual `e2e-tests.yml` workflow. All workflow shell logic was extracted
+  from the YAML into `scripts/ci/` (`load-config.sh`, `generate-test-matrix.sh`,
+  `pull-minecraft-images.sh`, `generate-summary.sh`, `create-test-env.sh`,
+  `filter-modpacks.sh`) so the pipeline logic is versioned and testable like
+  any other script
+- `pnpm run test:quick` and `make test-sh` run the full fast suite
+  (`config-validation.bats`) instead of a name filter over the old monolithic file
+- **Web panel tables on TanStack Table v9**: `DataTable` now declares features,
+  row models and filter-fn registries up front (`tableFeatures`/`useTable`) and
+  exports a `DataTableColumn` type; Dashboard and AdminApp adopt it
+- Root `package.json` trimmed: dead `docker:*`, `ci`, `test:verbose`,
+  `dev:setup`, `backup:all` and redundant `web:*`/`tui:build` filters removed
+  (use the workspace filter or `scripts/tui.sh` directly); engines now require
+  pnpm >= 10
 - **Router-only architecture**: all game traffic goes through mc-router, always.
   The per-server `SERVER_PORT` variable is gone from every config — servers have
   no game port at all, and `RCON_PORT` (unique, managed range 26565-26664,
@@ -92,6 +109,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `MC_ROUTER_ENABLED`, `MC_ROUTER_PUBLISH_PORTS` and
   `docker-compose.published-ports.yml` — the router always runs and game ports
   are never published
+- CI `prepare-images` job and Docker-image/server-data caches — the image cache
+  was never shared between jobs of the same run, and cached world data risked
+  stale-state false positives; E2E runners now pull the tags they need
+  (`scripts/ci/pull-minecraft-images.sh`) and always start from clean data
+- Dead keys in `.github/workflows/config` (`CHUNK_STRATEGY`, `CACHE_*`,
+  `ARTIFACT_RETENTION_DAYS`, `ENABLE_DEBUG_LOGS`, `VERBOSE_TEST_OUTPUT` — none
+  were read by any workflow)
 
 ### Fixed
 
