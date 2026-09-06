@@ -125,7 +125,7 @@ describe("server registry", () => {
     );
     write(
       "config/modpacks/cf-slug.env",
-      ["TYPE=AUTO_CURSEFORGE", "AUTO_CURSEFORGE=rlcraft"].join("\n"),
+      ["TYPE=AUTO_CURSEFORGE", "CF_SLUG=rlcraft"].join("\n"),
     );
     write(
       "config/modpacks/modrinth-url.env",

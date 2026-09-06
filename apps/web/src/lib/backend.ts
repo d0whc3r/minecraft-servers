@@ -7,7 +7,9 @@ import {
   getStats,
   getRecentLogs,
   getDockerVersion,
+  isServerStopped,
 } from "@/lib/docker.js";
+import { isServerStopped as k8sIsServerStopped } from "@/lib/k8sLifecycle.js";
 import {
   listContainers as k8sListContainers,
   getStats as k8sGetStats,
@@ -17,6 +19,8 @@ import {
 } from "@/lib/k8s.js";
 
 export interface Backend {
+  /** Fresh check for registry removal. Throws if workload state is unavailable. */
+  isServerStopped(server: string): Promise<boolean>;
   /** Workload state keyed by "mc-<server>". */
   listContainers(): Promise<
     Map<string, import("@/lib/docker.js").ContainerInfo>
@@ -31,6 +35,7 @@ export interface Backend {
 }
 
 const dockerBackend: Backend = {
+  isServerStopped,
   listContainers,
   getStats,
   getRecentLogs: (server, tail) => getRecentLogs(`mc-${server}`, tail),
@@ -42,6 +47,7 @@ const dockerBackend: Backend = {
 };
 
 const kubernetesBackend: Backend = {
+  isServerStopped: k8sIsServerStopped,
   listContainers: k8sListContainers,
   getStats: k8sGetStats,
   getRecentLogs: k8sGetRecentLogs,

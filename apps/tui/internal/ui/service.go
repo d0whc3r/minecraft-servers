@@ -21,5 +21,7 @@ type Service interface {
 	LatestBackup(server string) (backups.Backup, bool)
 }
 
-// The concrete application service must keep satisfying the interface.
+// The concrete application services must keep satisfying the interface:
+// the docker/scripts one and the kubernetes one (MCPANEL_RUNTIME).
 var _ Service = app.Service{}
+var _ Service = app.KubeService{}

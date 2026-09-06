@@ -30,7 +30,15 @@ func main() {
 		fatal(err)
 	}
 
-	svc := app.New(root)
+	// MCPANEL_RUNTIME=kubernetes is the panel's own switch: inside the panel
+	// container the TUI manages the cluster (helm/kubectl + ServiceAccount)
+	// instead of the docker scripts.
+	var svc ui.Service
+	if os.Getenv("MCPANEL_RUNTIME") == "kubernetes" {
+		svc = app.NewKube(root)
+	} else {
+		svc = app.New(root)
+	}
 
 	if *dump != "" {
 		runDump(svc, *dump)
@@ -48,7 +56,7 @@ func main() {
 	}
 }
 
-func runDump(svc app.Service, format string) {
+func runDump(svc ui.Service, format string) {
 	if format != "table" && format != "json" {
 		fatal(errors.New("unknown --dump format: " + format + " (use table|json)"))
 	}
@@ -121,6 +129,15 @@ func findRoot(flagRoot string) (string, error) {
 }
 
 func isProjectRoot(dir string) bool {
-	st, err := os.Stat(filepath.Join(dir, "scripts", "common.sh"))
-	return err == nil && !st.IsDir()
+	if st, err := os.Stat(filepath.Join(dir, "scripts", "common.sh")); err == nil && !st.IsDir() {
+		return true
+	}
+	// The panel image bakes the charts + modpack catalog without the docker
+	// management scripts (kubernetes runtime): /repo inside the mcpanel
+	// container is a valid root too.
+	if _, err := os.Stat(filepath.Join(dir, "charts", "minecraft-server", "Chart.yaml")); err != nil {
+		return false
+	}
+	st, err := os.Stat(filepath.Join(dir, "config", "modpacks"))
+	return err == nil && st.IsDir()
 }

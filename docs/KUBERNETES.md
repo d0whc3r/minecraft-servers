@@ -82,10 +82,11 @@ helm upgrade --install minecraft-panel charts/web-panel -n minecraft \
 > it can also be run manually from the Actions tab. GHCR creates the first
 > package as **private**: flip it to public (Packages → panel → Package
 > settings) or set `imagePullSecrets` in the web-panel chart, or pulls fail
-> with 403. It carries kubectl, helm, the charts and the modpack catalog —
-> that plus the cluster credentials is everything the panel needs to start
-> servers. To use your own registry instead, set `image.repository` /
-> `image.tag` in the web-panel chart.
+> with 403. It carries kubectl, helm, the charts, the modpack catalog and the
+> mc-tui binary (plus an optional key-only sshd, see below) — that plus the
+> cluster credentials is everything the panel needs to start servers. To use
+> your own registry instead, set `image.repository` / `image.tag` in the
+> web-panel chart.
 
 ## Quick start (no repo clone)
 
@@ -146,6 +147,15 @@ Two caveats:
 - **Keep secrets out of `config/modpacks/*.env`**: the catalog rides in a
   ConfigMap, which is not redacted. Anything sensitive (API keys, passwords)
   belongs in `.env`, which lands in a Secret.
+
+### Servers created from the panel
+
+The catalog ConfigMap mounts read-only, so **+ New server** in the panel
+writes to `<panel PVC>/servers/<name>.env` instead. Those servers persist
+across panel restarts (they live on the panel's data claim), appear in the
+dashboard immediately and are deletable from the panel (**custom** badge).
+They are _not_ part of the ConfigMap: if you also want them in the git
+catalog, copy the file into `config/modpacks/` and re-run the sync script.
 
 ## How a server start works
 
@@ -381,6 +391,49 @@ the build portable across environments. The `web-panel` chart defaults to
 
 Also expect the **first server start** to be slow: the node pulls
 `itzg/minecraft-server` (~1 GB) plus the modpack download on first boot.
+
+## Shell + mc-tui over ssh
+
+The panel image bundles the repo's TUI (`mc-tui`) and — when enabled — a
+key-only sshd, so an ssh session into the panel container can manage the same
+cluster from the terminal:
+
+```yaml
+# values for the minecraft-panel release
+ssh:
+  enabled: true
+  port: 2222
+  authorizedKeys:
+    - ssh-ed25519 AAAA... operator@laptop
+```
+
+```bash
+kubectl -n minecraft port-forward svc/minecraft-panel 2222:2222
+ssh -p 2222 node@localhost # then run: mc-tui
+```
+
+Nothing is duplicated: the sshd has no passwords and no root login, and the
+TUI inside the container runs with `MCPANEL_RUNTIME=kubernetes` — the same
+switch the panel uses — so both UIs act on the same things:
+
+- the same Helm releases (`mc-<server>`): start/stop/restart map to
+  `helm upgrade --reuse-values --set replicaCount=…` and
+  `kubectl rollout restart`, exactly the panel's action table; start-all /
+  stop-all scale every existing release, and never-deployed packs must be
+  started once from the panel (or with a single start) so a slip of the
+  keyboard can't create twenty 8Gi releases at once;
+- the same configuration sources: `/repo/.env` (the shared-env Secret) and
+  `/repo/config/modpacks` (the synced ConfigMap) — the TUI reads them to list
+  servers and builds chart values the same way the panel does for first
+  starts, panel-created servers included;
+- the same ServiceAccount RBAC: logs (`kubectl logs --follow`), RCON
+  (`kubectl exec … rcon-cli`), and backups (the same one-off alpine Jobs the
+  panel runs, from the same `/repo/scripts/k8s-jobs` scripts).
+
+Host keys persist on the panel's data claim (`/data/mc-ssh`), so clients
+don't get host-key warnings on pod restarts. Manage the keys by editing the
+`ssh.authorizedKeys` values (or point `ssh.existingAuthorizedKeysSecret` at
+your own Secret) and re-running the install.
 
 ## Migration notes (docker → kubernetes)
 

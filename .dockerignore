@@ -31,6 +31,8 @@ tests/
 # Logs
 *.log
 logs/
+!apps/web/src/pages/api/logs/
+!apps/web/src/pages/api/logs/**
 
 # macOS
 .DS_Store

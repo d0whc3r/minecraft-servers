@@ -24,13 +24,13 @@ nodes:
     extraPortMappings:
       - containerPort: 30065
         hostPort: 25565
-        listenAddress: "0.0.0.0"
+        listenAddress: '0.0.0.0'
         protocol: TCP
       - containerPort: 80
         hostPort: 9090
-        listenAddress: "0.0.0.0"
+        listenAddress: '0.0.0.0'
         protocol: TCP
       - containerPort: 443
         hostPort: 9443
-        listenAddress: "0.0.0.0"
+        listenAddress: '0.0.0.0'
         protocol: TCP

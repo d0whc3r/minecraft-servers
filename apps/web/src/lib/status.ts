@@ -125,6 +125,7 @@ export async function buildStatus(): Promise<StatusResponse> {
         maxPlayers: def.maxPlayers,
         description: def.description,
         modUrl: def.modUrl,
+        custom: def.source === "custom",
         state,
         statusText: container?.statusText ?? "",
         health: container?.health ?? null,

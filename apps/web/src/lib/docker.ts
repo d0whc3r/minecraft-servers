@@ -80,6 +80,25 @@ export async function listContainers(): Promise<Map<string, ContainerInfo>> {
   return map;
 }
 
+/** Fresh, strict check for destructive operations; command/parse errors propagate. */
+export async function isServerStopped(server: string): Promise<boolean> {
+  const name = `mc-${server}`;
+  const { stdout } = await exec(
+    "docker",
+    ["ps", "-a", "--filter", `name=^/${name}$`, "--format", "{{json .}}"],
+    { timeout: DOCKER_TIMEOUT_MS, maxBuffer: 1024 * 1024 },
+  );
+  for (const line of stdout.split("\n")) {
+    if (!line.trim()) continue;
+    const entry: DockerPsEntry = JSON.parse(line);
+    if (entry.Names !== name || typeof entry.State !== "string") {
+      throw new Error("Unexpected Docker container state response");
+    }
+    if (entry.State !== "exited" && entry.State !== "dead") return false;
+  }
+  return true;
+}
+
 export interface ContainerStats {
   cpuPerc: number;
   memUsed: string;

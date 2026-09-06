@@ -151,14 +151,31 @@ Other useful facts:
 
 ## Daily use
 
-| Task                      | Where                                                        |
-| ------------------------- | ------------------------------------------------------------ |
-| See what's running        | `/` — cards refresh every 5 s; filter or search              |
-| Start / stop a server     | `/admin` → row buttons, or the card on the dashboard         |
-| Watch server logs live    | `/admin` → **Logs** (SSE stream of `docker logs -f`)         |
-| Run a server command      | `/admin` → **Console** (RCON; no leading slash, e.g. `list`) |
-| Create / restore a backup | `/admin` → **Backups** (restores require typing a confirm)   |
-| Host health               | `/admin` → **System** (RAM, disk, CPU, Docker version)       |
+| Task                      | Where                                                             |
+| ------------------------- | ----------------------------------------------------------------- |
+| See what's running        | `/` — cards refresh every 5 s; filter or search                   |
+| Start / stop a server     | `/admin` → row buttons, or the card on the dashboard              |
+| **Create a new server**   | `/admin` → **+ New server** (type, version, memory, modpack URL…) |
+| Watch server logs live    | `/admin` → **Logs** (SSE stream of `docker logs -f`)              |
+| Run a server command      | `/admin` → **Console** (RCON; no leading slash, e.g. `list`)      |
+| Create / restore a backup | `/admin` → **Backups** (restores require typing a confirm)        |
+| Host health               | `/admin` → **System** (RAM, disk, CPU, Docker version)            |
+
+### Creating servers from the panel
+
+**+ New server** writes a regular itzg env file (`TYPE`, `VERSION`,
+`MEMORY`, `SERVER_NAME`, a free `RCON_PORT` from the managed range, …) and
+the server joins the table on the next status poll — no panel restart, and
+you can start it right away from the same dialog. Where the file lands:
+
+- **Docker runtime**: `config/modpacks/<name>.env` — the same catalog the CLI
+  (`scripts/add-modpack.sh`) uses, so it is visible to git and every script.
+- **Kubernetes runtime**: `<MCPANEL_DATA_DIR>/servers/<name>.env` (the PVC
+  backed panel data), because the catalog mounts read-only from a ConfigMap.
+
+Panel-created servers are marked **custom** in the table and can be removed
+with **Delete** (stopped servers only; world data and backups on disk are
+kept). Catalog servers from the repo are never deletable from the panel.
 
 ## Configuration (environment variables)
 
@@ -173,7 +190,7 @@ Other useful facts:
 | `MCPANEL_TRUST_PROXY`    | `false`         | `true` behind a reverse proxy: login throttling then keys on the proxy-forwarded client IP                               |
 | `MCPANEL_ROOT`           | (auto)          | Repo root override if auto-detection fails                                                                               |
 | `MCPANEL_HOST_ROOT`      | (unset)         | Repo path **on the host** — needed for start/stop from the containerized panel ([why](#starting-servers-from-the-panel)) |
-| `MCPANEL_DATA_DIR`       | `apps/web/data` | Where `auth.json` and `secret.key` live                                                                                  |
+| `MCPANEL_DATA_DIR`       | `apps/web/data` | Where `auth.json`, `secret.key` and panel-created servers live                                                           |
 | `MCPANEL_RUNTIME`        | `docker`        | `kubernetes` → actions use helm/kubectl instead of the repo scripts ([Kubernetes](../../docs/KUBERNETES.md))             |
 | `MCPANEL_K8S_NAMESPACE`  | `default`       | (kubernetes runtime) namespace where the `mc-<server>` releases are managed                                              |
 | `MCPANEL_CHARTS_DIR`     | `<root>/charts` | (kubernetes runtime) location of the `minecraft-server` chart                                                            |
@@ -191,8 +208,9 @@ and RCON goes to the server's in-cluster Service. Full guide:
 
 ## How it works
 
-- The server list comes from `config/modpacks/*.env` (titles and descriptions
-  from `docs/modpacks/*.md`) — there is no duplicated list to maintain.
+- The server list comes from `config/modpacks/*.env` plus any servers created
+  from the panel (titles and descriptions from `docs/modpacks/*.md`) — there
+  is no duplicated list to maintain.
 - **mc-router only**: there are no per-server game ports. Players (and the
   panel's status ping) go through the single mc-router entry point
   (`MC_ROUTER_PORT`, default `25565`) using each server's routed hostname

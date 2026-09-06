@@ -45,7 +45,7 @@ MOTD=Welcome # to the server
 		t.Fatal(err)
 	}
 
-	got, err := parseEnvFile(path)
+	got, err := ParseEnvFile(path)
 	if err != nil {
 		t.Fatalf("parseEnvFile: %v", err)
 	}

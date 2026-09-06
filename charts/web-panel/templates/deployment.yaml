@@ -73,6 +73,13 @@ spec:
               value: /tmp/helm/config
             - name: HELM_DATA_HOME
               value: /tmp/helm/data
+            {{- if .Values.ssh.enabled }}
+            # Key-only sshd (entrypoint) for shell + mc-tui management.
+            - name: MCPANEL_SSH
+              value: "1"
+            - name: MCPANEL_SSH_PORT
+              value: {{ .Values.ssh.port | quote }}
+            {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -80,6 +87,11 @@ spec:
             - name: http
               containerPort: 3777
               protocol: TCP
+            {{- if .Values.ssh.enabled }}
+            - name: ssh
+              containerPort: {{ .Values.ssh.port }}
+              protocol: TCP
+            {{- end }}
           {{- with .Values.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
@@ -94,6 +106,12 @@ spec:
             {{- if .Values.modpacksConfigMap }}
             - name: modpacks
               mountPath: /repo/config/modpacks
+              readOnly: true
+            {{- end }}
+            {{- if .Values.ssh.enabled }}
+            - name: ssh-keys
+              subPath: authorized_keys
+              mountPath: /home/node/.ssh/authorized_keys
               readOnly: true
             {{- end }}
           livenessProbe:
@@ -130,6 +148,14 @@ spec:
         - name: modpacks
           configMap:
             name: {{ .Values.modpacksConfigMap }}
+        {{- end }}
+        {{- if .Values.ssh.enabled }}
+        - name: ssh-keys
+          secret:
+            secretName: {{ .Values.ssh.existingAuthorizedKeysSecret | default (printf "%s-ssh-keys" (include "web-panel.fullname" .)) }}
+            items:
+              - key: authorized_keys
+                path: authorized_keys
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

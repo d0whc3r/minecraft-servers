@@ -1,9 +1,11 @@
 // Management actions: run the repo's own bash scripts (docker runtime) or the
 // helm/kubectl backend (kubernetes runtime), with per-server locking.
 import { execFile } from "node:child_process";
-import { PROJECT_ROOT } from "@/lib/servers.js";
+import { PROJECT_ROOT, getServerDef } from "@/lib/servers.js";
 import { RUNTIME } from "@/lib/runtime.js";
 import { runAction as k8sRunAction } from "@/lib/k8s.js";
+import { withServerOperation } from "@/lib/serverOperations.js";
+export { isServerOperationRunning as isActionRunning } from "@/lib/serverOperations.js";
 
 export type ActionType = "start" | "stop" | "restart" | "backup" | "restore";
 
@@ -23,19 +25,12 @@ export const ACTION_LABELS: Record<ActionType, string> = {
   restore: "Restore",
 };
 
-// One action at a time per server (status reads stay free).
-const locks = new Map<string, Promise<ActionResult>>();
-
 export interface ActionResult {
   ok: boolean;
   action: ActionType;
   server: string;
   output: string;
   durationMs: number;
-}
-
-export function isActionRunning(server: string): boolean {
-  return locks.has(server);
 }
 
 function runScript(args: string[], timeoutMs: number): Promise<string> {
@@ -63,50 +58,29 @@ export async function runAction(
   server: string,
   backupFile?: string,
 ): Promise<ActionResult> {
-  const existing = locks.get(server);
-  if (existing)
-    throw new Error("Another action is already running for this server");
-
-  if (RUNTIME === "kubernetes") {
-    if (
-      action !== "start" &&
-      action !== "stop" &&
-      action !== "restart" &&
-      action !== "backup" &&
-      action !== "restore"
-    )
+  return withServerOperation(server, async () => {
+    // A request may have validated its parameter before a concurrent delete.
+    if (!getServerDef(server)) throw new Error(`Unknown server: ${server}`);
+    if (!Object.hasOwn(SCRIPTS, action)) {
       throw new Error(`Unknown action: ${action}`);
-    // Same lock discipline: the promise is tracked until it settles, and the
-    // k8s backend never throws (it returns ok:false output).
-    const promise = k8sRunAction(action, server, backupFile).finally(() =>
-      locks.delete(server),
-    );
-    const tracked = promise.catch(() => undefined) as Promise<ActionResult>;
-    locks.set(server, tracked);
-    return promise;
-  }
+    }
+    if (RUNTIME === "kubernetes") {
+      return k8sRunAction(action, server, backupFile);
+    }
 
-  const spec = SCRIPTS[action];
-  if (!spec) throw new Error(`Unknown action: ${action}`);
-
-  const args =
-    action === "restore"
-      ? [spec.script, server, backupFile ?? "", "--force"]
-      : [spec.script, server];
-
-  const started = Date.now();
-  const promise = runScript(args, spec.timeoutMs)
-    .then((output): ActionResult => ({
+    const spec = SCRIPTS[action];
+    const args =
+      action === "restore"
+        ? [spec.script, server, backupFile ?? "", "--force"]
+        : [spec.script, server];
+    const started = Date.now();
+    const output = await runScript(args, spec.timeoutMs);
+    return {
       ok: true,
       action,
       server,
       output,
       durationMs: Date.now() - started,
-    }))
-    .finally(() => locks.delete(server));
-
-  // Store a swallowed copy so concurrent callers get a friendly error
-  const tracked = promise.catch(() => undefined) as Promise<ActionResult>;
-  locks.set(server, tracked);
-  return promise;
+    };
+  });
 }

@@ -70,7 +70,10 @@ ENV_FILE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --env-file)
-      [ $# -ge 2 ] || { error "--env-file needs a path"; exit 1; }
+      [ $# -ge 2 ] || {
+        error "--env-file needs a path"
+        exit 1
+      }
       ENV_FILE="$2"
       shift 2
       ;;

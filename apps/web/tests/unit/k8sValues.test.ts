@@ -17,6 +17,7 @@ function def(env: Record<string, string>): ServerDef {
     maxPlayers: 20,
     description: "",
     modUrl: null,
+    source: "catalog",
     env,
   };
 }

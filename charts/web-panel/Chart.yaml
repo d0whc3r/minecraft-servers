@@ -6,7 +6,7 @@ description: >-
   itself: start/stop/restart from the dashboard, live logs, RCON console and
   backups — no Docker socket needed.
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "latest"
 home: https://github.com/d0whc3r/minecraft-servers
 sources:

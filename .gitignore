@@ -16,6 +16,8 @@ backups/*/*.tar.gz.sha256
 # Logs
 *.log
 logs/
+!apps/web/src/pages/api/logs/
+!apps/web/src/pages/api/logs/**
 
 # macOS
 .DS_Store

@@ -28,7 +28,7 @@ func Load(root string) ([]domain.ServerConfig, error) {
 		if name == "" { // a literal ".env" is not a server
 			continue
 		}
-		kv, err := parseEnvFile(filepath.Join(dir, entry.Name()))
+		kv, err := ParseEnvFile(filepath.Join(dir, entry.Name()))
 		if err != nil {
 			return nil, err
 		}
@@ -47,10 +47,11 @@ func Load(root string) ([]domain.ServerConfig, error) {
 	return configs, nil
 }
 
-// parseEnvFile extracts KEY=VALUE pairs, trimming surrounding spaces and a
+// ParseEnvFile extracts KEY=VALUE pairs, trimming surrounding spaces and a
 // single layer of quotes. Lines starting with # and lines without = are
 // ignored; everything after the first = is the value (MOTDs may contain #).
-func parseEnvFile(path string) (map[string]string, error) {
+// Exported so the kubernetes runtime can parse the same env files identically.
+func ParseEnvFile(path string) (map[string]string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read config %s: %w", path, err)
@@ -84,7 +85,7 @@ func trimQuotes(s string) string {
 // when there is no .env (the dashboard then shows routes only for containers
 // that carry the mc-router label).
 func RouterDomain(root string) string {
-	kv, err := parseEnvFile(filepath.Join(root, ".env"))
+	kv, err := ParseEnvFile(filepath.Join(root, ".env"))
 	if err != nil {
 		return ""
 	}

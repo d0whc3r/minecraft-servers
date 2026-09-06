@@ -17,3 +17,9 @@ mc-<server> Helm releases itself.
 
 Make sure mc-router is installed so players can reach the servers:
    helm upgrade --install minecraft-router charts/mc-router -n {{ .Values.minecraft.namespace | default .Release.Namespace }}
+{{- if .Values.ssh.enabled }}
+
+Shell + mc-tui over ssh (key-only; keys come from the ssh values):
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "web-panel.fullname" . }} {{ .Values.ssh.port }}:{{ .Values.ssh.port }}
+   ssh -p {{ .Values.ssh.port }} node@localhost   # then run: mc-tui
+{{- end }}

@@ -120,7 +120,18 @@ function parseEnvFile(filePath: string): Record<string, string> {
       (value.startsWith('"') && value.endsWith('"') && value.length >= 2) ||
       (value.startsWith("'") && value.endsWith("'") && value.length >= 2)
     ) {
+      const singleQuoted = value.startsWith("'");
       value = value.slice(1, -1);
+      if (singleQuoted) value = value.replace(/\\'/g, "'");
+      else value = value.replace(/\\([\\"nrt])|\$\$/g, (match, escape) => {
+        if (match === "$$") return "$";
+        switch (escape) {
+          case "n": return "\n";
+          case "r": return "\r";
+          case "t": return "\t";
+          default: return escape;
+        }
+      });
     }
     out[key] = value;
   }
@@ -167,14 +178,14 @@ function detectPlatform(env: Record<string, string>, type: string): string {
   if (/FABRIC/i.test(type)) return "Fabric";
   if (/VANILLA/i.test(type)) return "Vanilla";
   if (/SPIGOT/i.test(type)) return "Spigot";
-  if (/FORGE/i.test(type)) return "Forge";
   if (/NEOFORGE/i.test(type)) return "NeoForge";
+  if (/FORGE/i.test(type)) return "Forge";
   return type ? type.charAt(0) + type.slice(1).toLowerCase() : "Unknown";
 }
 
 /**
  * Official modpack page, from whatever source field the pack declares:
- * MODRINTH_MODPACK (slug or URL), CF_PAGE_URL, or AUTO_CURSEFORGE (slug or URL).
+ * MODRINTH_MODPACK (slug or URL), CF_PAGE_URL, or CF_SLUG.
  * Server types without a modpack (Paper, Vanilla,…) return null.
  */
 function modpackUrl(env: Record<string, string>): string | null {
@@ -183,6 +194,8 @@ function modpackUrl(env: Record<string, string>): string | null {
   if (env.MODRINTH_MODPACK)
     return asUrl(env.MODRINTH_MODPACK, "https://modrinth.com/modpack/");
   if (env.CF_PAGE_URL) return env.CF_PAGE_URL;
+  if (env.CF_SLUG)
+    return asUrl(env.CF_SLUG, "https://www.curseforge.com/minecraft/modpacks/");
   if (env.AUTO_CURSEFORGE)
     return asUrl(
       env.AUTO_CURSEFORGE,

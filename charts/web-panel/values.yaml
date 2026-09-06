@@ -70,6 +70,23 @@ admin:
   secureCookies: false
 
 # ---------------------------------------------------------------------------
+# SSH access to the panel container: a key-only sshd (started by the
+# entrypoint when this is enabled) whose login shell has the bundled mc-tui
+# available. The TUI runs with MCPANEL_RUNTIME=kubernetes over the same
+# /repo (charts, shared .env, config/modpacks) and ServiceAccount as the
+# panel, so it manages exactly the same releases.
+# ---------------------------------------------------------------------------
+ssh:
+  enabled: false
+  # In-pod listener; the Service exposes it on the same port when enabled.
+  port: 2222
+  # Public keys allowed to log in as the `node` user.
+  authorizedKeys: []
+  # ssh-ed25519 AAAA... operator@laptop
+  # Or reference an existing Secret holding an `authorized_keys` key:
+  existingAuthorizedKeysSecret: ""
+
+# ---------------------------------------------------------------------------
 # Shared .env for the servers (EULA / CF_API_KEY / RCON_PASSWORD /
 # MC_ROUTER_DOMAIN...). Rendered into a Secret mounted at /repo/.env — this is
 # the same file servers read in the docker setup.

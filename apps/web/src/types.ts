@@ -22,6 +22,8 @@ export interface ServerStatus {
   description: string;
   /** Official modpack page (CurseForge/Modrinth), null for plain server types. */
   modUrl: string | null;
+  /** True when the panel created this server (it can be removed from the panel). */
+  custom: boolean;
   // Live data
   state: ServerState;
   statusText: string;

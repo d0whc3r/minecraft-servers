@@ -52,8 +52,8 @@ if container_running "$CONTAINER_NAME"; then
   exit 4
 fi
 
-# Load environment to get port
-source "$CONFIG_FILE"
+# docker_compose_up reads the routing values and passes this file to Compose.
+# Never source server configuration: panel-entered values are data, not shell.
 
 # Ensure directories exist
 ensure_directory "servers/${SERVER_NAME}/data"

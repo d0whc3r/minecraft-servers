@@ -42,7 +42,10 @@ import {
   useToasts,
 } from "@/components/ui";
 
+import { CreateServerModal } from "@/components/CreateServerModal";
+
 type Tab = "servers" | "backups" | "system";
+
 
 export default function AdminApp() {
   const [me, setMe] = useState<AuthMe | null>(null);
@@ -199,9 +202,10 @@ function ServersTab({ push }: { push: Push }) {
   const [logsOf, setLogsOf] = useState<ServerStatus | null>(null);
   const [rconOf, setRconOf] = useState<ServerStatus | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const [confirming, setConfirming] = useState<{
     name: string;
-    action: "stop" | "restart" | "backup";
+    action: "stop" | "restart" | "backup" | "delete";
   } | null>(null);
 
   useEffect(() => {
@@ -237,6 +241,36 @@ function ServersTab({ push }: { push: Push }) {
     [push],
   );
 
+  const remove = useCallback(
+    async (name: string) => {
+      setBusy(`${name}:delete`);
+      setConfirming(null);
+      try {
+        await api(`/api/servers/${name}`, { method: "DELETE" });
+        push(
+          "ok",
+          `Removed ${name}`,
+          "Config deleted. World data and backups on disk are kept.",
+        );
+      } catch (err) {
+        push("err", `Remove ${name}: error`, (err as Error).message);
+      } finally {
+        setBusy(null);
+      }
+    },
+    [push],
+  );
+
+  // Create modal hand-off: fire the normal start action once the config exists.
+  const created = useCallback(
+    async (name: string, start: boolean) => {
+      setCreating(false);
+      push("ok", `Created ${name}`, "It will appear in the table momentarily.");
+      if (start) await run(name, "start");
+    },
+    [push, run],
+  );
+
   const servers = useMemo(
     () =>
       [...(status?.servers ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
@@ -254,6 +288,14 @@ function ServersTab({ push }: { push: Push }) {
         cell: ({ row }) => (
           <div className="min-w-0">
             <strong>{row.original.title}</strong>
+            {row.original.custom && (
+              <span
+                title="Created from the panel (removable)"
+                className="ml-1.5 inline-flex items-center rounded-full border border-edge bg-raise px-1.5 py-0 align-middle text-[0.68rem] uppercase tracking-wide text-dim"
+              >
+                custom
+              </span>
+            )}
             <span className="block font-mono text-[0.78rem] text-dim">
               {row.original.name} · {row.original.platform} · MC{" "}
               {row.original.mcVersion}
@@ -360,6 +402,23 @@ function ServersTab({ push }: { push: Push }) {
               <Button size="sm" onClick={() => setRconOf(s)}>
                 Console
               </Button>
+              {s.custom && (
+                <Button
+                  size="sm"
+                  variant="danger"
+                  disabled={busy !== null || !stopped}
+                  title={
+                    stopped
+                      ? "Remove this server from the panel"
+                      : "Stop the server first"
+                  }
+                  onClick={() =>
+                    setConfirming({ name: s.name, action: "delete" })
+                  }
+                >
+                  Delete
+                </Button>
+              )}
             </div>
           );
         },
@@ -385,6 +444,20 @@ function ServersTab({ push }: { push: Push }) {
 
   return (
     <>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="m-0 text-[0.88rem] text-dim">
+          New servers are stored in the panel data (and the repo catalog on the
+          Docker runtime), so they survive restarts.
+        </p>
+        <Button
+          variant="primary"
+          disabled={busy !== null}
+          onClick={() => setCreating(true)}
+        >
+          + New server
+        </Button>
+      </div>
+
       <DataTable
         data={servers}
         columns={columns}
@@ -399,29 +472,50 @@ function ServersTab({ push }: { push: Push }) {
           title={`Confirm: ${confirming.action}`}
           onClose={() => setConfirming(null)}
         >
-          <p>
-            This will{" "}
-            <strong>
-              {confirming.action === "stop"
-                ? "stop"
-                : confirming.action === "restart"
-                  ? "restart"
-                  : "back up"}
-            </strong>{" "}
-            <span className={MONO}>{confirming.name}</span>.
-            {confirming.action !== "backup" &&
-              " Connected players will be disconnected."}
-          </p>
+          {confirming.action === "delete" ? (
+            <p>
+              Remove <span className={MONO}>{confirming.name}</span> from the
+              panel? Its config file will be deleted.{" "}
+              <strong>World data and backups on disk are kept</strong>; the
+              server disappears from the list and can no longer be started.
+            </p>
+          ) : (
+            <p>
+              This will{" "}
+              <strong>
+                {confirming.action === "stop"
+                  ? "stop"
+                  : confirming.action === "restart"
+                    ? "restart"
+                    : "back up"}
+              </strong>{" "}
+              <span className={MONO}>{confirming.name}</span>.
+              {confirming.action !== "backup" &&
+                " Connected players will be disconnected."}
+            </p>
+          )}
           <div className="mt-4 flex flex-wrap gap-2">
             <Button
               variant="danger"
-              onClick={() => run(confirming.name, confirming.action)}
+              onClick={() =>
+                confirming.action === "delete"
+                  ? remove(confirming.name)
+                  : run(confirming.name, confirming.action)
+              }
             >
               Yes, continue
             </Button>
             <Button onClick={() => setConfirming(null)}>Cancel</Button>
           </div>
         </Modal>
+      )}
+
+      {creating && (
+        <CreateServerModal
+          onClose={() => setCreating(false)}
+          onCreated={created}
+          push={push}
+        />
       )}
 
       {logsOf && (
@@ -437,6 +531,7 @@ function ServersTab({ push }: { push: Push }) {
     </>
   );
 }
+
 
 function LogsModal({
   server,
@@ -460,8 +555,15 @@ function LogsModal({
       setLines((prev) => [...prev.slice(-800), line]);
       setStatus("live");
     });
-    es.addEventListener("end", () => setStatus("stream closed"));
-    es.addEventListener("error", () => setStatus("stream error"));
+    es.addEventListener("end", () => {
+      es.close();
+      setStatus("stream closed");
+    });
+    es.addEventListener("error", (event) => {
+      // Server error events are terminal; network errors may reconnect.
+      if (event instanceof MessageEvent) es.close();
+      setStatus("stream error");
+    });
     // History is prepended (not assigned) so live lines that arrived while
     // the request was in flight keep their chronological position.
     fetch(`/api/logs/${server}/tail?tail=300`)
