@@ -1,0 +1,36 @@
+# ===========================================================================
+# kind cluster definition - source of truth for the host-facing ports.
+#
+# kind cannot add port mappings to a running node, so changing this file
+# means recreating the cluster:
+#   kind delete cluster --name kind-cluster
+#   kind create cluster --config kind-config.yaml
+#
+# Host-facing ports (what players and admins actually connect to):
+#   host 25565 -> node 30065  mc-router (MC_ROUTER_NODE_PORT in .env /
+#                              scripts/k8s-install.sh); players use
+#                              <host-LAN-IP>:25565 with hostname
+#                              <server>.<MC_ROUTER_DOMAIN>
+#   host 9090  -> node 80     ingress HTTP (Contour envoy hostPort) - panel
+#                              via Host: <K8S_PANEL_HOST> header
+#   host 9443  -> node 443    ingress HTTPS
+# ===========================================================================
+
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: kind-cluster
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30065
+        hostPort: 25565
+        listenAddress: "0.0.0.0"
+        protocol: TCP
+      - containerPort: 80
+        hostPort: 9090
+        listenAddress: "0.0.0.0"
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 9443
+        listenAddress: "0.0.0.0"
+        protocol: TCP

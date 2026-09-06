@@ -16,7 +16,10 @@ spec:
       port: {{ .Values.service.port }}
       targetPort: minecraft
       protocol: TCP
-      {{- if and (eq .Values.service.type "NodePort") .Values.service.nodePort }}
+      {{- /* LoadBalancer and NodePort both allocate a nodePort; fixing it
+          (30065) is what kind-config.yaml's extraPortMapping forwards the
+          host's 25565 to. */}}
+      {{- if and (ne .Values.service.type "ClusterIP") .Values.service.nodePort }}
       nodePort: {{ .Values.service.nodePort }}
       {{- end }}
   selector:

@@ -26,6 +26,9 @@ metadata:
   name: {{ include "web-panel.fullname" . }}-data
   labels:
     {{- include "web-panel.labels" . | nindent 4 }}
+  # admin password hash + sessions outlive the release
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   accessModes: [ReadWriteOnce]
   resources:

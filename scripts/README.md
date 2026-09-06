@@ -134,6 +134,33 @@ All management scripts source `common.sh`:
 Standalone utilities (`diagnose-failed-servers.sh`, `analyze-java-versions.sh`) do not
 source the library.
 
+## Kubernetes Scripts
+
+Two scripts drive the Kubernetes setup (see `docs/KUBERNETES.md`); both talk
+to `kubectl`/`helm` directly and don't source `common.sh`:
+
+- `k8s-install.sh` - Bring up mc-router + the web panel in one namespace;
+  references the synced Secret/ConfigMap when they already exist
+- `k8s-bootstrap.sh` - Same install as `k8s-install.sh` but **without a repo
+  checkout**: self-contained, installs the charts straight from the OCI
+  artifacts published to GHCR and builds the shared Secret from flags, env
+  vars or prompts (run it with `--help` for the knobs)
+- `k8s-sync-configs.sh` - Push the local `.env` (→ Secret) and
+  `config/modpacks/*.env` (→ ConfigMap) to the cluster and restart the panel
+  with them; re-run any time a local config changes
+- `k8s-uninstall.sh` - Uninstall every `mc-*` release plus panel and router;
+  PVCs survive (`--purge` deletes the namespace, `--yes` skips the prompt)
+
+`k8s-jobs/` holds the POSIX sh scripts the panel runs inside the cluster
+(one-off Jobs or `kubectl exec`) for backup/restore operations. They are not
+meant to be run by the operator: the panel reads them from
+`scripts/k8s-jobs` (baked into the panel image) and executes them with the
+backup name as a positional argument. They must stay POSIX sh — the Jobs run
+on alpine, the `exec` path on debian.
+
+Convenience make targets wrap the three: `make k8s` (install + sync),
+`make k8s-install NS=…`, `make k8s-sync NS=…`, `make k8s-uninstall NS=… ARGS=--purge`.
+
 ## Benefits
 
 Using `common.sh` provides:

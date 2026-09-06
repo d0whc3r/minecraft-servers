@@ -15,6 +15,7 @@ on:
       - 'charts/**'
       - 'config/modpacks/**'
       - 'docs/modpacks/**'
+      - 'scripts/k8s-jobs/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'

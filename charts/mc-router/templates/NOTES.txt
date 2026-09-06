@@ -5,6 +5,9 @@ Get the player-facing address:
   kubectl -n {{ .Release.Namespace }} get svc {{ include "mc-router.fullname" . }}
 
 For type=LoadBalancer take EXTERNAL-IP (or a node IP with an open port).
+In kind there is no LB controller, so EXTERNAL-IP stays <pending>: connect
+through the fixed nodePort instead — kind-config.yaml maps host 25565 to
+nodePort {{ default "auto" .Values.service.nodePort }}.
 Routes are discovered automatically from the Services of the
 minecraft-server chart; check what the router sees on the API service
 ({{ include "mc-router.fullname" . }}-api:{{ .Values.api.port }}/routes).

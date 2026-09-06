@@ -53,9 +53,10 @@ ENV NODE_ENV=production \
 
 # Mirror the monorepo layout (workspace root + apps/web) so pnpm's relative
 # node_modules symlinks keep resolving inside the image. The repo-shaped
-# content the panel reads (charts, modpack catalog, docs metadata) is baked
-# in: on the docker runtime the host checkout is mounted over /repo anyway,
-# on the kubernetes runtime these are the panel's working files.
+# content the panel reads (charts, modpack catalog, docs metadata, k8s job
+# scripts) is baked in: on the docker runtime the host checkout is mounted
+# over /repo anyway, on the kubernetes runtime these are the panel's working
+# files.
 WORKDIR /repo
 COPY --from=build /mono/node_modules /mono/node_modules
 COPY --from=build /mono/apps/web/node_modules /mono/apps/web/node_modules
@@ -64,6 +65,7 @@ COPY --from=build /mono/apps/web/dist /mono/apps/web/dist
 COPY charts/ /repo/charts/
 COPY config/modpacks/ /repo/config/modpacks/
 COPY docs/modpacks/ /repo/docs/modpacks/
+COPY scripts/k8s-jobs/ /repo/scripts/k8s-jobs/
 
 EXPOSE 3777
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \

@@ -40,7 +40,9 @@ bind mounts, no repo scripts.
 - A default **StorageClass** that can provision `ReadWriteOnce` volumes
   (local-path, nfs-subdir, Longhorn, cloud CSI…)
 - **LoadBalancer** support for the router (or set
-  `service.type=NodePort` on the mc-router chart)
+  `service.type=NodePort` on the mc-router chart). On kind there is no LB
+  controller: the EXTERNAL-IP stays `<pending>` by design and players connect
+  through the fixed nodePort mapped by `kind-config.yaml` instead
 - Optional: **metrics-server** for CPU/memory bars in the panel
   (everything works without it; the bars just stay empty)
 - Optional: an **Ingress controller** if you want the panel off `port-forward`
@@ -84,6 +86,66 @@ helm upgrade --install minecraft-panel charts/web-panel -n minecraft \
 > that plus the cluster credentials is everything the panel needs to start
 > servers. To use your own registry instead, set `image.repository` /
 > `image.tag` in the web-panel chart.
+
+## Quick start (no repo clone)
+
+The charts are also published to GHCR as OCI artifacts by the **Charts
+Publish** workflow (`.github/workflows/charts-publish.yml`):
+
+```
+oci://ghcr.io/d0whc3r/minecraft-servers/charts/mc-router
+oci://ghcr.io/d0whc3r/minecraft-servers/charts/web-panel
+oci://ghcr.io/d0whc3r/minecraft-servers/charts/minecraft-server
+```
+
+`scripts/k8s-bootstrap.sh` is a standalone script that installs the stack
+from those refs — no checkout needed. Download it (and read it) first, since
+it asks for your secrets interactively:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/d0whc3r/minecraft-servers/master/scripts/k8s-bootstrap.sh -o k8s-bootstrap.sh
+bash k8s-bootstrap.sh minecraft
+```
+
+It creates the `minecraft-shared-env` Secret (EULA, `CF_API_KEY`,
+`RCON_PASSWORD` — prompts on a TTY, or pass them as environment variables
+when piped) and installs router + panel from the OCI charts. The modpack
+catalog ships baked into the panel image, so the panel is fully functional
+afterwards: start servers from the dashboard and each becomes an `mc-<server>`
+release. Re-run with `FORCE_SHARED_ENV=1` to update the Secret, and pass
+`--env-file .env` to import extra keys. Chart versions are pinned at the top
+of the script; override with `MC_ROUTER_CHART_VERSION` / `PANEL_CHART_VERSION`.
+The chart packages on GHCR are also born **private** — flip them to public
+the same way as the panel image.
+
+## Syncing local configs and secrets
+
+The local files stay the source of truth: one command uploads them to the
+cluster and wires the panel to them.
+
+```bash
+./scripts/k8s-sync-configs.sh minecraft # or: make k8s-sync NS=minecraft
+```
+
+| Local                   | Cluster object                 | Mounted in the panel at |
+| ----------------------- | ------------------------------ | ----------------------- |
+| `.env`                  | Secret `minecraft-shared-env`  | `/repo/.env`            |
+| `config/modpacks/*.env` | ConfigMap `minecraft-modpacks` | `/repo/config/modpacks` |
+
+Re-running it after editing any local file updates both objects, re-points the
+panel release and restarts the panel pod (the `.env` mount only refreshes on
+restart). The catalog is live-mounted, so new or edited modpacks appear in the
+dashboard without waiting for the restart. `k8s-install.sh` auto-detects both
+objects, so install order doesn't matter.
+
+Two caveats:
+
+- **Servers started earlier keep the env they were started with** — each
+  `mc-<server>` release renders its env on start. Restart a server from the
+  panel to pick up `.env` / modpack changes.
+- **Keep secrets out of `config/modpacks/*.env`**: the catalog rides in a
+  ConfigMap, which is not redacted. Anything sensitive (API keys, passwords)
+  belongs in `.env`, which lands in a Secret.
 
 ## How a server start works
 
@@ -179,11 +241,23 @@ cluster-scoped unless you opt in with `rbac.watchAllNamespaces`.
 ## Uninstall
 
 ```bash
-helm -n minecraft uninstall minecraft-panel minecraft-router
-helm -n minecraft list -q | grep '^mc-' | xargs -r -n1 helm -n minecraft uninstall
-# PVCs (worlds, backups) survive; delete them explicitly to wipe everything:
-kubectl -n minecraft get pvc
+./scripts/k8s-uninstall.sh minecraft # or: make k8s-uninstall NS=minecraft
 ```
+
+Uninstalls every `mc-<server>` release, then the panel and the router. The
+PVCs (worlds, backups, panel state) carry the `helm.sh/resource-policy: keep`
+annotation, so data survives; the synced config Secret/ConfigMap also stay and
+are re-used by the next install. Equivalent manual uninstall:
+
+```bash
+helm -n minecraft list -q | grep '^mc-' | xargs -r -n1 helm -n minecraft uninstall
+helm -n minecraft uninstall minecraft-panel minecraft-router
+# wipe the data for a clean slate:
+kubectl -n minecraft delete pvc --all
+```
+
+`--purge` deletes the whole namespace instead (worlds and backups included;
+`--yes` skips the confirmation): `./scripts/k8s-uninstall.sh minecraft --purge`.
 
 ## One-shot commands (kind)
 
@@ -194,17 +268,28 @@ re-paste over an existing cluster.
 cd /path/to/minecraft-servers
 
 # 1. cluster (skipped when it exists) + node DNS + CoreDNS refresh
-kind get clusters 2> /dev/null | grep -q '^kind-cluster$' || kind create cluster --name kind-cluster
+#    kind-config.yaml is the source of truth for the host-facing ports:
+#    25565 -> node 30065 (mc-router), 9090 -> 80 / 9443 -> 443 (ingress).
+#    On podman setups (docker=podman alias, rootless) kind needs the
+#    explicit provider, and it cannot add port mappings to a running node:
+#    changing kind-config.yaml means delete + create.
+export KIND_EXPERIMENTAL_PROVIDER=podman # docker setups: drop this line
+kind get clusters 2> /dev/null | grep -q '^kind-cluster$' || kind create cluster --config kind-config.yaml
 docker exec kind-cluster-control-plane sh -c 'printf "nameserver 8.8.8.8\nnameserver 1.1.1.1\n" > /etc/resolv.conf'
 kubectl -n kube-system rollout restart deployment/coredns
 kubectl -n kube-system rollout status deployment/coredns --timeout=120s
 
 # 2. panel image: build + load into the node
+#    podman normalizes the loaded name to localhost/minecraft-panel:local —
+#    PANEL_IMAGE_REPO below must match or the pull tries docker.io.
 docker build -f apps/web/Dockerfile --build-arg TARGETARCH=amd64 --network=host -t minecraft-panel:local .
 kind load docker-image minecraft-panel:local --name kind-cluster
 
-# 3. router + panel (reads .env; keep the PANEL_IMAGE_* vars on re-installs)
-PANEL_IMAGE_REPO=minecraft-panel PANEL_IMAGE_TAG=local ./scripts/k8s-install.sh minecraft
+# 3. router + panel (reads .env; keep the PANEL_IMAGE_* vars on re-installs;
+#    K8S_PANEL_HOST enables the panel Ingress through Contour -> port 9090)
+PANEL_IMAGE_REPO=localhost/minecraft-panel PANEL_IMAGE_TAG=local \
+  K8S_PANEL_HOST=panel.${MC_ROUTER_DOMAIN:-$(grep -m1 '^MC_ROUTER_DOMAIN=' .env | cut -d= -f2)} \
+  ./scripts/k8s-install.sh minecraft
 
 # 4. open the panel in the background + credentials
 kubectl -n minecraft rollout status deployment/minecraft-panel --timeout=300s
@@ -213,26 +298,46 @@ sleep 1
 nohup kubectl -n minecraft port-forward svc/minecraft-panel 3777:3777 > /tmp/mcpanel-forward.log 2>&1 &
 sleep 3 && curl -s http://localhost:3777/api/auth/me
 kubectl -n minecraft logs deploy/minecraft-panel | grep -i password
-# -> http://localhost:3777 (user admin)
+# -> http://localhost:3777 (user admin), or via ingress:
+#    http://panel.<MC_ROUTER_DOMAIN>:9090 (any host that resolves <domain>)
 ```
+
+Players connect to `<host-LAN-IP>:25565` with the hostname
+`<server>.<MC_ROUTER_DOMAIN>` — with a `nip.io` domain (e.g.
+`192.168.1.10.nip.io`) both the host resolution and the LAN IP come free,
+no DNS setup needed. Verified end to end: `kind-config.yaml` forwards host
+25565 to the router's fixed nodePort 30065, and a real status ping for
+`smoke.<MC_ROUTER_DOMAIN>` returns the backend server's JSON.
 
 Full uninstall (deletes servers, worlds, backups, panel, router):
 
 ```bash
 pkill -f "port-forward svc/minecraft-panel" 2> /dev/null
-helm -n minecraft list -q | grep '^mc-' | xargs -r -n1 helm -n minecraft uninstall
-helm -n minecraft uninstall minecraft-panel minecraft-router
-kubectl delete namespace minecraft
+./scripts/k8s-uninstall.sh minecraft --purge --yes
 # optional: remove the whole cluster
 # kind delete cluster --name kind-cluster
 ```
 
 ## Local clusters (kind)
 
-kind runs the whole cluster inside a single docker container. Two things a
-fresh node can't do out of the box:
+kind runs the whole cluster inside a single docker/podman container. Three
+things a fresh node can't do out of the box:
 
-**1. The node can't pull images (DNS).** The kind node resolves registry
+**1. Port mappings are fixed at cluster creation.** `kind-config.yaml` (repo
+root) publishes the ports the outside world uses — players and browsers hit
+the HOST, kind forwards into the node:
+
+| Host port | Node port | Who listens there                       |
+| --------- | --------- | --------------------------------------- |
+| 25565     | 30065     | mc-router nodePort (fixed in the chart) |
+| 9090      | 80        | Contour envoy hostPort (ingress HTTP)   |
+| 9443      | 443       | Contour envoy hostPort (ingress HTTPS)  |
+
+kind cannot add mappings to a running node — recreate the cluster after
+editing the file. The router chart pins `service.nodePort: 30065` by default
+so the mapping always lands on it.
+
+**2. The node can't pull images (DNS).** The kind node resolves registry
 hostnames through the container network's embedded DNS, and when that
 resolver is broken every pull fails with
 `lookup registry-1.docker.io ... connection refused` while pods sit in
@@ -248,7 +353,16 @@ kubectl -n kube-system rollout restart deployment/coredns
 The node fix doesn't survive a node restart — reapply it if you recreate the
 cluster.
 
-**2. The panel image isn't in any registry by default.** Build it and load it
+**3. Provider and image-name quirks on podman.** On hosts where
+`docker` is an alias for podman (rootless), kind must be told explicitly:
+`export KIND_EXPERIMENTAL_PROVIDER=podman` for `kind create` and
+`kind load` (the docker-provider path fails inspecting the API-server port).
+Loading a local image also normalizes the name
+(`minecraft-panel:local` → `localhost/minecraft-panel:local` in the node), so
+point `PANEL_IMAGE_REPO` at `localhost/minecraft-panel` or the pod tries to
+pull from docker.io.
+
+**4. The panel image isn't in any registry by default.** Build it and load it
 into the cluster, then point the release at it:
 
 ```bash

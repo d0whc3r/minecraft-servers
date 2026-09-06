@@ -8,7 +8,9 @@ replicaCount: 1
 
 image:
   repository: itzg/mc-router
-  tag: latest
+  # Pinned: "latest" tracks master, so a cluster rebuild can silently change
+  # behavior. Bump alongside Chart.yaml appVersion on upgrades.
+  tag: "1.46.5"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -34,7 +36,11 @@ service:
   # when there is no LB controller (set service.nodePort if you want it fixed).
   type: LoadBalancer
   port: 25565
-  # nodePort: ""
+  # Fixed nodePort matching kind-config.yaml's extraPortMapping (host 25565).
+  # On clusters with a real LB controller you can clear it to let the
+  # allocator pick. In kind the LB EXTERNAL-IP stays <pending> by design;
+  # the hostPort mapping via the nodePort is the actual path.
+  nodePort: 30065
   annotations: {}
 
 api:

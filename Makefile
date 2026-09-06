@@ -53,10 +53,10 @@ SHSTAMP   := $(TMP)/test-sh.cksum
 
 .PHONY: help all build build-one run release test test-sh test-bats vet fmt \
 	fmt-check lint check cover cover-html vuln outdated tidy install web-build \
-	helm-lint helm-template hooks clean
+	helm-lint helm-template k8s k8s-install k8s-sync k8s-uninstall hooks clean
 
 help: ## list targets
-	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
 all: hooks check build
 
@@ -161,6 +161,19 @@ helm-template: ## render the helm charts as a smoke test (needs helm)
 	helm template minecraft-router charts/mc-router > /dev/null && \
 	helm template minecraft-panel charts/web-panel \
 		--set sharedEnv.EULA=TRUE > /dev/null && echo "charts render OK"
+
+NS ?= minecraft
+
+k8s: k8s-install k8s-sync ## install the stack, then push local configs
+
+k8s-install: ## install mc-router + web panel into the cluster (NS=minecraft)
+	./scripts/k8s-install.sh $(NS)
+
+k8s-sync: ## upload local .env + config/modpacks to the cluster (NS=minecraft)
+	./scripts/k8s-sync-configs.sh $(NS)
+
+k8s-uninstall: ## uninstall the stack, data kept (NS=minecraft; ARGS=--purge wipes data)
+	./scripts/k8s-uninstall.sh $(NS) $(ARGS)
 
 hooks: ## point git at the husky hooks
 	git config core.hooksPath .husky

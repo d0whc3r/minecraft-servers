@@ -63,8 +63,27 @@ spec:
             {{- end }}
           {{- with .Values.securityContext }}
           securityContext:
-            {{- toYaml . | nindent 12 }}
+            {{- toYaml .Values.securityContext | nindent 12 }}
           {{- end }}
+          {{- if .Values.api.enabled }}
+          # httpGet against the API instead of tcpSocket on the Minecraft port:
+          # a completed HTTP request never reaches the game-connection handler,
+          # whereas every tcpSocket probe is logged by mc-router as
+          # "Failed to read packet ... error=EOF" (a probe connects and closes
+          # without sending a handshake).
+          livenessProbe:
+            httpGet:
+              path: /routes
+              port: api
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /routes
+              port: api
+            periodSeconds: 10
+            timeoutSeconds: 5
+          {{- else }}
           livenessProbe:
             tcpSocket:
               port: minecraft
@@ -75,6 +94,7 @@ spec:
               port: minecraft
             periodSeconds: 10
             timeoutSeconds: 5
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

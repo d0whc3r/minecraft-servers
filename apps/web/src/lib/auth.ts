@@ -3,11 +3,9 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { PROJECT_ROOT } from "@/lib/servers.js";
+import { panelDataDir } from "@/lib/servers.js";
 
-const PANEL_DATA_DIR = process.env.MCPANEL_DATA_DIR
-  ? path.resolve(process.env.MCPANEL_DATA_DIR)
-  : path.join(PROJECT_ROOT, "apps", "web", "data");
+const PANEL_DATA_DIR = panelDataDir();
 const AUTH_FILE = path.join(PANEL_DATA_DIR, "auth.json");
 const SECRET_FILE = path.join(PANEL_DATA_DIR, "secret.key");
 

@@ -11,6 +11,9 @@ metadata:
   name: {{ include "minecraft-server.fullname" $ }}-{{ $entry.suffix }}
   labels:
     {{- include "minecraft-server.labels" $ | nindent 4 }}
+  # worlds/backups outlive the release: helm uninstall keeps them
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   accessModes:
     {{- toYaml $entry.vol.accessModes | nindent 4 }}

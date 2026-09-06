@@ -408,6 +408,7 @@ async function runJob(
   server: string,
   script: string,
   timeoutMs: number,
+  args: string[] = [],
 ): Promise<string> {
   const job = {
     apiVersion: "batch/v1",
@@ -434,7 +435,9 @@ async function runJob(
             {
               name: "job",
               image: JOB_IMAGE,
-              command: ["/bin/sh", "-ec", script],
+              // argv tail: "job" is $0; args are positional parameters of the
+              // script, so no shell quoting of user data happens in TS.
+              command: ["/bin/sh", "-ec", script, "job", ...args],
               volumeMounts: [
                 { name: "data", mountPath: "/data" },
                 { name: "backups", mountPath: "/backups" },
@@ -523,23 +526,26 @@ async function waitForJob(name: string, timeoutMs: number): Promise<string> {
   throw new Error(`Job ${name} did not finish within the time limit`);
 }
 
-/** Listing script: POSIX sh, same output on alpine (Jobs) and Debian (exec). */
-function listScript(): string {
-  return [
-    "for f in /backups/*.tar.gz; do",
-    '  [ -f "$f" ] || continue',
-    '  sz=$(wc -c < "$f")',
-    '  ts=$(date -u -r "$f" "+%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo unknown)',
-    '  cs=no; [ -f "$f.sha256" ] && cs=yes',
-    '  echo "$(basename "$f") $sz $ts $cs"',
-    "done",
-  ].join("\n");
+/** Job scripts: POSIX sh files shipped with the panel (baked into the image
+ *  at /repo/scripts/k8s-jobs by the Dockerfile) and executed either via
+ *  `kubectl exec … /bin/sh -c` or as one-off Jobs with the script as argv, so
+ *  arguments arrive as positional parameters instead of interpolated text. */
+async function jobScript(name: string): Promise<string> {
+  // Same env fallback chain as serverChartPath(): explicit override first,
+  // MCPANEL_ROOT inside the image, cwd in dev. Resolved here instead of
+  // importing servers.ts to keep this module importable in tests.
+  const dir =
+    (process.env.MCPANEL_JOBS_DIR ||
+      process.env.MCPANEL_ROOT ||
+      process.cwd()) + "/scripts/k8s-jobs";
+  return fs.readFile(path.join(dir, `${name}.sh`), "utf8");
 }
 
 export async function listBackups(server: string): Promise<BackupFile[]> {
   const files: BackupFile[] = [];
   let out = "";
   const release = releaseName(server);
+  const script = await jobScript("backup-list");
   try {
     // cheap path: exec into the running server pod
     const res = await exec(
@@ -554,7 +560,7 @@ export async function listBackups(server: string): Promise<BackupFile[]> {
         "--",
         "/bin/sh",
         "-c",
-        listScript(),
+        script,
       ],
       { timeout: KUBECTL_TIMEOUT_MS },
     );
@@ -564,7 +570,7 @@ export async function listBackups(server: string): Promise<BackupFile[]> {
     out = await runJob(
       `mc-${server}-backup-list-${Date.now().toString(36)}`,
       server,
-      listScript(),
+      script,
       3 * 60_000,
     );
   }
@@ -678,19 +684,12 @@ export async function runAction(
         .replace(/[-:]/g, "")
         .replace(/\.\d+Z$/, "Z");
       const file = `${server}-${stamp}.tar.gz`;
-      const script = [
-        "set -e",
-        `f="${file}"`,
-        'tar czf "/backups/$f" -C /data .',
-        "cd /backups",
-        'sha256sum "$f" > "$f.sha256"',
-        'echo "backup created: $f"',
-      ].join("\n");
       const out = await runJob(
         `mc-${server}-backup-${Date.now().toString(36)}`,
         server,
-        script,
+        await jobScript("backup-create"),
         BACKUP_TIMEOUT_MS,
+        [file],
       );
       return finish(true, out);
     }
@@ -702,20 +701,12 @@ export async function runAction(
         await helmUpgrade(def, 0);
         await waitForScaleZero(server);
       }
-      const script = [
-        "set -e",
-        `f="${file}"`,
-        "cd /backups",
-        'if [ -f "$f.sha256" ]; then sha256sum -c "$f.sha256"; fi',
-        "find /data -mindepth 1 -delete",
-        'tar xzf "/backups/$f" -C /data',
-        'echo "restore complete: $f"',
-      ].join("\n");
       const out = await runJob(
         `mc-${server}-restore-${Date.now().toString(36)}`,
         server,
-        script,
+        await jobScript("backup-restore"),
         BACKUP_TIMEOUT_MS,
+        [file],
       );
       return finish(true, `Server stopped; world restored.\n${out}`);
     }

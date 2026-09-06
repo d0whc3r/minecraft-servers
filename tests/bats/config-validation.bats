@@ -22,7 +22,7 @@ config_value() {
     local failed=""
     local error_output
 
-    for script in scripts/*.sh scripts/ci/*.sh; do
+    for script in scripts/*.sh scripts/ci/*.sh scripts/k8s-jobs/*.sh; do
         if error_output=$(bash -n "$script" 2>&1); then
             echo "✓ $script"
         else
@@ -143,7 +143,7 @@ config_value() {
 # Test Case: US1-TC004 - scripts are executable, and running the entry point
 # without arguments prints usage guidance instead of failing silently
 @test "US1-TC004: Scripts are executable and usage is accessible" {
-    for script in scripts/*.sh scripts/ci/*.sh; do
+    for script in scripts/*.sh scripts/ci/*.sh scripts/k8s-jobs/*.sh; do
         [ -x "$script" ] || fail "Script is not executable: $script"
     done
 

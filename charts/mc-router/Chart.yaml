@@ -6,8 +6,8 @@ description: >-
   (mc-router.itzg.me/externalServerName), so no per-server routing config is
   needed: installing a mc-<server> release is enough to expose it.
 type: application
-version: 0.1.0
-appVersion: "latest"
+version: 0.1.2
+appVersion: "1.46.5"
 home: https://github.com/d0whc3r/minecraft-servers
 sources:
   - https://github.com/itzg/mc-router

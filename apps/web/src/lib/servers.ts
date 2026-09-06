@@ -1,5 +1,7 @@
 // Server registry: reads the repo layout (config/modpacks/*.env + shared .env +
-// docs/modpacks/*.md) and exposes the list of manageable servers.
+// docs/modpacks/*.md) and exposes the list of manageable servers. Servers
+// created live from the panel live in the panel data dir (kubernetes: the
+// catalog ConfigMap is read-only) and override catalog entries on name clash.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,6 +24,8 @@ export interface ServerDef {
   description: string;
   /** Official modpack page (CurseForge/Modrinth) so players can verify the pack against their client. */
   modUrl: string | null;
+  /** "custom" when the panel created (and may delete) this server. */
+  source: "catalog" | "custom";
   /** Merged env (shared .env overridden by server env) with secrets intact */
   env: Record<string, string>;
 }
@@ -50,6 +54,49 @@ function findProjectRoot(): string {
 }
 
 export const PROJECT_ROOT = findProjectRoot();
+
+/** Persistent panel dir (auth records, servers created from the panel). */
+export function panelDataDir(): string {
+  return process.env.MCPANEL_DATA_DIR
+    ? path.resolve(process.env.MCPANEL_DATA_DIR)
+    : path.join(PROJECT_ROOT, "apps", "web", "data");
+}
+
+/**
+ * Servers created from the panel live here (one <name>.env each). They survive
+ * panel restarts in every runtime: a repo dir natively, a named volume in the
+ * containerized docker setup, a PVC in kubernetes.
+ */
+export function panelServersDir(): string {
+  return path.join(panelDataDir(), "servers");
+}
+
+/**
+ * Where createServer writes new configs: the repo catalog on the docker
+ * runtime (the checkout is writable there, and the bash scripts + git see the
+ * new server like any add-modpack.sh one); on kubernetes the catalog mounts
+ * read-only from a ConfigMap, so new servers go to the panel data dir.
+ */
+export function writableServerDir(): string {
+  if (RUNTIME === "kubernetes") return panelServersDir();
+  return path.join(PROJECT_ROOT, "config/modpacks");
+}
+
+const CATALOG_DIR = () => path.join(PROJECT_ROOT, "config/modpacks");
+
+/** Header line marking a config as panel-created (and panel-deletable). */
+export const MANAGED_MARKER = "# managed-by: mc-panel";
+
+function listEnvFiles(dir: string): string[] {
+  try {
+    return fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".env"))
+      .sort();
+  } catch {
+    return [];
+  }
+}
 
 function parseEnvFile(filePath: string): Record<string, string> {
   const out: Record<string, string> = {};
@@ -144,17 +191,20 @@ function modpackUrl(env: Record<string, string>): string | null {
   return null;
 }
 
+/** Every server name: repo catalog plus panel-created ones (catalog wins ties
+ *  in listing order; buildRegistry resolves the file with the reverse rule). */
 export function listServerNames(): string[] {
-  const dir = path.join(PROJECT_ROOT, "config/modpacks");
-  try {
-    return fs
-      .readdirSync(dir)
-      .filter((f) => f.endsWith(".env"))
-      .map((f) => f.slice(0, -4))
-      .sort();
-  } catch {
-    return [];
-  }
+  const names = new Set<string>();
+  for (const f of listEnvFiles(CATALOG_DIR())) names.add(f.slice(0, -4));
+  for (const f of listEnvFiles(panelServersDir())) names.add(f.slice(0, -4));
+  return [...names].sort();
+}
+
+/** Env file for a server: the panel dir overrides the read-only catalog. */
+export function serverEnvPath(name: string): string {
+  const custom = path.join(panelServersDir(), `${name}.env`);
+  if (fs.existsSync(custom)) return custom;
+  return path.join(CATALOG_DIR(), `${name}.env`);
 }
 
 interface Registry {
@@ -229,7 +279,7 @@ function buildRegistry() {
 
   const servers = new Map<string, ServerDef>();
   for (const name of listServerNames()) {
-    const envPath = path.join(PROJECT_ROOT, "config/modpacks", `${name}.env`);
+    const envPath = serverEnvPath(name);
     const serverEnv = parseEnvFile(envPath);
     const env = { ...shared, ...serverEnv };
     const type = env.TYPE ?? "";
@@ -250,6 +300,7 @@ function buildRegistry() {
       maxPlayers: env.MAX_PLAYERS ? Number(env.MAX_PLAYERS) : 20,
       description: doc.description ?? "",
       modUrl: modpackUrl(env),
+      source: isManagedFile(envPath, serverEnv) ? "custom" : "catalog",
       env,
     });
   }
@@ -259,6 +310,48 @@ function buildRegistry() {
 
 export function getServerDef(name: string): ServerDef | null {
   return getServerRegistry().get(name) ?? null;
+}
+
+/** True when the env file is panel-managed: it lives in the panel dir (the
+ *  only writable place on kubernetes) or carries the managed marker. */
+function isManagedFile(
+  envPath: string,
+  serverEnv: Record<string, string>,
+): boolean {
+  if (envPath.startsWith(panelServersDir() + path.sep)) return true;
+  // parseEnvFile drops comments, so match the marker against the raw file
+  try {
+    return fs
+      .readFileSync(envPath, "utf8")
+      .split(/\r?\n/)
+      .some((line) => line.trim() === MANAGED_MARKER);
+  } catch {
+    return false;
+  }
+}
+
+/** Drop the in-memory cache so the next read sees created/deleted servers. */
+export function invalidateRegistry() {
+  registry = null;
+}
+
+/**
+ * First free RCON port in the managed loopback range, scanning every env file
+ * in both dirs. Null when the range is exhausted. Kubernetes ignores it (the
+ * chart pins RCON internally) but a unique value keeps the configs portable.
+ */
+export function nextRconPort(): number | null {
+  const used = new Set<string>();
+  for (const dir of [CATALOG_DIR(), panelServersDir()]) {
+    for (const file of listEnvFiles(dir)) {
+      const port = parseEnvFile(path.join(dir, file)).RCON_PORT;
+      if (port) used.add(port);
+    }
+  }
+  for (let port = 26565; port <= 26664; port++) {
+    if (!used.has(String(port))) return port;
+  }
+  return null;
 }
 
 export function rconPassword(def: ServerDef): string | null {
