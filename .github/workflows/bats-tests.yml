@@ -1,10 +1,9 @@
 name: BATS Test Suite
 
+# Desactivado en push/PR: los tests BATS tardan demasiado y gastan minutos de CI.
+# Solo se puede lanzar manualmente desde la pestaña Actions.
 on:
-  push:
-    branches: [master]
-  pull_request:
-    branches: [master]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
