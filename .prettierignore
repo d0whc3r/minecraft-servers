@@ -37,6 +37,9 @@ Thumbs.db
 # CI/CD
 .github/
 
+# Agent skill definitions (tool docs, not project source)
+.agents/
+
 # Temporary files
 *.tmp
 *.temp
@@ -69,9 +72,6 @@ bin/
 # Web panel generated files
 apps/web/.astro/
 apps/web/.prettierrc.json
-
-# Broken leftovers from a corrupted node_modules (fs error -117)
-node_modules.broken/
 
 # Env templates (no parser)
 .env.example
