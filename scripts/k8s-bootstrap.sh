@@ -159,8 +159,10 @@ else
   [ -n "${CF_API_KEY:-}" ] && add_env CF_API_KEY "$CF_API_KEY"
   add_env RCON_PASSWORD "$RCON_PASSWORD"
   info "Writing shared Secret '${SHARED_ENV_SECRET}'..."
+  # Single '.env' key with the whole file: the panel chart mounts it as
+  # /repo/.env and expects the same layout k8s-sync-configs.sh produces.
   kubectl create secret generic "$SHARED_ENV_SECRET" -n "$NAMESPACE" \
-    --from-env-file="$ENV_TMP" --dry-run=client -o yaml | kubectl apply -f -
+    --from-file=".env=$ENV_TMP" --dry-run=client -o yaml | kubectl apply -f -
   success "Shared Secret written"
 fi
 
