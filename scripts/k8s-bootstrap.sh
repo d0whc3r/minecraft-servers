@@ -29,10 +29,12 @@
 #                     format as the repo .env; its keys win over defaults)
 #
 # Environment (all optional):
-#   MC_ROUTER_DOMAIN        players connect to <server>.<domain>  (mc.local)
+#   MC_ROUTER_DOMAIN        players connect to <server>.<domain>  (mc.local,
+#                           prompted when empty on a tty)
 #   MC_ROUTER_PORT          public router port                   (25565)
-#   MC_ROUTER_SERVICE_TYPE  LoadBalancer|NodePort|ClusterIP      (LoadBalancer)
-#   MC_ROUTER_NODE_PORT     explicit nodePort when type=NodePort
+#   MC_ROUTER_SERVICE_TYPE  LoadBalancer|NodePort|ClusterIP      (LoadBalancer,
+#                           NodePort automatically on kind unless set)
+#   MC_ROUTER_NODE_PORT     explicit nodePort when type=NodePort (30065 on kind)
 #   CF_API_KEY              CurseForge API key (modpack downloads)
 #   RCON_PASSWORD           generated when empty
 #   MCPANEL_USER            panel admin user                     (admin)
@@ -108,12 +110,26 @@ fi
 # 1. Shared env Secret: EULA, CF_API_KEY, RCON_PASSWORD...
 #    Resolution order: environment > --env-file > prompt (tty only) > default.
 # ---------------------------------------------------------------------------
-MC_ROUTER_DOMAIN="${MC_ROUTER_DOMAIN:-mc.local}"
 MC_ROUTER_PORT="${MC_ROUTER_PORT:-25565}"
-MC_ROUTER_SERVICE_TYPE="${MC_ROUTER_SERVICE_TYPE:-LoadBalancer}"
 MCPANEL_USER="${MCPANEL_USER:-admin}"
 
+SECRET_EXISTS=0
+if kubectl get secret "$SHARED_ENV_SECRET" -n "$NAMESPACE" > /dev/null 2>&1; then
+  SECRET_EXISTS=1
+fi
+# Whether this run rewrites the Secret: only then is the domain prompt
+# meaningful (and only then does the summary's domain change).
+WILL_WRITE_SECRET=1
+if [ "$SECRET_EXISTS" = "1" ] && [ "${FORCE_SHARED_ENV:-0}" != "1" ] && [ -z "$ENV_FILE" ]; then
+  WILL_WRITE_SECRET=0
+fi
+
 if [ -t 0 ]; then
+  if [ "$WILL_WRITE_SECRET" = "1" ] && [ -z "${MC_ROUTER_DOMAIN:-}" ]; then
+    info "Router domain: players connect to <server>.<domain>. The name must"
+    info "resolve (DNS or /etc/hosts) to this cluster's router address."
+    read -r -p "MC_ROUTER_DOMAIN [mc.local]: " MC_ROUTER_DOMAIN
+  fi
   if [ -z "${CF_API_KEY:-}" ]; then
     info "CurseForge API key, needed to download CurseForge modpacks."
     info "Get one at https://console.curseforge.com/ (leave empty to add later)."
@@ -133,18 +149,17 @@ if [ -z "${RCON_PASSWORD:-}" ]; then
   RCON_PASSWORD="$(head -c 24 /dev/urandom | base64 | tr -d '/+=' | cut -c1-24)"
   info "Generated RCON password: ${RCON_PASSWORD}"
 fi
-
-SECRET_EXISTS=0
-if kubectl get secret "$SHARED_ENV_SECRET" -n "$NAMESPACE" > /dev/null 2>&1; then
-  SECRET_EXISTS=1
-fi
+MC_ROUTER_DOMAIN="${MC_ROUTER_DOMAIN:-mc.local}"
 
 ENV_TMP="$(mktemp /tmp/mc-bootstrap-env.XXXXXX)"
 PANEL_VALUES="$(mktemp /tmp/mc-bootstrap-values.XXXXXX.yaml)"
 trap 'rm -f "$ENV_TMP" "$PANEL_VALUES"' EXIT
 
-if [ "$SECRET_EXISTS" = "1" ] && [ "${FORCE_SHARED_ENV:-0}" != "1" ] && [ -z "$ENV_FILE" ]; then
+if [ "$WILL_WRITE_SECRET" != "1" ]; then
   success "Shared Secret '${SHARED_ENV_SECRET}' already exists — keeping it (FORCE_SHARED_ENV=1 to overwrite)"
+  # The summary must tell the truth: show the domain stored in the Secret.
+  EFFECTIVE_DOMAIN="$(kubectl get secret "$SHARED_ENV_SECRET" -n "$NAMESPACE" -o json | jq -r '.data.".env" // empty' 2> /dev/null | base64 -d 2> /dev/null | grep -m1 '^MC_ROUTER_DOMAIN=' | cut -d= -f2- || true)"
+  EFFECTIVE_DOMAIN="${EFFECTIVE_DOMAIN:-$MC_ROUTER_DOMAIN}"
 else
   # --env-file first: the core keys below only apply when not already present
   if [ -n "$ENV_FILE" ]; then
@@ -164,6 +179,7 @@ else
   kubectl create secret generic "$SHARED_ENV_SECRET" -n "$NAMESPACE" \
     --from-file=".env=$ENV_TMP" --dry-run=client -o yaml | kubectl apply -f -
   success "Shared Secret written"
+  EFFECTIVE_DOMAIN="$MC_ROUTER_DOMAIN"
 fi
 
 # ---------------------------------------------------------------------------
@@ -171,6 +187,21 @@ fi
 # ---------------------------------------------------------------------------
 info ""
 info "Installing ${YELLOW}mc-router${NC} chart ${CHART_OCI_PREFIX}/mc-router${ROUTER_CHART_VERSION:+ ($ROUTER_CHART_VERSION)}..."
+# kind has no LoadBalancer controller: an LB Service would stay <pending>
+# forever and the port would never open. kind-config.yaml maps host 25565 to
+# node port 30065, so default to that on kind unless the caller chose a type.
+NODE_NAME="$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}' 2> /dev/null || true)"
+CONTEXT_NAME="$(kubectl config current-context 2> /dev/null || true)"
+IS_KIND=0
+case "$NODE_NAME" in *-control-plane*) IS_KIND=1 ;; esac
+case "$CONTEXT_NAME" in kind-*) IS_KIND=1 ;; esac
+if [ "$IS_KIND" = "1" ] && [ -z "${MC_ROUTER_SERVICE_TYPE:-}" ]; then
+  MC_ROUTER_SERVICE_TYPE="NodePort"
+  [ -n "${MC_ROUTER_NODE_PORT:-}" ] || MC_ROUTER_NODE_PORT="30065"
+  info "kind cluster detected: exposing mc-router as NodePort ${MC_ROUTER_NODE_PORT}"
+  info "  (kind-config.yaml maps host 25565 -> node port 30065)"
+fi
+MC_ROUTER_SERVICE_TYPE="${MC_ROUTER_SERVICE_TYPE:-LoadBalancer}"
 ROUTER_ARGS=(--set "service.type=$MC_ROUTER_SERVICE_TYPE" --set "service.port=$MC_ROUTER_PORT")
 if [ -n "${MC_ROUTER_NODE_PORT:-}" ]; then
   ROUTER_ARGS+=(--set "service.nodePort=$MC_ROUTER_NODE_PORT")
@@ -225,8 +256,59 @@ info ""
 info "───────────────────────────────────────────────────────"
 success "Stack ready in namespace '${NAMESPACE}' (no repo needed)"
 info ""
-info "Router address (what players connect to):"
-kubectl get svc minecraft-router -n "$NAMESPACE" 2> /dev/null | sed 's/^/  /' || true
+info "Players join with: <server-name>.${EFFECTIVE_DOMAIN} (port ${MC_ROUTER_PORT})"
+info "  Make '<anything>.${EFFECTIVE_DOMAIN}' resolve to the router address"
+info "  (DNS wildcard or /etc/hosts). Changing the domain later:"
+info "  MC_ROUTER_DOMAIN=<domain> FORCE_SHARED_ENV=1 $0 $NAMESPACE, then"
+info "  restart the servers from the panel so their routes are re-registered."
+info ""
+info "Verifying that the router port is really exposed..."
+if ! kubectl -n "$NAMESPACE" rollout status deployment/minecraft-router --timeout=120s > /dev/null 2>&1; then
+  error "mc-router pods are not Ready: kubectl -n $NAMESPACE describe deploy/minecraft-router"
+fi
+
+# A TCP connect is the only real proof of exposure; everything else is wishes.
+port_open() { timeout 3 bash -c "exec 3<>/dev/tcp/$1/$2" 2> /dev/null; }
+
+EXPOSED_AT=""
+NODE_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' 2> /dev/null || true)"
+if [ "$MC_ROUTER_SERVICE_TYPE" = "LoadBalancer" ]; then
+  LB_IP=""
+  for _ in 1 2 3 4 5; do
+    LB_IP="$(kubectl get svc minecraft-router -n "$NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2> /dev/null || true)"
+    [ -n "$LB_IP" ] && break
+    sleep 3
+  done
+  if [ -n "$LB_IP" ]; then
+    if port_open "$LB_IP" "$MC_ROUTER_PORT"; then
+      EXPOSED_AT="$LB_IP:${MC_ROUTER_PORT}"
+    else
+      info "  LB $LB_IP:${MC_ROUTER_PORT} has no TCP answer yet (may need a minute)."
+    fi
+  fi
+else
+  NODEPORT="$(kubectl get svc minecraft-router -n "$NAMESPACE" -o jsonpath='{.spec.ports[0].nodePort}' 2> /dev/null || true)"
+  if [ "$IS_KIND" = "1" ] && port_open 127.0.0.1 25565; then
+    EXPOSED_AT="127.0.0.1:25565 (kind hostPort -> node port ${NODEPORT})"
+  elif [ -n "$NODE_IP" ] && [ -n "$NODEPORT" ] && port_open "$NODE_IP" "$NODEPORT"; then
+    EXPOSED_AT="${NODE_IP}:${NODEPORT}"
+  fi
+fi
+
+if [ -n "$EXPOSED_AT" ]; then
+  success "mc-router is reachable at ${EXPOSED_AT}"
+else
+  error "mc-router port is NOT reachable from this machine: players won't connect."
+  if [ "$MC_ROUTER_SERVICE_TYPE" = "LoadBalancer" ]; then
+    error "  The LoadBalancer Service never got an external IP (kind has no LB"
+    error "  controller). Re-run with MC_ROUTER_SERVICE_TYPE=NodePort, or install"
+    error "  MetalLB / your cloud's LB solution."
+  else
+    error "  Tried kind hostPort 127.0.0.1:25565 and node ${NODE_IP:-?}:${NODEPORT:-?}."
+    error "  If the cluster was created without kind-config.yaml (extraPortMappings),"
+    error "  recreate it: kind delete cluster && kind create cluster --config kind-config.yaml"
+  fi
+fi
 info ""
 info "Panel:"
 info "  kubectl -n $NAMESPACE port-forward svc/minecraft-panel 3777:3777"

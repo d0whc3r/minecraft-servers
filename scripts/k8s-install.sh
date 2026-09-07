@@ -99,7 +99,9 @@ MC_ROUTER_PORT="${MC_ROUTER_PORT:-25565}"
 # Fixed nodePort expected by kind-config.yaml's extraPortMapping (host 25565).
 MC_ROUTER_NODE_PORT="${MC_ROUTER_NODE_PORT:-$(get_env_value MC_ROUTER_NODE_PORT)}"
 MC_ROUTER_NODE_PORT="${MC_ROUTER_NODE_PORT:-30065}"
-MC_ROUTER_SERVICE_TYPE="${MC_ROUTER_SERVICE_TYPE:-LoadBalancer}"
+# Keep the raw value to tell "operator chose LoadBalancer" from the default.
+MC_ROUTER_SERVICE_TYPE_EXPLICIT="${MC_ROUTER_SERVICE_TYPE:-$(get_env_value MC_ROUTER_SERVICE_TYPE)}"
+MC_ROUTER_SERVICE_TYPE="${MC_ROUTER_SERVICE_TYPE_EXPLICIT:-LoadBalancer}"
 MCPANEL_USER="${MCPANEL_USER:-$(get_env_value MCPANEL_USER)}"
 MCPANEL_USER="${MCPANEL_USER:-admin}"
 
@@ -128,6 +130,21 @@ yaml_escape() {
 # ---------------------------------------------------------------------------
 info ""
 info "Installing ${YELLOW}mc-router${NC} (players connect to <server>.${MC_ROUTER_DOMAIN})..."
+# kind has no LoadBalancer controller: an LB Service would stay <pending>
+# forever and the port would never open. kind-config.yaml maps host 25565 to
+# node port 30065, so default to that on kind unless .env chose a type.
+NODE_NAME="$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}' 2> /dev/null || true)"
+CONTEXT_NAME="$(kubectl config current-context 2> /dev/null || true)"
+IS_KIND=0
+case "$NODE_NAME" in *-control-plane*) IS_KIND=1 ;; esac
+case "$CONTEXT_NAME" in kind-*) IS_KIND=1 ;; esac
+if [ "$IS_KIND" = "1" ] && [ -z "$MC_ROUTER_SERVICE_TYPE_EXPLICIT" ]; then
+  MC_ROUTER_SERVICE_TYPE="NodePort"
+  [ -n "${MC_ROUTER_NODE_PORT:-}" ] || MC_ROUTER_NODE_PORT="30065"
+  info "kind cluster detected: exposing mc-router as NodePort ${MC_ROUTER_NODE_PORT}"
+  info "  (kind-config.yaml maps host 25565 -> node port 30065; set"
+  info "   MC_ROUTER_SERVICE_TYPE in .env to override)"
+fi
 ROUTER_ARGS=(--set "service.type=$MC_ROUTER_SERVICE_TYPE" --set "service.port=$MC_ROUTER_PORT")
 if [ -n "${MC_ROUTER_NODE_PORT:-}" ]; then
   ROUTER_ARGS+=(--set "service.nodePort=$MC_ROUTER_NODE_PORT")
@@ -217,11 +234,49 @@ info ""
 info "───────────────────────────────────────────────────────"
 success "Stack ready in namespace '${NAMESPACE}'"
 info ""
-info "Router address (what players connect to):"
-kubectl get svc minecraft-router -n "$NAMESPACE" 2> /dev/null | sed 's/^/  /' || true
-info "  kind: players use <host-LAN-IP>:25565 (extraPortMapping in"
-info "        kind-config.yaml -> nodePort ${MC_ROUTER_NODE_PORT}). The"
-info "        LoadBalancer EXTERNAL-IP stays <pending> in kind by design."
+info "Players join with: <server-name>.${MC_ROUTER_DOMAIN} (port ${MC_ROUTER_PORT})"
+info "Verifying that the router port is really exposed..."
+kubectl -n "$NAMESPACE" rollout status deployment/minecraft-router --timeout=120s > /dev/null 2>&1 || {
+  error "mc-router pods are not Ready: kubectl -n $NAMESPACE describe deploy/minecraft-router"
+}
+
+# A TCP connect is the only real proof of exposure; everything else is wishes.
+port_open() { timeout 3 bash -c "exec 3<>/dev/tcp/$1/$2" 2> /dev/null; }
+
+EXPOSED_AT=""
+NODE_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' 2> /dev/null || true)"
+if [ "$MC_ROUTER_SERVICE_TYPE" = "NodePort" ]; then
+  if [ "$IS_KIND" = "1" ] && port_open 127.0.0.1 25565; then
+    EXPOSED_AT="127.0.0.1:25565 (kind hostPort -> node port ${MC_ROUTER_NODE_PORT})"
+  elif [ -n "$NODE_IP" ] && port_open "$NODE_IP" "${MC_ROUTER_NODE_PORT:-30065}"; then
+    EXPOSED_AT="${NODE_IP}:${MC_ROUTER_NODE_PORT:-30065}"
+  fi
+elif [ "$MC_ROUTER_SERVICE_TYPE" = "LoadBalancer" ]; then
+  LB_IP=""
+  for _ in 1 2 3 4 5; do
+    LB_IP="$(kubectl get svc minecraft-router -n "$NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2> /dev/null || true)"
+    [ -n "$LB_IP" ] && break
+    sleep 3
+  done
+  if [ -n "$LB_IP" ] && port_open "$LB_IP" "$MC_ROUTER_PORT"; then
+    EXPOSED_AT="$LB_IP:${MC_ROUTER_PORT}"
+  fi
+fi
+
+if [ -n "$EXPOSED_AT" ]; then
+  success "mc-router is reachable at ${EXPOSED_AT}"
+else
+  error "mc-router port is NOT reachable from this machine: players won't connect."
+  if [ "$MC_ROUTER_SERVICE_TYPE" = "LoadBalancer" ]; then
+    error "  The LoadBalancer Service never got an external IP (kind has no LB"
+    error "  controller). Set MC_ROUTER_SERVICE_TYPE=NodePort in .env, or install"
+    error "  MetalLB / your cloud's LB solution."
+  else
+    error "  Tried kind hostPort 127.0.0.1:25565 and node ${NODE_IP:-?}:${MC_ROUTER_NODE_PORT:-?}."
+    error "  If the cluster was created without kind-config.yaml (extraPortMappings),"
+    error "  recreate it: kind delete cluster && kind create cluster --config kind-config.yaml"
+  fi
+fi
 info ""
 info "Panel:"
 info "  kubectl -n $NAMESPACE port-forward svc/minecraft-panel 3777:3777"
