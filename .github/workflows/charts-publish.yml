@@ -4,11 +4,14 @@ name: Charts Publish
 # can be installed without cloning the repo (scripts/k8s-bootstrap.sh):
 #
 #   helm upgrade --install minecraft-router \
-#     oci://ghcr.io/d0whc3r/minecraft-servers/charts/mc-router --version 0.1.2
+#     oci://ghcr.io/d0whc3r/minecraft-servers/charts/mc-router
+#   (no --version = newest published chart)
 #
-# Only publishes the chart whose folder changed in the push, and requires
-# bumping the version field of its Chart.yaml (same push). workflow_dispatch
-# publishes every chart.
+# Each publish pushes the bumped Chart.yaml version and re-tags the same
+# manifest as "latest" (usable by raw-OCI tooling; helm only resolves
+# semver tags and ignores it). Only publishes the chart whose folder changed
+# in the push, and requires bumping the version field of its Chart.yaml
+# (same push). workflow_dispatch publishes every chart.
 #
 # After the first push, GHCR creates each package as PRIVATE: it must be
 # switched to public in GitHub -> Packages -> charts/<chart> -> Package

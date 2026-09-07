@@ -114,8 +114,10 @@ when piped) and installs router + panel from the OCI charts. The modpack
 catalog ships baked into the panel image, so the panel is fully functional
 afterwards: start servers from the dashboard and each becomes an `mc-<server>`
 release. Re-run with `FORCE_SHARED_ENV=1` to update the Secret, and pass
-`--env-file .env` to import extra keys. Chart versions are pinned at the top
-of the script; override with `MC_ROUTER_CHART_VERSION` / `PANEL_CHART_VERSION`.
+`--env-file .env` to import extra keys. Helm installs the newest published
+chart by default (each publish also re-tags it as `latest` on GHCR for raw
+OCI tooling); pin a release with `MC_ROUTER_CHART_VERSION` /
+`PANEL_CHART_VERSION`.
 The chart packages on GHCR are also born **private** — flip them to public
 the same way as the panel image.
 
