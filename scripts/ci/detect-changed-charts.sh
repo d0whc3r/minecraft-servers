@@ -32,7 +32,7 @@ for chart in ${CHARTS:-}; do
     continue
   fi
   if git diff "$BEFORE" "$SHA" -- "charts/$chart/Chart.yaml" \
-      | grep -qE '^\+version:'; then
+    | grep -qE '^\+version:'; then
     publish+=("$chart")
   else
     echo "::error::charts/$chart changed without bumping 'version' in its Chart.yaml — bumping version is required to publish to OCI"
