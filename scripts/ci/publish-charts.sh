@@ -34,9 +34,10 @@ for chart in "$@"; do
   helm package "charts/$chart"
   helm push "$chart"-*.tgz "oci://$OCI_REPO"
   version="$(awk '$1 == "version:" {print $2; exit}' "charts/$chart/Chart.yaml")"
-  # helm registry login stores credentials in the docker config; point the
-  # containers-image client (skopeo) at the same file.
-  REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE:-$HOME/.docker/config.json}" \
+  # helm registry login stores credentials in helm's own registry config
+  # (docker config format), not in ~/.docker/config.json — point the
+  # containers-image client (skopeo) at the file helm actually uses.
+  REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE:-$(helm env | sed -n 's/^HELM_REGISTRY_CONFIG="\(.*\)"$/\1/p')}" \
     skopeo copy "docker://$OCI_REPO/$chart:$version" "docker://$OCI_REPO/$chart:latest"
   echo "Tagged $OCI_REPO/$chart:latest (=$version)"
   echo "::endgroup::"
