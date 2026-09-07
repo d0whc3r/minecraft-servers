@@ -1,6 +1,6 @@
 // Unit tests for the chart values builder (repo env config -> helm values).
 import { describe, expect, it } from "vitest";
-import { buildServerValues, memoryToK8s } from "@/lib/k8sValues.js";
+import { buildServerValues, memoryLimitK8s, memoryToK8s } from "@/lib/k8sValues.js";
 import type { ServerDef } from "@/lib/servers.js";
 
 function def(env: Record<string, string>): ServerDef {
@@ -28,6 +28,9 @@ describe("memoryToK8s", () => {
     expect(memoryToK8s("2GB")).toBe("2Gi");
     expect(memoryToK8s("512M")).toBe("512Mi");
     expect(memoryToK8s("1024")).toBe("1024Mi"); // plain = MB in itzg land
+    expect(memoryLimitK8s("4G")).toBe("5Gi"); // + 1Gi native headroom
+    expect(memoryLimitK8s("512M")).toBe("1536Mi"); // small heaps get 1Gi too
+    expect(memoryLimitK8s("a lot")).toBeNull();
   });
 
   it("returns null for absent or garbage values", () => {
@@ -64,7 +67,7 @@ describe("buildServerValues", () => {
     expect(values.image.tag).toBe("java21");
     expect(values.resources).toEqual({
       requests: { memory: "6Gi" },
-      limits: { memory: "6Gi" },
+      limits: { memory: "7680Mi" }, // heap + 25% native JVM headroom
     });
     expect(values.router).toEqual({ host: "vanilla.mc.test", default: false });
     expect(values.replicaCount).toBe(1);

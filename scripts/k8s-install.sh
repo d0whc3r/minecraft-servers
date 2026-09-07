@@ -60,6 +60,24 @@ if ! kubectl get namespace "$NAMESPACE" > /dev/null 2>&1; then
   kubectl create namespace "$NAMESPACE"
 fi
 
+# inotify instances are a kernel-wide per-user budget (kubelet, containerd and
+# every pod share it). The default 128 makes big modpacks crash their init
+# with "failed to create fsnotify watcher: too many open files".
+INOTIFY_MIN=512
+if [ -r /proc/sys/fs/inotify/max_user_instances ]; then
+  INOTIFY_NOW="$(cat /proc/sys/fs/inotify/max_user_instances)"
+  if [ "$INOTIFY_NOW" -lt "$INOTIFY_MIN" ]; then
+    if sysctl -w "fs.inotify.max_user_instances=${INOTIFY_MIN}" > /dev/null 2>&1; then
+      success "Raised fs.inotify.max_user_instances: ${INOTIFY_NOW} -> ${INOTIFY_MIN}"
+      info "  Make it persistent: echo 'fs.inotify.max_user_instances=${INOTIFY_MIN}' | sudo tee /etc/sysctl.d/90-minecraft-inotify.conf"
+    else
+      error "fs.inotify.max_user_instances is ${INOTIFY_NOW} (< ${INOTIFY_MIN}); server pods may fail"
+      error "  with 'failed to create fsnotify watcher: too many open files'."
+      error "  Fix: sudo sysctl -w fs.inotify.max_user_instances=${INOTIFY_MIN}"
+    fi
+  fi
+fi
+
 # Read a variable from .env (strips surrounding quotes; empty when unset)
 get_env_value() {
   local key="$1"

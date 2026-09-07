@@ -53,6 +53,20 @@ export function memoryToK8s(raw: string | undefined): string | null {
   return null;
 }
 
+// Native JVM memory on top of the heap (metaspace, code cache, direct byte
+// buffers, GC metadata): a pod limit equal to the heap OOMKills the server
+// right when the heap fills up. At least 1Gi, or 25% of the heap when larger.
+const LIMIT_OVERHEAD_MIB = 1024;
+
+export function memoryLimitK8s(raw: string | undefined): string | null {
+  const heap = memoryToK8s(raw);
+  if (!heap) return null;
+  const heapMib = Number(heap.slice(0, -2)) * (heap.endsWith("Gi") ? 1024 : 1);
+  const limitMib =
+    heapMib + Math.max(LIMIT_OVERHEAD_MIB, Math.round(heapMib / 4));
+  return limitMib % 1024 === 0 ? `${limitMib / 1024}Gi` : `${limitMib}Mi`;
+}
+
 export function buildServerValues(
   def: ServerDef,
   replicas: number,
@@ -82,11 +96,11 @@ export function buildServerValues(
 
   const memory = memoryToK8s(def.env.MEMORY);
   if (memory) {
-    // request = limit: the JVM heap is fixed anyway, and the scheduler then
-    // never puts more load on a node than the operators asked for.
+    // Request keeps the heap (what the scheduler should reserve); the limit
+    // adds native-JVM headroom so the container survives full-heap moments.
     values.resources = {
       requests: { memory },
-      limits: { memory },
+      limits: { memory: memoryLimitK8s(def.env.MEMORY) ?? memory },
     };
   }
   return values;

@@ -97,13 +97,14 @@ probes:
     timeoutSeconds: 10
     failureThreshold: 3
 
-# The panel fills memory from the modpack MEMORY value (request = limit so
-# Aikar flags and the JVM heap agree with the scheduler). CPU is left unset.
+# The panel fills memory from the modpack MEMORY value: request = JVM heap,
+# limit = heap + native headroom (a limit equal to the heap OOMKills the pod
+# right when the heap fills). CPU is left unset.
 resources: {}
   # requests:
   #   memory: 6Gi
   # limits:
-  #   memory: 6Gi
+  #   memory: 7680Mi
 
 persistence:
   # World data (server.properties, worlds, mods downloaded by the pack...)
