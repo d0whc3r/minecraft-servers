@@ -1,9 +1,10 @@
 name: E2E BATS Tests
 
-# Suite pesado: arranca cada modpack de verdad y espera a que esté "Done!"
-# (tests/bats/server-startup.bats). Solo manual: cada job descarga modpacks
-# y levanta contenedores, lo que consume horas de runner repartidas en
-# chunks de 2 modpacks. La suite rápida (push/PR) vive en bats-tests.yml.
+# Heavy suite: actually starts every modpack and waits until it reports
+# "Done!" (tests/bats/server-startup.bats). Manual-only: each job downloads
+# modpacks and brings up containers, which consumes runner hours spread
+# across chunks of 2 modpacks. The fast suite (push/PR) lives in
+# bats-tests.yml.
 on:
   workflow_dispatch:
 
@@ -12,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Chunking de modpacks + versiones de Java necesarias
+  # Modpack chunking + required Java versions
   prepare-matrix:
     runs-on: ubuntu-latest
     outputs:
@@ -92,7 +93,7 @@ jobs:
             test-results/
           retention-days: 7
 
-  # Recolecta resultados y publica un resumen en el run
+  # Collects results and publishes a summary to the run
   summarize:
     needs: [prepare-matrix, test]
     runs-on: ubuntu-latest

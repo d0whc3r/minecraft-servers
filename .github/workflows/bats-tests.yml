@@ -1,9 +1,9 @@
 name: BATS Tests
 
-# Suite rápido de BATS: validación de scripts, configuraciones y compose
-# (tests/bats/config-validation.bats). No arranca servidores ni descarga
-# imágenes, así que puede correr en cada push/PR. El E2E pesado (arranque
-# real de servidores) vive en e2e-tests.yml y es solo manual.
+# Fast BATS suite: validation of scripts, configurations and compose files
+# (tests/bats/config-validation.bats). It starts no servers and downloads no
+# images, so it can run on every push/PR. The heavy E2E suite (real server
+# startup) lives in e2e-tests.yml and is manual-only.
 on:
   push:
     branches: [master]
@@ -33,7 +33,7 @@ jobs:
         with:
           node-version: ${{ steps.config.outputs.NODE_VERSION || '22' }}
 
-      # US1-TC008 renderiza los compose files y necesita un .env
+      # US1-TC008 renders the compose files and needs a .env
       - name: Create test .env
         run: cp .env.example .env
 

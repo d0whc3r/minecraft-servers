@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Panel container entrypoint. When MCPANEL_SSH=1 (chart values ssh.enabled),
 # start a key-only sshd before the panel server, so operators can ssh in and
 # drive the cluster with the bundled mc-tui. sshd runs unprivileged as the
@@ -16,7 +16,7 @@ if [ "${MCPANEL_SSH:-0}" = "1" ]; then
     ssh-keygen -t ed25519 -f "$ssh_dir/ssh_host_ed25519_key" -N '' -C mcpanel
   fi
 
-  cat > "$ssh_dir/sshd_config" <<EOF
+  cat > "$ssh_dir/sshd_config" << EOF
 Port $port
 ListenAddress 0.0.0.0
 HostKey $ssh_dir/ssh_host_ed25519_key

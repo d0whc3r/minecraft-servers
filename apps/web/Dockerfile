@@ -45,25 +45,25 @@ ARG KUBECTL_VERSION=v1.32.5
 ARG HELM_VERSION=v3.17.3
 ARG TARGETARCH
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates curl gnupg openssh-server \
- && install -m 0755 -d /etc/apt/keyrings \
- && curl -fsSL "https://download.docker.com/linux/debian/gpg" \
-      -o /etc/apt/keyrings/docker.asc \
- && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" \
-      > /etc/apt/sources.list.d/docker.list \
- && apt-get update \
- && apt-get install -y --no-install-recommends \
-      docker-ce-cli docker-compose-plugin tzdata \
- && curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" \
-      -o /usr/local/bin/kubectl && chmod 0755 /usr/local/bin/kubectl \
- && curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${TARGETARCH}.tar.gz" \
-      | tar xz -C /tmp --strip-components=1 "linux-${TARGETARCH}/helm" \
- && install -m 0755 /tmp/helm /usr/local/bin/helm \
- && rm -f /tmp/helm \
- && mkdir -p /run/sshd /home/node/.ssh \
- && chown node:node /home/node \
- && usermod -s /bin/bash node \
- && rm -rf /var/lib/apt/lists/*
+  && apt-get install -y --no-install-recommends ca-certificates curl gnupg openssh-server \
+  && install -m 0755 -d /etc/apt/keyrings \
+  && curl -fsSL "https://download.docker.com/linux/debian/gpg" \
+    -o /etc/apt/keyrings/docker.asc \
+  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" \
+    > /etc/apt/sources.list.d/docker.list \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends \
+    docker-ce-cli docker-compose-plugin tzdata \
+  && curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" \
+    -o /usr/local/bin/kubectl && chmod 0755 /usr/local/bin/kubectl \
+  && curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${TARGETARCH}.tar.gz" \
+  | tar xz -C /tmp --strip-components=1 "linux-${TARGETARCH}/helm" \
+  && install -m 0755 /tmp/helm /usr/local/bin/helm \
+  && rm -f /tmp/helm \
+  && mkdir -p /run/sshd /home/node/.ssh \
+  && chown node:node /home/node \
+  && usermod -s /bin/bash node \
+  && rm -rf /var/lib/apt/lists/*
 
 # The TUI binary + a wrapper pinning -root /repo: findRoot() walks up from the
 # working directory, which never lands on /repo from a login shell.
@@ -71,15 +71,15 @@ COPY --from=tui /mc-tui /opt/mc-tui/mc-tui
 COPY apps/web/mc-tui-ssh.sh /usr/local/bin/mc-tui
 COPY apps/web/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod 0755 /opt/mc-tui/mc-tui /usr/local/bin/mc-tui /usr/local/bin/docker-entrypoint.sh \
- # sshd with UsePAM=no rejects locked accounts ("!" in shadow): give the node
- # user an empty-but-valid password field so pubkey login works.
- && usermod -p '*' node
+  # sshd with UsePAM=no rejects locked accounts ("!" in shadow): give the node
+  # user an empty-but-valid password field so pubkey login works.
+  && usermod -p '*' node
 
 ENV NODE_ENV=production \
-    HOST=0.0.0.0 \
-    PORT=3777 \
-    MCPANEL_ROOT=/repo \
-    MCPANEL_DATA_DIR=/data
+  HOST=0.0.0.0 \
+  PORT=3777 \
+  MCPANEL_ROOT=/repo \
+  MCPANEL_DATA_DIR=/data
 
 # Mirror the monorepo layout (workspace root + apps/web) so pnpm's relative
 # node_modules symlinks keep resolving inside the image. The repo-shaped

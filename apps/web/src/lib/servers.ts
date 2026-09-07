@@ -123,15 +123,20 @@ function parseEnvFile(filePath: string): Record<string, string> {
       const singleQuoted = value.startsWith("'");
       value = value.slice(1, -1);
       if (singleQuoted) value = value.replace(/\\'/g, "'");
-      else value = value.replace(/\\([\\"nrt])|\$\$/g, (match, escape) => {
-        if (match === "$$") return "$";
-        switch (escape) {
-          case "n": return "\n";
-          case "r": return "\r";
-          case "t": return "\t";
-          default: return escape;
-        }
-      });
+      else
+        value = value.replace(/\\([\\"nrt])|\$\$/g, (match, escape) => {
+          if (match === "$$") return "$";
+          switch (escape) {
+            case "n":
+              return "\n";
+            case "r":
+              return "\r";
+            case "t":
+              return "\t";
+            default:
+              return escape;
+          }
+        });
     }
     out[key] = value;
   }

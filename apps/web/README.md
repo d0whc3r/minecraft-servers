@@ -22,9 +22,9 @@ adapter) and part of the pnpm workspace (`apps/web`).
 ## Quick start
 
 ```bash
-pnpm install                      # from the repo root (workspace install)
+pnpm install # from the repo root (workspace install)
 pnpm --filter @minecraft-servers/web build
-pnpm --filter @minecraft-servers/web start   # serves http://localhost:4321
+pnpm --filter @minecraft-servers/web start # serves http://localhost:4321
 ```
 
 Development with hot reload:
@@ -36,7 +36,7 @@ pnpm web:dev
 To serve it on your LAN:
 
 ```bash
-PORT=3777 HOST=0.0.0.0 pnpm --filter @minecraft-servers/web start   # → http://<server-ip>:3777
+PORT=3777 HOST=0.0.0.0 pnpm --filter @minecraft-servers/web start # → http://<server-ip>:3777
 ```
 
 ## Run in Docker (recommended)
@@ -57,7 +57,7 @@ Or with plain compose:
 
 ```bash
 cd apps/web
-cp .env.example .env       # set the admin credentials (MCPANEL_USER/PASSWORD)
+cp .env.example .env # set the admin credentials (MCPANEL_USER/PASSWORD)
 MCPANEL_HOST_ROOT=$PWD/../../ docker compose up -d --build
 ```
 
@@ -274,7 +274,7 @@ Everything runs inside `apps/web` (or through the root `web:*` scripts).
 ```bash
 # Unit tests (Vitest): libs and API guards, no Docker or network needed
 pnpm web:test
-pnpm --filter @minecraft-servers/web test:watch   # watch mode
+pnpm --filter @minecraft-servers/web test:watch # watch mode
 
 # E2E tests (Playwright, real browser)
 # Builds and boots the real panel on :4599 with throwaway credentials and an

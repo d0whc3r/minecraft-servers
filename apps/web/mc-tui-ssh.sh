@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # mc-tui inside the panel container. Two reasons this is a wrapper and not a
 # bare binary:
 #   - the login shell never starts in /repo, and findRoot() only walks up from

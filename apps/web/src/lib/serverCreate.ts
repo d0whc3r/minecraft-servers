@@ -83,7 +83,15 @@ function assertCreateInput(input: unknown): asserts input is CreateServerInput {
       throw new Error(`'${key}' is required and must be a string`);
     }
   }
-  for (const key of ["name", "type", "modpack", "version", "memory", "difficulty", "motd"]) {
+  for (const key of [
+    "name",
+    "type",
+    "modpack",
+    "version",
+    "memory",
+    "difficulty",
+    "motd",
+  ]) {
     const value = fields[key];
     if (value === undefined) continue;
     if (typeof value !== "string" || /[\r\n\0]/.test(value)) {
@@ -93,13 +101,22 @@ function assertCreateInput(input: unknown): asserts input is CreateServerInput {
       throw new Error(`'${key}' is too long`);
     }
   }
-  if (fields.maxPlayers !== undefined &&
-      (typeof fields.maxPlayers !== "number" || !Number.isInteger(fields.maxPlayers))) {
+  if (
+    fields.maxPlayers !== undefined &&
+    (typeof fields.maxPlayers !== "number" ||
+      !Number.isInteger(fields.maxPlayers))
+  ) {
     throw new Error("Max players must be an integer between 1 and 1000.");
   }
-  if (fields.extraEnv !== undefined &&
-      (typeof fields.extraEnv !== "string" || fields.extraEnv.length > 65536 || fields.extraEnv.includes("\0"))) {
-    throw new Error("Extra settings must be text of at most 64 KiB without NUL characters");
+  if (
+    fields.extraEnv !== undefined &&
+    (typeof fields.extraEnv !== "string" ||
+      fields.extraEnv.length > 65536 ||
+      fields.extraEnv.includes("\0"))
+  ) {
+    throw new Error(
+      "Extra settings must be text of at most 64 KiB without NUL characters",
+    );
   }
 }
 
@@ -153,7 +170,11 @@ function normalizeModpack(
   if (value && spec.modpackRequired && !/^[a-zA-Z0-9_-]+$/.test(value)) {
     try {
       const url = new URL(value);
-      if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) {
+      if (
+        !["http:", "https:"].includes(url.protocol) ||
+        url.username ||
+        url.password
+      ) {
         throw new Error("Invalid URL");
       }
     } catch {
@@ -227,12 +248,16 @@ export function buildServerEnv(
 function serializeEnv(env: Record<string, string>): string {
   return `${MANAGED_MARKER}\n${Object.entries(env)
     .map(([k, v]) => {
-      if (/[\r\n\0]/.test(v)) throw new Error(`'${k}' must be a single-line value`);
+      if (/[\r\n\0]/.test(v))
+        throw new Error(`'${k}' must be a single-line value`);
       // Compose quoting preserves literal text, including dollars and trailing
       // backslashes. The registry decodes these escapes for Kubernetes too.
       const value = /^[a-zA-Z0-9_./:@+-]*$/.test(v)
         ? v
-        : `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\$/g, () => "$$")}"`;
+        : `"${v
+            .replace(/\\/g, "\\\\")
+            .replace(/"/g, '\\"')
+            .replace(/\$/g, () => "$$")}"`;
       return `${k}=${value}`;
     })
     .join("\n")}\n`;

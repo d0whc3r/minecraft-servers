@@ -1,12 +1,13 @@
 name: Docker Publish
 
-# Construye y publica la imagen del panel (apps/web/Dockerfile) en GHCR con
-# el nombre exacto que espera charts/web-panel:
+# Builds and publishes the panel image (apps/web/Dockerfile) to GHCR with
+# the exact name charts/web-panel expects:
 #   ghcr.io/d0whc3r/minecraft-servers/panel:latest
 #
-# Tras el primer push, GHCR crea el paquete como PRIVADO: hay que cambiarlo a
-# público en GitHub -> Packages -> panel -> Package settings, o configurar
-# imagePullSecrets en el chart (los pulls anónimos del cluster devuelven 403).
+# After the first push, GHCR creates the package as PRIVATE: it must be
+# switched to public in GitHub -> Packages -> panel -> Package settings,
+# or imagePullSecrets must be configured in the chart (the cluster's
+# anonymous pulls return 403).
 on:
   push:
     branches: [master]
@@ -22,14 +23,14 @@ on:
       - '.github/workflows/docker-publish.yml'
   workflow_dispatch:
 
-# Sin cancel-in-progress: no cortar un push a medias si llega otro commit
+# No cancel-in-progress: never cut a push in half when another commit lands
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
 env:
   REGISTRY: ghcr.io
-  # github.repository ya viene en minúsculas (d0whc3r/minecraft-servers);
-  # docker/metadata-action normaliza igualmente por si cambia el nombre.
+  # github.repository is already lowercase (d0whc3r/minecraft-servers);
+  # docker/metadata-action normalizes anyway in case the name changes.
   IMAGE_NAME: ${{ github.repository }}/panel
 
 permissions:
@@ -67,8 +68,9 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v7
         with:
-          # El Dockerfile copia charts/, config/modpacks/ y docs/modpacks/,
-          # así que el contexto es la raíz del repo (ver apps/web/Dockerfile).
+          # The Dockerfile copies charts/, config/modpacks/ and
+          # docs/modpacks/, so the context is the repo root (see
+          # apps/web/Dockerfile).
           context: .
           file: apps/web/Dockerfile
           platforms: linux/amd64

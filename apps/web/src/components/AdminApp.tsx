@@ -46,7 +46,6 @@ import { CreateServerModal } from "@/components/CreateServerModal";
 
 type Tab = "servers" | "backups" | "system";
 
-
 export default function AdminApp() {
   const [me, setMe] = useState<AuthMe | null>(null);
   const { push, list: toasts } = useToasts();
@@ -531,7 +530,6 @@ function ServersTab({ push }: { push: Push }) {
     </>
   );
 }
-
 
 function LogsModal({
   server,

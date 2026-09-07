@@ -105,7 +105,7 @@ describe("createServer (docker runtime)", () => {
       name: "literal-values",
       type: "paper",
       motd,
-      extraEnv: "CUSTOM_TOKEN=$2a$10$abc\nEMPTY=\nJSON={\"key\":\"value\"}",
+      extraEnv: 'CUSTOM_TOKEN=$2a$10$abc\nEMPTY=\nJSON={"key":"value"}',
     });
     expect(result.def.env.MOTD).toBe(motd);
     expect(result.def.env.CUSTOM_TOKEN).toBe("$2a$10$abc");
@@ -133,18 +133,28 @@ describe("createServer (docker runtime)", () => {
       { extraEnv: "1INVALID=value" },
       { extraEnv: "A=one\rB=two" },
     ]) {
-      expect(() => serverCreate.createServer({
-        name: "bad-input", type: "paper", ...fields,
-      })).toThrow();
+      expect(() =>
+        serverCreate.createServer({
+          name: "bad-input",
+          type: "paper",
+          ...fields,
+        }),
+      ).toThrow();
     }
-    expect(fs.readdirSync(path.join(root, "config/modpacks"))).toEqual(["vanilla.env"]);
+    expect(fs.readdirSync(path.join(root, "config/modpacks"))).toEqual([
+      "vanilla.env",
+    ]);
   });
 
   it("rejects non-HTTP modpack URLs", async () => {
     const { serverCreate } = await load();
-    expect(() => serverCreate.createServer({
-      name: "bad-pack", type: "curseforge", modpack: "javascript:alert(1)",
-    })).toThrow(/HTTP/);
+    expect(() =>
+      serverCreate.createServer({
+        name: "bad-pack",
+        type: "curseforge",
+        modpack: "javascript:alert(1)",
+      }),
+    ).toThrow(/HTTP/);
   });
 
   it("rejects duplicate, malformed names and bad values", async () => {
@@ -246,7 +256,11 @@ describe("kubernetes runtime", () => {
     const { serverCreate } = await load();
     const { buildServerValues } = await import("@/lib/k8sValues");
     const motd = 'A "quote", $dollar, \\backslash and \'apostrophe';
-    const result = serverCreate.createServer({ name: "literal-k8s", type: "paper", motd });
+    const result = serverCreate.createServer({
+      name: "literal-k8s",
+      type: "paper",
+      motd,
+    });
     expect(buildServerValues(result.def, 1).env.MOTD).toBe(motd);
   });
 
