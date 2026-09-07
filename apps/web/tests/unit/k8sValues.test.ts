@@ -1,6 +1,10 @@
 // Unit tests for the chart values builder (repo env config -> helm values).
 import { describe, expect, it } from "vitest";
-import { buildServerValues, memoryLimitK8s, memoryToK8s } from "@/lib/k8sValues.js";
+import {
+  buildServerValues,
+  memoryLimitK8s,
+  memoryToK8s,
+} from "@/lib/k8sValues.js";
 import type { ServerDef } from "@/lib/servers.js";
 
 function def(env: Record<string, string>): ServerDef {
