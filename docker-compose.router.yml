@@ -12,7 +12,7 @@
 services:
   mc-router:
     image: itzg/mc-router:${MC_ROUTER_VERSION:-latest}
-    container_name: minecraft-router
+    container_name: ${ROUTER_CONTAINER_NAME:-minecraft-router}
     restart: unless-stopped
     ports:
       # The one public port every player connects to

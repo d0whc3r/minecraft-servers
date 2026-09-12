@@ -6,10 +6,86 @@
 # daemon plus a prepared .env, which is why it only runs in the manual
 # e2e-tests.yml workflow (the fast suite lives in config-validation.bats).
 # The set of modpacks under test is narrowed with TEST_MODPACKS.
+#
+# Isolation: real servers keep their containers, worlds and backups. Every
+# test run is namespaced away from the production stack:
+#   - CONTAINER_NAME_PREFIX=mc-test-   test containers vs. real mc-*
+#   - SERVERS_BASE_DIR=.tmp/e2e-data   worlds/mods/backups written under the
+#                                      repo's git-ignored .tmp, never into
+#                                      the real servers/ and backups/ trees
+#   - ROUTER_PROJECT_NAME/ROUTER_CONTAINER_NAME=minecraft-router-test
+#   - MC_ROUTER_PORT/MC_ROUTER_API_PORT moved off the real router ports
+#   - RCON_PORT_OFFSET=1000            published RCON becomes 27565-27664,
+#                                      so tests can run beside live servers
+# Every server's test data is deleted as soon as its check finishes, and
+# teardown removes whatever a crash may have left behind.
+
+# Isolation knobs (keep in sync with the defaults in scripts/common.sh)
+TEST_CONTAINER_PREFIX="mc-test-"
+TEST_DATA_BASE_DIR="$(pwd)/.tmp/e2e-data"
+TEST_ROUTER_PORT=25600
+TEST_ROUTER_API_PORT=25601
 
 setup() {
     # Scripts and configs are referenced relative to the project root
     cd "$(dirname "$BATS_TEST_DIRNAME")/.."
+
+    export CONTAINER_NAME_PREFIX="$TEST_CONTAINER_PREFIX"
+    export SERVERS_BASE_DIR="$TEST_DATA_BASE_DIR"
+    export ROUTER_PROJECT_NAME="minecraft-router-test"
+    export ROUTER_CONTAINER_NAME="minecraft-router-test"
+    export MC_ROUTER_PORT="$TEST_ROUTER_PORT"
+    export MC_ROUTER_API_PORT="$TEST_ROUTER_API_PORT"
+    export RCON_PORT_OFFSET="${RCON_PORT_OFFSET:-1000}"
+
+    # Startup monitoring budgets, overridable for slow machines/first downloads
+    export MAX_WAIT_TIME="${MAX_WAIT_TIME:-300}"
+    export CONTAINER_CREATE_TIMEOUT="${CONTAINER_CREATE_TIMEOUT:-30}"
+
+    mkdir -p "$SERVERS_BASE_DIR"
+}
+
+teardown() {
+    # Remove the dedicated test router (the real minecraft-router is a
+    # different project/container and stays untouched)
+    docker compose -p "${ROUTER_PROJECT_NAME:-minecraft-router-test}" \
+        -f docker-compose.router.yml down -v > /dev/null 2>&1 || true
+
+    # Safety net for data of servers whose check was interrupted: only ever
+    # touches the dedicated test tree, never the real servers/ and backups/
+    if [ -d "${SERVERS_BASE_DIR:-/nonexistent}" ]; then
+        remove_tree "${SERVERS_BASE_DIR}/servers"
+        remove_tree "${SERVERS_BASE_DIR}/backups"
+    fi
+}
+
+# Delete a directory tree that may be owned by the container user. Under
+# rootless podman, container root maps to an unprivileged host subuid, so a
+# plain host rm -rf fails with permission errors; fall back to removing it
+# from inside a container in the same user namespace.
+remove_tree() {
+    local path="$1"
+    [ -e "$path" ] || return 0
+    rm -rf "$path" 2> /dev/null || \
+        docker run --rm -v "${path}:/target" "${CLEANUP_IMAGE:-alpine:latest}" \
+            rm -rf /target > /dev/null 2>&1 || true
+}
+
+# Save the full container log before the container is removed, so failures
+# stay diagnosable (CI uploads them as artifacts)
+capture_server_logs() {
+    local modpack_name="$1" container_name="$2"
+    local log_dir="${TEST_LOG_DIR:-${SERVERS_BASE_DIR}/server-logs}"
+    mkdir -p "$log_dir"
+    docker logs "$container_name" > "${log_dir}/${modpack_name}.log" 2>&1 || true
+}
+
+# Delete the test world/mods/backup data of one server. Called as soon as its
+# check finishes so sequential runs never accumulate gigabytes on disk.
+cleanup_test_server_data() {
+    local modpack_name="$1"
+    remove_tree "${SERVERS_BASE_DIR}/servers/${modpack_name}"
+    remove_tree "${SERVERS_BASE_DIR}/backups/${modpack_name}"
 }
 
 # Test Case: US1-TC007 - servers fully start and become ready (end-to-end)
@@ -19,8 +95,8 @@ setup() {
         skip "Docker daemon is not running"
     fi
 
-    local max_wait_time=300 # 5 minutes max per server
-    local check_interval=5  # Check logs every 5 seconds
+    local max_wait_time="$MAX_WAIT_TIME"
+    local check_interval=5 # Check logs every 5 seconds
     local failed_servers=()
     local successful_servers=()
     local total_servers=0
@@ -53,13 +129,14 @@ setup() {
     echo "📋 Modpacks to test: $(for config in "${modpack_configs[@]}"; do basename "$config" .env; done | tr '\n' ' ')"
     echo "⏱️  Max wait time per server: ${max_wait_time}s"
     echo "🔍 Check interval: ${check_interval}s"
+    echo "🧪 Isolation: containers '${CONTAINER_NAME_PREFIX}*', data under ${SERVERS_BASE_DIR}"
     echo "---"
 
     for config_file in "${modpack_configs[@]}"; do
         total_servers=$((total_servers + 1))
         local modpack_name
         modpack_name=$(basename "$config_file" .env)
-        local container_name="mc-${modpack_name}"
+        local container_name="${CONTAINER_NAME_PREFIX}${modpack_name}"
 
         echo ""
         echo "[$total_servers/${#modpack_configs[@]}] Testing: $modpack_name"
@@ -74,7 +151,7 @@ setup() {
         # Wait for container to be created
         echo "⏳ Waiting for container creation..."
         local wait_container=0
-        while [ $wait_container -lt 30 ]; do
+        while [ $wait_container -lt "$CONTAINER_CREATE_TIMEOUT" ]; do
             if docker ps -a --filter "name=${container_name}" --format "{{.Names}}" | grep -q "^${container_name}$"; then
                 echo "  ✅ Container created successfully"
                 break
@@ -83,10 +160,11 @@ setup() {
             wait_container=$((wait_container + 1))
         done
 
-        if [ $wait_container -ge 30 ]; then
-            echo "  ❌ Container not created after 30s"
+        if [ $wait_container -ge "$CONTAINER_CREATE_TIMEOUT" ]; then
+            echo "  ❌ Container not created after ${CONTAINER_CREATE_TIMEOUT}s"
             failed_servers+=("$modpack_name:container_not_created")
             kill $server_pid > /dev/null 2>&1 || true
+            cleanup_test_server_data "$modpack_name"
             continue
         fi
 
@@ -100,7 +178,7 @@ setup() {
         echo "   📊 Progress updates every 5 seconds"
         echo "   🔍 Checking for 'Done!' message"
 
-        while [ $elapsed -lt $max_wait_time ]; do
+        while [ $elapsed -lt "$max_wait_time" ]; do
             # CRITICAL: Check container status FIRST before any operation
             local container_status
             container_status=$(docker inspect "${container_name}" --format='{{.State.Status}}' 2> /dev/null || echo "not_found")
@@ -121,7 +199,9 @@ setup() {
                 fi
 
                 kill $server_pid > /dev/null 2>&1 || true
+                capture_server_logs "$modpack_name" "$container_name"
                 docker rm "$container_name" > /dev/null 2>&1 || true
+                cleanup_test_server_data "$modpack_name"
                 break
             fi
 
@@ -155,14 +235,21 @@ setup() {
                 break
             fi
 
-            # Check for fatal errors
-            if echo "$current_logs" | grep -q -i "java.lang.OutOfMemoryError\|Server crashed\|Failed to start\|Could not reserve enough space\|Exception in thread"; then
+            # Check for fatal errors. Autopause/knockd noise is filtered
+            # first: when the daemon cannot grab the interface (rootless
+            # podman) it logs "Failed to start knockd daemon" yet the
+            # server itself starts fine. Exceptions are only fatal when
+            # they hit the main/server thread — background workers can
+            # throw survivable exceptions while the server keeps loading.
+            if echo "$current_logs" | grep -v -i "autopause\|knockd" | grep -q -i "java.lang.OutOfMemoryError\|Server crashed\|Failed to start\|Could not reserve enough space\|Exception in thread \"main\"\|Exception in thread \"Server thread\""; then
                 echo "  ❌ Fatal error detected in '$modpack_name' logs"
                 echo "  📄 Last 20 log lines:"
                 echo "$current_logs" | tail -20 | sed 's/^/     /'
                 failed_servers+=("$modpack_name:fatal_error")
                 kill $server_pid > /dev/null 2>&1 || true
+                capture_server_logs "$modpack_name" "$container_name"
                 docker rm "$container_name" > /dev/null 2>&1 || true
+                cleanup_test_server_data "$modpack_name"
                 break
             fi
 
@@ -175,9 +262,11 @@ setup() {
             echo "  ✅ Completed in ${elapsed}s"
             successful_servers+=("$modpack_name")
 
-            # Clean up
+            # Clean up container, then the test data it generated
+            capture_server_logs "$modpack_name" "$container_name"
             ./scripts/stop-server.sh "$modpack_name" > /dev/null 2>&1 || true
             docker rm "$container_name" > /dev/null 2>&1 || true
+            cleanup_test_server_data "$modpack_name"
         else
             # Only add timeout if server wasn't already marked as failed
             if ! echo "${failed_servers[*]}" | grep -q "$modpack_name"; then
@@ -199,10 +288,12 @@ setup() {
                     failed_servers+=("$modpack_name:timeout_stopped_$final_exit_code")
                 fi
 
-                # Clean up
+                # Clean up container, then the test data it generated
                 kill $server_pid > /dev/null 2>&1 || true
+                capture_server_logs "$modpack_name" "$container_name"
                 ./scripts/stop-server.sh "$modpack_name" > /dev/null 2>&1 || true
                 docker rm "$container_name" > /dev/null 2>&1 || true
+                cleanup_test_server_data "$modpack_name"
             fi
         fi
     done

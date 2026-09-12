@@ -140,6 +140,13 @@ confirm() {
 # SERVER INFORMATION FUNCTIONS
 # ============================================================================
 
+# Root directory that holds the servers/ and backups/ data trees. Defaults to
+# the repo root; override (e.g. the e2e bats suite) to keep test worlds and
+# downloads away from the directories used for real play.
+servers_base_dir() {
+  echo "${SERVERS_BASE_DIR:-$(repo_root)}"
+}
+
 # List available servers (from config files)
 list_available_servers() {
   if [ -d "config/modpacks" ]; then
@@ -154,15 +161,17 @@ list_available_servers() {
 
 # List running servers
 list_running_servers() {
-  docker ps --filter "name=mc-" --format "{{.Names}}" 2> /dev/null | sed 's/mc-//' || true
+  local prefix="${CONTAINER_NAME_PREFIX:-mc-}"
+  docker ps --filter "name=${prefix}" --format "{{.Names}}" 2> /dev/null | sed "s/^${prefix}//" || true
 }
 
-# Get container name from server name
+# Get container name from server name (CONTAINER_NAME_PREFIX keeps test
+# containers separate from the real ones)
 # Args: $1 - server name
 # Returns: container name (stdout)
 get_container_name() {
   local server_name="$1"
-  echo "mc-${server_name}"
+  echo "${CONTAINER_NAME_PREFIX:-mc-}${server_name}"
 }
 
 # Get human-readable uptime for a container (e.g. "3d 4h", "2h 15m", "8m")
@@ -208,7 +217,15 @@ get_config_file() {
 # Returns: data directory path (stdout)
 get_data_dir() {
   local server_name="$1"
-  echo "servers/${server_name}/data"
+  echo "$(servers_base_dir)/servers/${server_name}/data"
+}
+
+# Get mods directory from server name
+# Args: $1 - server name
+# Returns: mods directory path (stdout)
+get_mods_dir() {
+  local server_name="$1"
+  echo "$(servers_base_dir)/servers/${server_name}/mods"
 }
 
 # Get backup directory from server name
@@ -216,7 +233,7 @@ get_data_dir() {
 # Returns: backup directory path (stdout)
 get_backup_dir() {
   local server_name="$1"
-  echo "backups/${server_name}"
+  echo "$(servers_base_dir)/backups/${server_name}"
 }
 
 # ============================================================================
@@ -263,7 +280,7 @@ get_route_host() {
 # Check if the mc-router container is running
 # Returns: 0 if running, 1 if not
 router_running() {
-  container_running "minecraft-router"
+  container_running "${ROUTER_CONTAINER_NAME:-minecraft-router}"
 }
 
 # Start mc-router (mandatory infrastructure: without it no server is
@@ -279,7 +296,7 @@ ensure_router() {
 
   ensure_network
   info "Starting mc-router (players connect via <server>.${MC_ROUTER_DOMAIN})..."
-  docker compose -p minecraft-router -f docker-compose.router.yml up -d
+  docker compose -p "${ROUTER_PROJECT_NAME:-minecraft-router}" -f docker-compose.router.yml up -d
 }
 
 # Start server using docker compose
@@ -300,14 +317,17 @@ docker_compose_up() {
   load_router_settings
 
   # Set dynamic environment variables for docker compose substitution
-  export CONTAINER_NAME="mc-${server_name}"
-  export SERVER_DATA_DIR="$(repo_root)/servers/${server_name}/data"
-  export SERVER_MODS_DIR="$(repo_root)/servers/${server_name}/mods"
-  export SERVER_BACKUP_DIR="$(repo_root)/backups/${server_name}"
+  # RCON_HOST_PORT lets tests shift the published loopback port so a test
+  # server never fights a running real server for the same host port
+  export CONTAINER_NAME="$(get_container_name "$server_name")"
+  export SERVER_DATA_DIR="$(get_data_dir "$server_name")"
+  export SERVER_MODS_DIR="$(get_mods_dir "$server_name")"
+  export SERVER_BACKUP_DIR="$(get_backup_dir "$server_name")"
   export SERVER_CONFIG_FILE="$config_file"
+  export RCON_HOST_PORT=$((RCON_PORT + ${RCON_PORT_OFFSET:-0}))
 
-  debug "Starting server with docker compose -p mc-${server_name} (RCON on 127.0.0.1:${RCON_PORT})"
-  docker compose -p "mc-${server_name}" -f docker-compose.yml up -d 2>&1
+  debug "Starting server with docker compose -p ${CONTAINER_NAME} (RCON on 127.0.0.1:${RCON_HOST_PORT})"
+  docker compose -p "${CONTAINER_NAME}" -f docker-compose.yml up -d 2>&1
 }
 
 # Stop server using docker compose
@@ -315,9 +335,11 @@ docker_compose_up() {
 # Returns: 0 on success, 1 on failure
 docker_compose_down() {
   local server_name="$1"
+  local project
+  project=$(get_container_name "$server_name")
 
-  debug "Stopping server with docker compose -p mc-${server_name} down"
-  docker compose -p "mc-${server_name}" down -v 2>&1
+  debug "Stopping server with docker compose -p ${project} down"
+  docker compose -p "${project}" down -v 2>&1
 }
 
 # Restart server using docker compose
@@ -336,14 +358,15 @@ docker_compose_restart() {
   load_router_settings
 
   # Set dynamic environment variables
-  export CONTAINER_NAME="mc-${server_name}"
-  export SERVER_DATA_DIR="$(repo_root)/servers/${server_name}/data"
-  export SERVER_MODS_DIR="$(repo_root)/servers/${server_name}/mods"
-  export SERVER_BACKUP_DIR="$(repo_root)/backups/${server_name}"
+  export CONTAINER_NAME="$(get_container_name "$server_name")"
+  export SERVER_DATA_DIR="$(get_data_dir "$server_name")"
+  export SERVER_MODS_DIR="$(get_mods_dir "$server_name")"
+  export SERVER_BACKUP_DIR="$(get_backup_dir "$server_name")"
   export SERVER_CONFIG_FILE="$config_file"
+  export RCON_HOST_PORT=$((RCON_PORT + ${RCON_PORT_OFFSET:-0}))
 
-  debug "Restarting server with docker compose -p mc-${server_name} restart"
-  docker compose -p "mc-${server_name}" restart 2>&1
+  debug "Restarting server with docker compose -p ${CONTAINER_NAME} restart"
+  docker compose -p "${CONTAINER_NAME}" restart 2>&1
 }
 
 # ============================================================================

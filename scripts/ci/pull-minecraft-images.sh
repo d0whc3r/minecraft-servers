@@ -16,7 +16,9 @@ fi
 modpacks=$(echo "$*" | tr ',' ' ')
 
 for version in $(bash "$SCRIPT_DIR/../analyze-java-versions.sh" $modpacks); do
-  image="itzg/minecraft-server:${version}"
+  # Fully qualified so podman-based setups (no unqualified-search registries)
+  # resolve it too; docker behaves identically with the explicit registry.
+  image="docker.io/itzg/minecraft-server:${version}"
   echo "Pulling ${image}..."
   docker pull "$image"
 done

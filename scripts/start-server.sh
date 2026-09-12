@@ -55,10 +55,11 @@ fi
 # docker_compose_up reads the routing values and passes this file to Compose.
 # Never source server configuration: panel-entered values are data, not shell.
 
-# Ensure directories exist
-ensure_directory "servers/${SERVER_NAME}/data"
-ensure_directory "servers/${SERVER_NAME}/mods"
-ensure_directory "backups/${SERVER_NAME}"
+# Ensure directories exist (under SERVERS_BASE_DIR, which defaults to the
+# repo root and is overridden by the test suite to isolate test data)
+ensure_directory "$(get_data_dir "$SERVER_NAME")"
+ensure_directory "$(get_mods_dir "$SERVER_NAME")"
+ensure_directory "$(get_backup_dir "$SERVER_NAME")"
 
 # Ensure network exists
 ensure_network

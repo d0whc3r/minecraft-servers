@@ -39,8 +39,8 @@ usage() {
   echo "Settings: MC_ROUTER_* variables in .env (see .env.example)" >&2
 }
 
-ROUTER_PROJECT="minecraft-router"
-ROUTER_CONTAINER="minecraft-router"
+ROUTER_PROJECT="${ROUTER_PROJECT_NAME:-minecraft-router}"
+ROUTER_CONTAINER="${ROUTER_CONTAINER_NAME:-minecraft-router}"
 ROUTER_COMPOSE_FILE="docker-compose.router.yml"
 
 router_up_down() {

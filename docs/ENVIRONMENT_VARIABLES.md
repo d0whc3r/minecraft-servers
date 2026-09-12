@@ -301,6 +301,23 @@ curl -s "https://api.modrinth.com/v2/project/cobbleverse" | grep game_versions
 | `DEBUG_AUTOPAUSE` | Debug autopause            | `false` |
 | `DEBUG_AUTOSTOP`  | Debug autostop             | `false` |
 
+## Test Isolation (scripts + bats suite)
+
+These shell environment variables keep automated tests away from the data and
+containers used for real play. Defaults preserve production behavior, so
+nothing changes for normal operation — only the e2e suite
+(`tests/bats/server-startup.bats`) sets them.
+
+| Variable                   | Description                                                                   | Default            |
+| -------------------------- | ----------------------------------------------------------------------------- | ------------------ |
+| `SERVERS_BASE_DIR`         | Root for the `servers/` and `backups/` data trees (tests use `.tmp/e2e-data`) | repo root          |
+| `CONTAINER_NAME_PREFIX`    | Prefix for server containers and compose projects (tests use `mc-test-`)      | `mc-`              |
+| `RCON_PORT_OFFSET`         | Added to each server's published loopback RCON port (tests use `1000`)        | `0`                |
+| `ROUTER_PROJECT_NAME`      | Compose project for mc-router (tests use `minecraft-router-test`)             | `minecraft-router` |
+| `ROUTER_CONTAINER_NAME`    | mc-router container name                                                      | `minecraft-router` |
+| `MAX_WAIT_TIME`            | e2e test: seconds to wait for "Done!" per server                              | `300`              |
+| `CONTAINER_CREATE_TIMEOUT` | e2e test: seconds to wait for container creation (image pull)                 | `30`               |
+
 ## Example Configurations
 
 ### Vanilla Paper Server
