@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/my-hero-adventure
 **Type**: My Hero Academia themed modpack with quirks and hero battles
+**Tags**: anime, superheroes, rpg, combat
 **Minecraft Version**: 1.16.5
 **Memory**: 4GB recommended
 

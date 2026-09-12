@@ -1,9 +1,10 @@
 # Aged Server
 
-**Modrinth**: https://modrinth.com/modpack/aged\
-**Type**: Realistic medieval progression modpack (Fabric)\
-**Minecraft Version**: 1.20.1\
-**Modpack Version**: 3.1.2\
+**Modrinth**: https://modrinth.com/modpack/aged  
+**Type**: Realistic medieval progression modpack (Fabric)  
+**Tags**: medieval, rpg, survival, exploration, progression  
+**Minecraft Version**: 1.20.1  
+**Modpack Version**: 3.1.2  
 **Memory**: 6GB initial allocation
 
 ## Overview

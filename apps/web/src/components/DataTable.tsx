@@ -66,8 +66,14 @@ interface DataTableProps<TData extends RowData> {
   initialSorting?: SortingState;
   searchPlaceholder?: string;
   emptyMessage?: string;
+  /** Filtering is owned by the parent; retain only table-specific controls. */
+  externalFiltering?: boolean;
   /** Called when a row's whitespace is clicked (inner buttons/links excluded). */
   onRowClick?: (row: TData) => void;
+  /** Stable DOM id used for deep links to a specific row. */
+  getRowAnchor?: (row: TData) => string | undefined;
+  /** Visually distinguishes a row selected by the parent. */
+  isRowHighlighted?: (row: TData) => boolean;
 }
 
 /** Reads the consumer-friendly label from a column def. */
@@ -85,7 +91,10 @@ export function DataTable<TData extends RowData>({
   initialSorting = [],
   searchPlaceholder = "Search…",
   emptyMessage = "No rows.",
+  externalFiltering = false,
   onRowClick,
+  getRowAnchor,
+  isRowHighlighted,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -147,59 +156,90 @@ export function DataTable<TData extends RowData>({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <input
-          type="search"
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-          placeholder={searchPlaceholder}
-          aria-label="Search table"
-          className={cn(inputClass, "min-w-[min(240px,100%)] flex-1")}
-        />
-        {filters.map((f) => {
-          const column = table.getColumn(f.columnId);
-          if (!column) return null;
-          if (f.kind === "select") {
-            return (
-              <select
-                key={f.columnId}
-                className={cn(inputClass, "w-auto")}
-                value={String(column.getFilterValue() ?? "")}
-                onChange={(e) =>
-                  column.setFilterValue(e.target.value || undefined)
-                }
-                aria-label={`Filter by ${f.label}`}
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-2.5",
+          externalFiltering
+            ? "justify-end"
+            : "rounded-xl border border-edge2 bg-panel/75 p-2.5",
+        )}
+      >
+        {!externalFiltering && (
+          <>
+            <div className="relative min-w-[min(240px,100%)] flex-1">
+              <svg
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 fill-none stroke-dim stroke-2"
               >
-                <option value="">{f.label}: all</option>
-                {f.options?.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            );
-          }
-          return (
-            <input
-              key={f.columnId}
-              type="search"
-              value={String(column.getFilterValue() ?? "")}
-              onChange={(e) =>
-                column.setFilterValue(e.target.value || undefined)
+                <circle cx="8.5" cy="8.5" r="5.5" />
+                <path d="m12.5 12.5 4 4" />
+              </svg>
+              <input
+                type="search"
+                name="table-search"
+                autoComplete="off"
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                placeholder={searchPlaceholder}
+                aria-label="Search table"
+                className={cn(inputClass, "w-full pl-9")}
+              />
+            </div>
+            {filters.map((f) => {
+              const column = table.getColumn(f.columnId);
+              if (!column) return null;
+              if (f.kind === "select") {
+                return (
+                  <select
+                    key={f.columnId}
+                    className={cn(inputClass, "w-auto")}
+                    value={String(column.getFilterValue() ?? "")}
+                    onChange={(e) =>
+                      column.setFilterValue(e.target.value || undefined)
+                    }
+                    aria-label={`Filter by ${f.label}`}
+                  >
+                    <option value="">{f.label}: all</option>
+                    {f.options?.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                );
               }
-              placeholder={`${f.label}…`}
-              aria-label={`Filter by ${f.label}`}
-              className={cn(inputClass, "w-44")}
-            />
-          );
-        })}
-        <span className="text-sm whitespace-nowrap text-dim" aria-live="polite">
-          {filtered === total ? total : `${filtered} of ${total}`}
+              return (
+                <input
+                  key={f.columnId}
+                  type="search"
+                  value={String(column.getFilterValue() ?? "")}
+                  onChange={(e) =>
+                    column.setFilterValue(e.target.value || undefined)
+                  }
+                  placeholder={`${f.label}…`}
+                  aria-label={`Filter by ${f.label}`}
+                  className={cn(inputClass, "w-44")}
+                />
+              );
+            })}
+          </>
+        )}
+        <span
+          className={cn(
+            "rounded-lg px-2.5 py-2 text-[0.78rem] font-semibold whitespace-nowrap text-dim",
+            externalFiltering ? "bg-panel" : "bg-raise",
+          )}
+          aria-live="polite"
+        >
+          {filtered === total
+            ? `${total} ${total === 1 ? "item" : "items"}`
+            : `${filtered} of ${total}`}
         </span>
         <details className="relative">
           <summary
             className={cn(
-              "inline-flex cursor-pointer list-none items-center rounded-lg border border-edge bg-raise px-2.5 py-1.5 text-[0.82rem] whitespace-nowrap select-none hover:bg-[#243044]",
+              "inline-flex min-h-10 cursor-pointer list-none items-center rounded-lg border border-edge bg-raise px-3 text-[0.82rem] font-semibold whitespace-nowrap select-none hover:border-[#45594f] hover:bg-[#223029]",
               "[&::-webkit-details-marker]:hidden",
             )}
           >
@@ -244,9 +284,9 @@ export function DataTable<TData extends RowData>({
         </details>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-edge bg-panel">
-        <table className="w-full border-collapse text-[0.92rem] [&>tbody>tr:hover]:bg-white/[0.02] [&>tbody>tr:last-child>td]:border-b-0">
-          <thead>
+      <div className="overflow-x-auto rounded-xl border border-edge bg-panel shadow-[0_18px_45px_rgba(0,0,0,0.08)]">
+        <table className="w-full border-collapse text-[0.9rem] [&>tbody>tr:hover]:bg-ok/[0.025] [&>tbody>tr:last-child>td]:border-b-0">
+          <thead className="bg-raise/55">
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id}>
                 {hg.headers.map((header) => {
@@ -278,7 +318,7 @@ export function DataTable<TData extends RowData>({
                         setOverId(null);
                       }}
                       className={cn(
-                        "border-b border-edge px-4 py-2.5 text-left text-[0.8rem] font-semibold whitespace-nowrap text-dim",
+                        "border-b border-edge px-4 py-3 text-left text-[0.76rem] font-bold whitespace-nowrap text-dim",
                         draggingId &&
                           overId === column.id &&
                           draggingId !== column.id
@@ -292,7 +332,7 @@ export function DataTable<TData extends RowData>({
                           onClick={column.getToggleSortingHandler()}
                           title="Sort (shift-click to multi-sort)"
                           className={cn(
-                            "inline-flex cursor-pointer items-center gap-1 border-0 bg-none p-0 font-inherit font-semibold text-dim hover:text-ink",
+                            "inline-flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 font-inherit font-semibold text-dim hover:text-ink",
                             sorted && "text-ink",
                           )}
                         >
@@ -321,7 +361,12 @@ export function DataTable<TData extends RowData>({
             {rows.map((row) => (
               <tr
                 key={row.id}
-                className={onRowClick ? "cursor-pointer" : undefined}
+                id={getRowAnchor?.(row.original)}
+                className={cn(
+                  onRowClick && "cursor-pointer",
+                  isRowHighlighted?.(row.original) &&
+                    "bg-ok/[0.07] outline-1 -outline-offset-1 outline-ok/35",
+                )}
                 onClick={(e) => {
                   if (!onRowClick) return;
                   const t = e.target as HTMLElement;
@@ -332,7 +377,7 @@ export function DataTable<TData extends RowData>({
                 {row.getVisibleCells().map((cell) => (
                   <td
                     key={cell.id}
-                    className="border-b border-edge2 px-4 py-2.5 align-middle"
+                    className="border-b border-edge2 px-4 py-3.5 align-middle"
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>

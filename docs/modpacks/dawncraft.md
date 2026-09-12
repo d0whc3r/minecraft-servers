@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/dawn-craft  
 **Type**: Open-world RPG adventure (10M+ downloads)  
+**Tags**: rpg, adventure, quests, bosses, magic  
 **Minecraft Version**: 1.18.2 (Forge)  
 **Memory**: 8GB recommended
 

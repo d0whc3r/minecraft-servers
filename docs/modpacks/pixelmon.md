@@ -3,6 +3,7 @@
 **Modrinth**: https://modrinth.com/modpack/the-pixelmon-modpack  
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/the-pixelmon-modpack  
 **Type**: NeoForge-based Pokemon adventure (20M+ downloads)  
+**Tags**: pokemon, multiplayer, adventure  
 **Minecraft Version**: 1.21.1  
 **Memory**: 6GB recommended
 

@@ -20,6 +20,8 @@ choices.
   flight restrictions on an existing profile without a concrete reason.
 - Keep memory easy to adjust. If `INIT_MEMORY` or `MAX_MEMORY` is present, make sure it does not
   contradict or obscure `MEMORY`.
+- Set `TAGS=<comma-separated lowercase tags>` so the panel can categorize servers without a guide
+  (panel-created servers have no doc file to read tags from).
 - Add world-generation, command, JVM, or performance settings only when supported by the pack or by
   an explicit configuration decision.
 
@@ -34,6 +36,9 @@ that do not apply. Adapt an existing guide in place instead of overwriting it wi
 
 The completed guide must include:
 
+- a `**Tags**:` line with lowercase comma-separated gameplay/theme tags (the web panel reads it for
+  search and tag filters); end metadata hard breaks with two trailing spaces, never a trailing
+  backslash — the panel parses these lines raw and a `\` would surface as a tag;
 - the selected pack, Minecraft, loader, and Java versions;
 - concrete source links and the date they were checked;
 - chosen resources and any special installation steps;

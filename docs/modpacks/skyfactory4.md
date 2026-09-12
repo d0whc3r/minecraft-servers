@@ -1,9 +1,10 @@
 # SkyFactory 4 Server
 
-**CurseForge**: https://www.curseforge.com/minecraft/modpacks/skyfactory-4\
-**Type**: Classic void-world skyblock modpack (Forge)\
-**Minecraft Version**: 1.12.2\
-**Modpack Version**: 4.2.4\
+**CurseForge**: https://www.curseforge.com/minecraft/modpacks/skyfactory-4  
+**Type**: Classic void-world skyblock modpack (Forge)  
+**Tags**: skyblock, tech, progression, quests  
+**Minecraft Version**: 1.12.2  
+**Modpack Version**: 4.2.4  
 **Memory**: 6GB allocated, 4GB official minimum
 
 ## Overview

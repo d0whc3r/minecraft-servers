@@ -124,6 +124,7 @@ export async function buildStatus(): Promise<StatusResponse> {
         rconPort: def.rconPort,
         maxPlayers: def.maxPlayers,
         description: def.description,
+        tags: def.tags,
         modUrl: def.modUrl,
         custom: def.source === "custom",
         state,

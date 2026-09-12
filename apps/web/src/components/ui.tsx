@@ -22,11 +22,12 @@ type ButtonVariant = "default" | "primary" | "danger" | "ghost";
 type ButtonSize = "md" | "sm" | "icon";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  default: "border-edge bg-raise text-ink hover:bg-[#243044]",
+  default:
+    "border-edge bg-raise text-ink hover:border-[#45594f] hover:bg-[#223029]",
   primary:
-    "border-transparent bg-ok font-semibold text-[#0c130c] hover:bg-[#4fc782]",
+    "border-transparent bg-ok font-semibold text-[#07100b] hover:bg-[#82e7b1]",
   danger:
-    "border-transparent bg-bad font-semibold text-[#1b0d0b] hover:bg-[#f07c6d]",
+    "border-transparent bg-bad font-semibold text-[#1b0d0b] hover:bg-[#f58c7f]",
   ghost: "border-edge bg-transparent text-ink hover:bg-raise",
 };
 
@@ -37,7 +38,7 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
 };
 
 const BUTTON_BASE =
-  "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border font-sans transition-colors disabled:cursor-not-allowed disabled:opacity-45";
+  "inline-flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg border font-sans font-semibold transition-[background-color,border-color,color] disabled:cursor-not-allowed disabled:opacity-45";
 
 export function buttonClass(
   variant: ButtonVariant = "default",
@@ -110,14 +111,14 @@ export function StatusDot({ state }: { state: string }) {
 
 export function StateBadge({ state }: { state: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[0.85rem] text-dim">
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-edge2 bg-base/55 px-2.5 py-1 text-[0.74rem] font-semibold text-dim">
       <StatusDot state={state} />
       <span>{STATE_LABELS[state] ?? state}</span>
     </span>
   );
 }
 
-/** Left edge bar on server cards, colored by state. */
+/** Top status line on server cards, coloured by state. */
 export function StateBar({ state }: { state: string }) {
   const colors: Record<string, string> = {
     running: "bg-ok",
@@ -130,7 +131,7 @@ export function StateBar({ state }: { state: string }) {
     <span
       aria-hidden="true"
       className={cn(
-        "absolute inset-y-0 left-0 w-1",
+        "absolute inset-x-0 top-0 h-0.5",
         colors[state] ?? "bg-idle",
       )}
     />
@@ -148,17 +149,17 @@ export function Chip({
   tone?: "mono" | "button";
   onClick?: () => void;
 }) {
-  return (
-    <span
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center rounded-full border border-edge bg-raise px-2.5 py-0.5 text-[0.8rem] text-ink",
-        tone === "mono" && "font-mono",
-        tone === "button" && "cursor-pointer font-mono hover:bg-[#243044]",
-      )}
-    >
+  const className = cn(
+    "inline-flex items-center rounded-full border border-edge bg-raise px-2.5 py-0.5 text-[0.8rem] text-ink",
+    tone === "mono" && "font-mono",
+    tone === "button" && "cursor-pointer font-mono hover:bg-[#223029]",
+  );
+  return onClick ? (
+    <button type="button" onClick={onClick} className={className}>
       {children}
-    </span>
+    </button>
+  ) : (
+    <span className={className}>{children}</span>
   );
 }
 
@@ -258,7 +259,7 @@ export function Modal({
     >
       <div
         className={cn(
-          "flex max-h-[min(85dvh,900px)] w-full flex-col overflow-hidden rounded-2xl border border-edge bg-panel shadow-[0_18px_60px_rgba(0,0,0,0.5)]",
+          "flex max-h-[min(88dvh,900px)] w-full flex-col overflow-hidden rounded-2xl border border-edge bg-panel shadow-[0_24px_80px_rgba(0,0,0,0.6)]",
           wide ? "max-w-[860px]" : "max-w-[560px]",
         )}
         role="dialog"
@@ -281,7 +282,7 @@ export function Modal({
             ✕
           </Button>
         </header>
-        <div className="overflow-y-auto p-4">{children}</div>
+        <div className="overscroll-contain overflow-y-auto p-4">{children}</div>
       </div>
     </div>
   );
@@ -305,7 +306,88 @@ export function Field({
 }
 
 export const inputClass =
-  "rounded-lg border border-edge bg-raise px-3 py-2 font-sans text-ink placeholder:text-dim";
+  "min-h-10 rounded-lg border border-edge bg-base/65 px-3 py-2 font-sans text-ink placeholder:text-dim/75 transition-colors hover:border-[#45594f] focus:border-ok";
+
+export function FilterSearch({
+  value,
+  onChange,
+  placeholder,
+  label,
+  name,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  label: string;
+  name: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("relative min-w-[min(300px,100%)] flex-1", className)}>
+      <svg
+        viewBox="0 0 20 20"
+        aria-hidden="true"
+        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 fill-none stroke-dim stroke-2"
+      >
+        <circle cx="8.5" cy="8.5" r="5.5" />
+        <path d="m12.5 12.5 4 4" />
+      </svg>
+      <input
+        type="search"
+        name={name}
+        autoComplete="off"
+        placeholder={placeholder}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-label={label}
+        className={cn(inputClass, "w-full pl-9")}
+      />
+    </div>
+  );
+}
+
+export function CountedFilterGroup<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: Array<{ value: T; label: string; count: number }>;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div role="group" aria-label={label} className="flex flex-wrap gap-1">
+      {options.map((option) => {
+        const active = value === option.value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={active}
+            className={cn(
+              "inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-lg border-0 px-3 font-sans text-[0.82rem] font-semibold text-dim",
+              active ? "bg-raise text-ink" : "bg-transparent hover:text-ink",
+            )}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+            <span
+              className={cn(
+                "rounded-md px-1.5 py-0.5 font-mono text-[0.7rem]",
+                active ? "bg-ok/12 text-ok" : "bg-raise text-dim",
+              )}
+            >
+              {option.count}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 // ---- Toasts -----------------------------------------------------------------------
 
@@ -373,7 +455,7 @@ export function CopyValue({ value }: { value: string }) {
       type="button"
       title="Copy to clipboard"
       className={cn(
-        "inline-flex cursor-pointer items-center gap-1 rounded-md border-0 bg-transparent p-0 font-mono text-[0.92em] text-ink",
+        "inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-md border-0 bg-transparent p-0 font-mono text-[0.82rem] font-semibold text-ink",
         copied ? "text-ok" : "hover:text-ok",
       )}
       onClick={async () => {
@@ -389,7 +471,12 @@ export function CopyValue({ value }: { value: string }) {
       <span className="block max-w-64 overflow-hidden text-ellipsis whitespace-nowrap">
         {value}
       </span>
-      <span aria-hidden="true">{copied ? "✓" : "⧉"}</span>
+      <span
+        aria-hidden="true"
+        className="grid size-5 flex-none place-items-center rounded bg-raise text-[0.7rem]"
+      >
+        {copied ? "✓" : "⧉"}
+      </span>
       <span className="sr-only">{copied ? "Copied" : "Copy"}</span>
     </button>
   );

@@ -109,6 +109,80 @@ describe("server registry", () => {
     expect(def.description).toContain("Optimized vanilla experience");
   });
 
+  it("reads tags from the doc heading block and merges env TAGS", async () => {
+    write(
+      "docs/modpacks/rlcraft.md",
+      [
+        "# RLCraft",
+        "",
+        "**Type**: Hardcore Survival Modpack  ",
+        "**Tags**: Hardcore, survival, Dragons",
+        "",
+        "## Overview",
+        "",
+        "Brutal survival.",
+      ].join("\n"),
+    );
+    const servers = await loadServers();
+    const def = servers.getServerDef("rlcraft")!;
+    expect(def.tags).toEqual(["hardcore", "survival", "dragons"]);
+  });
+
+  it("ignores markdown hard-break backslashes in the Tags line", async () => {
+    write(
+      "docs/modpacks/rlcraft.md",
+      [
+        "# RLCraft",
+        "",
+        "**Type**: Hardcore Survival Modpack  ",
+        "**Tags**: Hardcore, survival, Dragons \\",
+        "",
+        "## Overview",
+        "",
+        "Brutal survival.",
+      ].join("\n"),
+    );
+    const servers = await loadServers();
+    expect(servers.getServerDef("rlcraft")!.tags).toEqual([
+      "hardcore",
+      "survival",
+      "dragons",
+    ]);
+  });
+
+  it("merges doc tags with the TAGS env var, deduped", async () => {
+    write(
+      "config/modpacks/vanilla.env",
+      [
+        "TYPE=PAPER",
+        "VERSION=1.21.1",
+        "MEMORY=2G",
+        "RCON_PORT=26567",
+        "MAX_PLAYERS=20",
+        "ENABLE_RCON=true",
+        "TAGS=vanilla, Survival, vanilla",
+      ].join("\n"),
+    );
+    write(
+      "docs/modpacks/vanilla.md",
+      [
+        "# Vanilla (Paper)",
+        "",
+        "**Tags**: vanilla, performance",
+        "",
+        "## Overview",
+        "",
+        "Optimized vanilla experience for testing.",
+      ].join("\n"),
+    );
+    const servers = await loadServers();
+    expect(servers.getServerDef("vanilla")!.tags).toEqual([
+      "vanilla",
+      "performance",
+      "survival",
+    ]);
+  });
+
   it("detects platforms (CurseForge vs Modrinth vs Paper)", async () => {
     const servers = await loadServers();
     expect(servers.getServerDef("rlcraft")!.platform).toBe("CurseForge");

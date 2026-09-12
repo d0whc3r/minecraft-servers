@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/better-mc-forge-bmc4  
 **Type**: Forge-based enhanced vanilla+ (18M+ downloads)  
+**Tags**: vanilla-plus, exploration, quests, multiplayer  
 **Minecraft Version**: 1.20.1  
 **Memory**: 6GB recommended
 

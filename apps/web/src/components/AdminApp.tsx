@@ -21,30 +21,41 @@ import {
   startPolling,
   timeAgo,
 } from "@/lib/client";
-import {
-  DataTable,
-  type DataTableColumn,
-  type TableFilter,
-} from "@/components/DataTable";
+import { DataTable, type DataTableColumn } from "@/components/DataTable";
+import { ServerDetailsModal } from "@/components/ServerDetailsModal";
 import {
   Button,
   buttonClass,
   cn,
-  CopyValue,
+  CountedFilterGroup,
   Field,
+  FilterSearch,
   inputClass,
   Meter,
   Modal,
   MONO,
   StateBadge,
-  StatusDot,
-  STATE_LABELS,
   useToasts,
 } from "@/components/ui";
 
 import { CreateServerModal } from "@/components/CreateServerModal";
 
 type Tab = "servers" | "backups" | "system";
+type AdminServerFilter = "all" | "running" | "stopped" | "alerts";
+type BackupFilter = "all" | "checksum" | "unchecked";
+
+const ADMIN_TABS: Tab[] = ["servers", "backups", "system"];
+const ADMIN_SERVER_FILTERS: Array<[AdminServerFilter, string]> = [
+  ["all", "All"],
+  ["running", "Running"],
+  ["stopped", "Stopped"],
+  ["alerts", "Alerts"],
+];
+const BACKUP_FILTERS: Array<[BackupFilter, string]> = [
+  ["all", "All"],
+  ["checksum", "Checksum"],
+  ["unchecked", "No checksum"],
+];
 
 export default function AdminApp() {
   const [me, setMe] = useState<AuthMe | null>(null);
@@ -80,6 +91,7 @@ export default function AdminApp() {
 function Login({ onDone }: { onDone: () => void }) {
   const [user, setUser] = useState("admin");
   const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
@@ -101,42 +113,100 @@ function Login({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <form
-      className="mx-auto mt-[8vh] flex w-full max-w-[380px] flex-col gap-3.5 rounded-2xl border border-edge bg-panel p-6"
-      onSubmit={submit}
-    >
-      <h2 className="m-0 mb-1">Admin sign in</h2>
-      {error && (
-        <p
-          role="alert"
-          className="m-0 rounded-lg border border-bad/50 bg-bad/10 px-3.5 py-2 text-[0.9rem]"
+    <section className="mx-auto mt-[clamp(1rem,7vh,5rem)] grid w-full max-w-[860px] overflow-hidden rounded-3xl border border-edge bg-panel shadow-[0_30px_80px_rgba(0,0,0,0.22)] md:grid-cols-[1.05fr_1fr]">
+      <div className="relative flex min-h-105 flex-col justify-between overflow-hidden border-r border-edge2 bg-raise/55 p-8 max-md:min-h-64 max-md:border-r-0 max-md:border-b">
+        <div
+          aria-hidden="true"
+          className="absolute -top-14 -right-12 size-48 rotate-12 border border-ok/10 bg-ok/[0.035] shadow-[0_0_0_24px_rgba(105,221,160,0.02),0_0_0_48px_rgba(105,221,160,0.015)]"
+        />
+        <span className="grid size-12 place-items-center rounded-2xl border border-ok/25 bg-ok/10 text-ok">
+          <svg
+            viewBox="0 0 24 24"
+            className="size-6 fill-none stroke-current stroke-[1.6]"
+            aria-hidden="true"
+          >
+            <path d="M12 3 5 6v5.5c0 4.4 2.7 7.4 7 9.5 4.3-2.1 7-5.1 7-9.5V6l-7-3Z" />
+            <path d="M9.3 11.2V9.8a2.7 2.7 0 0 1 5.4 0v1.4M8.5 11.2h7v5h-7z" />
+          </svg>
+        </span>
+        <div className="relative">
+          <h1 className="m-0 max-w-xs text-[clamp(1.8rem,4vw,2.55rem)] leading-[1.08] font-bold tracking-[-0.045em]">
+            Your control room is protected.
+          </h1>
+          <p className="mt-3 mb-0 max-w-sm leading-relaxed text-dim">
+            Sign in to start and stop servers, run console commands, and manage
+            backups.
+          </p>
+        </div>
+      </div>
+      <form
+        className="flex flex-col justify-center gap-4 p-8 max-sm:p-5"
+        onSubmit={submit}
+      >
+        <div className="mb-2">
+          <h2 className="m-0 text-xl font-bold tracking-[-0.025em]">
+            Admin sign in
+          </h2>
+          <p className="mt-1.5 mb-0 text-sm text-dim">
+            Use your panel credentials to continue.
+          </p>
+        </div>
+        {error && (
+          <p
+            role="alert"
+            className="m-0 rounded-lg border border-bad/50 bg-bad/10 px-3.5 py-2 text-[0.9rem]"
+          >
+            {error}
+          </p>
+        )}
+        <Field label="Username">
+          <input
+            className={inputClass}
+            name="username"
+            spellCheck={false}
+            value={user}
+            onChange={(e) => setUser(e.target.value)}
+            autoComplete="username"
+            required
+          />
+        </Field>
+        {/* Not Field(): a <label> cannot wrap the show-password button. */}
+        <div className="flex flex-col gap-1 text-[0.85rem] text-dim">
+          <label htmlFor="admin-password" className="font-semibold">
+            Password
+          </label>
+          <div className="relative">
+            <input
+              id="admin-password"
+              className={cn(inputClass, "w-full pr-16")}
+              name="password"
+              type={showPass ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPass((v) => !v)}
+              aria-pressed={showPass}
+              aria-label={showPass ? "Hide credentials" : "Show credentials"}
+              className="absolute inset-y-0 right-1.5 my-auto h-7 cursor-pointer rounded-md border-0 bg-transparent px-2 font-sans text-[0.78rem] font-semibold text-dim transition-colors hover:bg-raise hover:text-ink"
+            >
+              {showPass ? "Hide" : "Show"}
+            </button>
+          </div>
+        </div>
+        <Button
+          className="mt-1 w-full"
+          variant="primary"
+          type="submit"
+          disabled={sending}
         >
-          {error}
-        </p>
-      )}
-      <Field label="Username">
-        <input
-          className={inputClass}
-          value={user}
-          onChange={(e) => setUser(e.target.value)}
-          autoComplete="username"
-          required
-        />
-      </Field>
-      <Field label="Password">
-        <input
-          className={inputClass}
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
-          required
-        />
-      </Field>
-      <Button variant="primary" type="submit" disabled={sending}>
-        {sending ? "Checking…" : "Sign in"}
-      </Button>
-    </form>
+          {sending ? "Checking…" : "Sign in"}
+        </Button>
+      </form>
+    </section>
   );
 }
 
@@ -148,32 +218,66 @@ function AdminTabs({
   push: ReturnType<typeof useToasts>["push"];
 }) {
   const [tab, setTab] = useState<Tab>(() =>
-    typeof location !== "undefined" && location.hash === "#copias"
+    typeof location !== "undefined" &&
+    (location.hash === "#backups" || location.hash === "#copias")
       ? "backups"
-      : "servers",
+      : typeof location !== "undefined" && location.hash === "#system"
+        ? "system"
+        : "servers",
   );
+
+  const selectTab = (next: Tab) => {
+    setTab(next);
+    history.replaceState(
+      null,
+      "",
+      next === "servers" ? location.pathname : `#${next}`,
+    );
+  };
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div
-          role="tablist"
-          aria-label="Admin sections"
-          className="inline-flex divide-x divide-edge overflow-hidden rounded-lg border border-edge"
-        >
-          {(["servers", "backups", "system"] as Tab[]).map((t) => (
+      <section className="page-heading" aria-labelledby="admin-title">
+        <div>
+          <h1 id="admin-title">Control room</h1>
+          <p>
+            Manage server lifecycle, backups and host resources from one place.
+          </p>
+        </div>
+        <Button variant="ghost" onClick={onLogout}>
+          Sign out
+        </Button>
+      </section>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-edge2">
+        <div role="tablist" aria-label="Admin sections" className="flex gap-1">
+          {ADMIN_TABS.map((t) => (
             <button
               key={t}
               type="button"
               role="tab"
+              id={`admin-${t}-tab`}
+              aria-controls={`admin-${t}-panel`}
               aria-selected={tab === t}
               className={cn(
-                "cursor-pointer border-0 px-3.5 py-2 font-sans text-dim",
-                tab === t
-                  ? "bg-raise font-semibold text-ink"
-                  : "hover:text-ink",
+                "relative min-h-11 cursor-pointer border-0 bg-transparent px-4 font-sans text-sm font-semibold text-dim after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:bg-transparent",
+                tab === t ? "text-ink after:bg-ok" : "hover:text-ink",
               )}
-              onClick={() => setTab(t)}
+              onClick={() => selectTab(t)}
+              onKeyDown={(event) => {
+                if (event.key !== "ArrowLeft" && event.key !== "ArrowRight")
+                  return;
+                event.preventDefault();
+                const offset = event.key === "ArrowRight" ? 1 : -1;
+                const next =
+                  ADMIN_TABS[
+                    (ADMIN_TABS.indexOf(t) + offset + ADMIN_TABS.length) %
+                      ADMIN_TABS.length
+                  ];
+                selectTab(next);
+                requestAnimationFrame(() =>
+                  document.getElementById(`admin-${next}-tab`)?.focus(),
+                );
+              }}
             >
               {t === "servers"
                 ? "Servers"
@@ -183,13 +287,16 @@ function AdminTabs({
             </button>
           ))}
         </div>
-        <Button variant="ghost" onClick={onLogout}>
-          Sign out
-        </Button>
       </div>
-      {tab === "servers" && <ServersTab push={push} />}
-      {tab === "backups" && <BackupsTab push={push} />}
-      {tab === "system" && <SystemTab />}
+      <div
+        role="tabpanel"
+        id={`admin-${tab}-panel`}
+        aria-labelledby={`admin-${tab}-tab`}
+      >
+        {tab === "servers" && <ServersTab push={push} />}
+        {tab === "backups" && <BackupsTab push={push} />}
+        {tab === "system" && <SystemTab />}
+      </div>
     </>
   );
 }
@@ -198,6 +305,15 @@ type Push = ReturnType<typeof useToasts>["push"];
 
 function ServersTab({ push }: { push: Push }) {
   const [status, setStatus] = useState<StatusResponse | null>(null);
+  const [targetServer, setTargetServer] = useState<string | null>(() => {
+    if (typeof location === "undefined") return null;
+    return new URLSearchParams(location.search).get("server");
+  });
+  const [query, setQuery] = useState(() => targetServer ?? "");
+  const [serverFilter, setServerFilter] = useState<AdminServerFilter>("all");
+  const [platformFilter, setPlatformFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const [detailOf, setDetailOf] = useState<string | null>(null);
   const [logsOf, setLogsOf] = useState<ServerStatus | null>(null);
   const [rconOf, setRconOf] = useState<ServerStatus | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -270,11 +386,108 @@ function ServersTab({ push }: { push: Push }) {
     [push, run],
   );
 
-  const servers = useMemo(
+  const allServers = useMemo(
     () =>
       [...(status?.servers ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
     [status],
   );
+
+  const platforms = useMemo(
+    () =>
+      [...new Set(allServers.map((server) => server.platform))].sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [allServers],
+  );
+
+  const tags = useMemo(
+    () =>
+      [...new Set(allServers.flatMap((server) => server.tags))].sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [allServers],
+  );
+  const detailServer = detailOf
+    ? (allServers.find((server) => server.name === detailOf) ?? null)
+    : null;
+
+  const servers = useMemo(() => {
+    let list = allServers;
+    if (targetServer)
+      list = list.filter((server) => server.name === targetServer);
+    if (serverFilter === "running")
+      list = list.filter(
+        (server) => server.state === "running" || server.state === "starting",
+      );
+    if (serverFilter === "stopped")
+      list = list.filter(
+        (server) => server.state === "stopped" || server.state === "missing",
+      );
+    if (serverFilter === "alerts")
+      list = list.filter((server) => server.state === "unhealthy");
+    if (platformFilter)
+      list = list.filter((server) => server.platform === platformFilter);
+    if (tagFilter)
+      list = list.filter((server) => server.tags.includes(tagFilter));
+
+    const normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery)
+      list = list.filter((server) =>
+        [
+          server.name,
+          server.title,
+          server.platform,
+          server.mcVersion,
+          server.description,
+          ...server.tags,
+        ].some((value) => value.toLowerCase().includes(normalizedQuery)),
+      );
+    return list;
+  }, [
+    allServers,
+    platformFilter,
+    query,
+    serverFilter,
+    tagFilter,
+    targetServer,
+  ]);
+
+  const filterCounts: Record<AdminServerFilter, number> = {
+    all: allServers.length,
+    running: allServers.filter(
+      (server) => server.state === "running" || server.state === "starting",
+    ).length,
+    stopped: allServers.filter(
+      (server) => server.state === "stopped" || server.state === "missing",
+    ).length,
+    alerts: allServers.filter((server) => server.state === "unhealthy").length,
+  };
+  const hasActiveFilters =
+    query.trim() !== "" ||
+    serverFilter !== "all" ||
+    platformFilter !== "" ||
+    tagFilter !== "";
+
+  useEffect(() => {
+    if (
+      !targetServer ||
+      !allServers.some((server) => server.name === targetServer)
+    )
+      return;
+    requestAnimationFrame(() =>
+      document
+        .getElementById(`admin-server-${targetServer}`)
+        ?.scrollIntoView({ block: "nearest" }),
+    );
+  }, [allServers, targetServer]);
+
+  const clearTargetServer = () => {
+    setTargetServer(null);
+    const url = new URL(location.href);
+    url.searchParams.delete("server");
+    if (url.hash.startsWith("#admin-server-")) url.hash = "";
+    history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  };
 
   const columns = useMemo<DataTableColumn<ServerStatus>[]>(
     () => [
@@ -286,7 +499,13 @@ function ServersTab({ push }: { push: Push }) {
         enableHiding: false,
         cell: ({ row }) => (
           <div className="min-w-0">
-            <strong>{row.original.title}</strong>
+            <button
+              type="button"
+              className="cursor-pointer border-0 bg-transparent p-0 text-left font-semibold text-ink hover:text-ok"
+              onClick={() => setDetailOf(row.original.name)}
+            >
+              {row.original.title}
+            </button>
             {row.original.custom && (
               <span
                 title="Created from the panel (removable)"
@@ -296,8 +515,7 @@ function ServersTab({ push }: { push: Push }) {
               </span>
             )}
             <span className="block font-mono text-[0.78rem] text-dim">
-              {row.original.name} · {row.original.platform} · MC{" "}
-              {row.original.mcVersion}
+              {row.original.name}
             </span>
           </div>
         ),
@@ -324,29 +542,6 @@ function ServersTab({ push }: { push: Push }) {
         ),
       },
       {
-        id: "uptime",
-        header: "Uptime",
-        meta: { label: "Uptime" },
-        accessorFn: (s) => s.uptimeSec ?? -1,
-        cell: ({ row }) => {
-          const s = row.original;
-          return (
-            <span className={MONO}>
-              {s.state === "running" || s.state === "starting"
-                ? formatUptime(s.uptimeSec)
-                : "—"}
-            </span>
-          );
-        },
-      },
-      {
-        id: "connect",
-        header: "Connect",
-        meta: { label: "Connect" },
-        accessorKey: "connect",
-        cell: ({ row }) => <CopyValue value={row.original.connect} />,
-      },
-      {
         id: "actions",
         header: "Actions",
         meta: { label: "Actions" },
@@ -354,9 +549,8 @@ function ServersTab({ push }: { push: Push }) {
         enableHiding: false,
         cell: ({ row }) => {
           const s = row.original;
-          const stopped = s.state === "stopped" || s.state === "missing";
           return (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-nowrap gap-1.5">
               {s.state === "running" || s.state === "starting" ? (
                 <Button
                   size="sm"
@@ -377,47 +571,9 @@ function ServersTab({ push }: { push: Push }) {
                   Start
                 </Button>
               )}
-              <Button
-                size="sm"
-                disabled={busy !== null || stopped}
-                onClick={() =>
-                  setConfirming({ name: s.name, action: "restart" })
-                }
-              >
-                Restart
+              <Button size="sm" onClick={() => setDetailOf(s.name)}>
+                Details
               </Button>
-              <Button
-                size="sm"
-                disabled={busy !== null || stopped}
-                onClick={() =>
-                  setConfirming({ name: s.name, action: "backup" })
-                }
-              >
-                Back up
-              </Button>
-              <Button size="sm" onClick={() => setLogsOf(s)}>
-                Logs
-              </Button>
-              <Button size="sm" onClick={() => setRconOf(s)}>
-                Console
-              </Button>
-              {s.custom && (
-                <Button
-                  size="sm"
-                  variant="danger"
-                  disabled={busy !== null || !stopped}
-                  title={
-                    stopped
-                      ? "Remove this server from the panel"
-                      : "Stop the server first"
-                  }
-                  onClick={() =>
-                    setConfirming({ name: s.name, action: "delete" })
-                  }
-                >
-                  Delete
-                </Button>
-              )}
             </div>
           );
         },
@@ -426,45 +582,222 @@ function ServersTab({ push }: { push: Push }) {
     [busy, run],
   );
 
-  const filters = useMemo<TableFilter[]>(
-    () => [
-      {
-        columnId: "state",
-        label: "Status",
-        kind: "select",
-        options: Object.entries(STATE_LABELS).map(([value, label]) => ({
-          value,
-          label,
-        })),
-      },
-    ],
-    [],
-  );
-
   return (
     <>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="m-0 text-[0.88rem] text-dim">
-          New servers are stored in the panel data (and the repo catalog on the
-          Docker runtime), so they survive restarts.
-        </p>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="m-0 text-[1.1rem] font-bold tracking-[-0.02em]">
+            Server management
+          </h2>
+          <p className="mt-1 mb-0 text-[0.84rem] text-dim">
+            Configurations are stored on disk and survive panel restarts.
+          </p>
+        </div>
         <Button
+          aria-label="+ New server"
           variant="primary"
           disabled={busy !== null}
           onClick={() => setCreating(true)}
         >
-          + New server
+          <span aria-hidden="true">＋</span> New server
         </Button>
+      </div>
+
+      <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-edge2 bg-panel/75 p-2.5">
+        <FilterSearch
+          name="admin-server-search"
+          placeholder="Search servers, versions, platforms or tags"
+          value={query}
+          onChange={(value) => {
+            setQuery(value);
+            if (value !== targetServer) clearTargetServer();
+          }}
+          label="Search admin servers"
+        />
+        <CountedFilterGroup
+          label="Filter admin servers by status"
+          value={serverFilter}
+          onChange={setServerFilter}
+          options={ADMIN_SERVER_FILTERS.map(([value, label]) => ({
+            value,
+            label,
+            count: filterCounts[value],
+          }))}
+        />
+      </div>
+
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <select
+          className={cn(inputClass, "w-auto min-w-44")}
+          value={platformFilter}
+          onChange={(event) => setPlatformFilter(event.target.value)}
+          aria-label="Filter admin servers by platform"
+        >
+          <option value="">Platform: all</option>
+          {platforms.map((platform) => (
+            <option key={platform} value={platform}>
+              {platform}
+            </option>
+          ))}
+        </select>
+        <select
+          className={cn(inputClass, "w-auto min-w-44")}
+          value={tagFilter}
+          onChange={(event) => setTagFilter(event.target.value)}
+          aria-label="Filter admin servers by tag"
+        >
+          <option value="">Tag: all</option>
+          {tags.map((tag) => (
+            <option key={tag} value={tag}>
+              #{tag}
+            </option>
+          ))}
+        </select>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            className="cursor-pointer border-0 bg-transparent px-1 py-2 text-[0.78rem] font-semibold text-dim underline underline-offset-3 hover:text-ink"
+            onClick={() => {
+              setQuery("");
+              clearTargetServer();
+              setServerFilter("all");
+              setPlatformFilter("");
+              setTagFilter("");
+            }}
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
+
+      <div className="sr-only" aria-live="polite">
+        {servers.length} servers match the current admin filters.
       </div>
 
       <DataTable
         data={servers}
         columns={columns}
-        filters={filters}
         initialSorting={[{ id: "server", desc: false }]}
-        searchPlaceholder="Search servers…"
-        emptyMessage={servers.length ? "No servers." : "Loading server status…"}
+        externalFiltering
+        getRowAnchor={(server) => `admin-server-${server.name}`}
+        isRowHighlighted={(server) => server.name === targetServer}
+        onRowClick={(server) => setDetailOf(server.name)}
+        emptyMessage={
+          !status
+            ? "Loading server status…"
+            : hasActiveFilters
+              ? "No servers match the current filters."
+              : "No servers are configured."
+        }
       />
+
+      {detailServer && (
+        <ServerDetailsModal
+          server={detailServer}
+          routerPort={status?.router.port ?? null}
+          onClose={() => setDetailOf(null)}
+          actions={
+            <>
+              {detailServer.state === "running" ||
+              detailServer.state === "starting" ? (
+                <Button
+                  disabled={busy !== null}
+                  onClick={() => {
+                    setDetailOf(null);
+                    setConfirming({
+                      name: detailServer.name,
+                      action: "stop",
+                    });
+                  }}
+                >
+                  Stop server
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  disabled={busy !== null}
+                  onClick={() => run(detailServer.name, "start")}
+                >
+                  Start server
+                </Button>
+              )}
+              <Button
+                disabled={
+                  busy !== null ||
+                  detailServer.state === "stopped" ||
+                  detailServer.state === "missing"
+                }
+                onClick={() => {
+                  setDetailOf(null);
+                  setConfirming({
+                    name: detailServer.name,
+                    action: "restart",
+                  });
+                }}
+              >
+                Restart
+              </Button>
+              <Button
+                disabled={
+                  busy !== null ||
+                  detailServer.state === "stopped" ||
+                  detailServer.state === "missing"
+                }
+                onClick={() => {
+                  setDetailOf(null);
+                  setConfirming({
+                    name: detailServer.name,
+                    action: "backup",
+                  });
+                }}
+              >
+                Back up
+              </Button>
+              <Button
+                onClick={() => {
+                  setDetailOf(null);
+                  setLogsOf(detailServer);
+                }}
+              >
+                Logs
+              </Button>
+              <Button
+                onClick={() => {
+                  setDetailOf(null);
+                  setRconOf(detailServer);
+                }}
+              >
+                Console
+              </Button>
+              {detailServer.custom && (
+                <Button
+                  variant="danger"
+                  disabled={
+                    busy !== null ||
+                    (detailServer.state !== "stopped" &&
+                      detailServer.state !== "missing")
+                  }
+                  title={
+                    detailServer.state === "stopped" ||
+                    detailServer.state === "missing"
+                      ? "Remove this server from the panel"
+                      : "Stop the server first"
+                  }
+                  onClick={() => {
+                    setDetailOf(null);
+                    setConfirming({
+                      name: detailServer.name,
+                      action: "delete",
+                    });
+                  }}
+                >
+                  Delete
+                </Button>
+              )}
+            </>
+          }
+        />
+      )}
 
       {confirming && (
         <Modal
@@ -769,6 +1102,8 @@ function BackupsTab({ push }: { push: Push }) {
   const [servers, setServers] = useState<ServerStatus[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [files, setFiles] = useState<BackupFile[]>([]);
+  const [query, setQuery] = useState("");
+  const [backupFilter, setBackupFilter] = useState<BackupFilter>("all");
   const [confirming, setConfirming] = useState<BackupFile | null>(null);
 
   useEffect(() => {
@@ -900,35 +1235,109 @@ function BackupsTab({ push }: { push: Push }) {
     [selected],
   );
 
+  const visibleFiles = useMemo(() => {
+    let list = files;
+    if (backupFilter === "checksum")
+      list = list.filter((file) => file.hasChecksum);
+    if (backupFilter === "unchecked")
+      list = list.filter((file) => !file.hasChecksum);
+    const normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery)
+      list = list.filter((file) =>
+        file.file.toLowerCase().includes(normalizedQuery),
+      );
+    return list;
+  }, [backupFilter, files, query]);
+
+  const filterCounts: Record<BackupFilter, number> = {
+    all: files.length,
+    checksum: files.filter((file) => file.hasChecksum).length,
+    unchecked: files.filter((file) => !file.hasChecksum).length,
+  };
+  const hasActiveFilters = query.trim() !== "" || backupFilter !== "all";
+
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <select
-          className={cn(inputClass, "min-w-55")}
-          value={selected ?? ""}
-          onChange={(e) => setSelected(e.target.value)}
-          aria-label="Server"
-        >
-          {servers.map((s) => (
-            <option key={s.name} value={s.name}>
-              {s.title}
-            </option>
-          ))}
-        </select>
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="m-0 text-[1.1rem] font-bold tracking-[-0.02em]">
+            Backup library
+          </h2>
+          <p className="mt-1 mb-0 text-[0.84rem] text-dim">
+            Create, download or restore a world snapshot.
+          </p>
+        </div>
         <Button variant="primary" disabled={!selected} onClick={createBackup}>
           Create backup now
         </Button>
       </div>
 
+      <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-edge2 bg-panel/75 p-2.5">
+        <select
+          className={cn(inputClass, "w-auto min-w-55")}
+          value={selected ?? ""}
+          onChange={(event) => {
+            setSelected(event.target.value);
+            setFiles([]);
+          }}
+          aria-label="Filter backups by server"
+        >
+          {servers.length === 0 && <option value="">No servers</option>}
+          {servers.map((server) => (
+            <option key={server.name} value={server.name}>
+              {server.title}
+            </option>
+          ))}
+        </select>
+        <FilterSearch
+          name="backup-search"
+          placeholder="Search backup files"
+          value={query}
+          onChange={setQuery}
+          label="Search backups"
+        />
+        <CountedFilterGroup
+          label="Filter backups by checksum"
+          value={backupFilter}
+          onChange={setBackupFilter}
+          options={BACKUP_FILTERS.map(([value, label]) => ({
+            value,
+            label,
+            count: filterCounts[value],
+          }))}
+        />
+      </div>
+
+      {hasActiveFilters && (
+        <div className="mb-3 flex justify-end">
+          <button
+            type="button"
+            className="cursor-pointer border-0 bg-transparent px-1 text-[0.78rem] font-semibold text-dim underline underline-offset-3 hover:text-ink"
+            onClick={() => {
+              setQuery("");
+              setBackupFilter("all");
+            }}
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
+
+      <div className="sr-only" aria-live="polite">
+        {visibleFiles.length} backups match the current filters.
+      </div>
+
       <DataTable
-        data={files}
+        data={visibleFiles}
         columns={columns}
         initialSorting={[{ id: "date", desc: true }]}
-        searchPlaceholder="Search backups…"
+        externalFiltering
         emptyMessage={
-          selected
-            ? "No backups for this server yet. Create the first one."
-            : "Pick a server."
+          hasActiveFilters
+            ? "No backups match the current filters."
+            : selected
+              ? "No backups for this server yet. Create the first one."
+              : "Pick a server."
         }
       />
 
@@ -976,41 +1385,52 @@ function SystemTab() {
     b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0;
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3.5">
-      <div className="flex flex-col gap-2 rounded-xl border border-edge bg-panel px-4 py-4">
-        <h3 className="m-0 text-[0.95rem]">Memory</h3>
-        <p className={cn("m-0", MONO)}>
-          {formatBytes(memUsed)} / {formatBytes(info.memTotalBytes)} (
-          {pct(memUsed, info.memTotalBytes)}%)
-        </p>
-        <Meter value={pct(memUsed, info.memTotalBytes)} />
-      </div>
-      <div className="flex flex-col gap-2 rounded-xl border border-edge bg-panel px-4 py-4">
-        <h3 className="m-0 text-[0.95rem]">Disk (project data)</h3>
-        <p className={cn("m-0", MONO)}>
-          {formatBytes(diskUsed)} / {formatBytes(info.diskTotalBytes)} (
-          {pct(diskUsed, info.diskTotalBytes)}%)
-        </p>
-        <Meter value={pct(diskUsed, info.diskTotalBytes)} />
-      </div>
-      <div className="flex flex-col gap-2 rounded-xl border border-edge bg-panel px-4 py-4">
-        <h3 className="m-0 text-[0.95rem]">CPU</h3>
-        <p className="m-0">{info.cpuCount} cores</p>
-        <p className={cn("m-0 text-sm", MONO)}>{info.cpuModel}</p>
-        <p className={cn("m-0", MONO)}>
-          load: {info.loadAvg.map((l) => l.toFixed(2)).join(" · ")}
+    <>
+      <div className="mb-5">
+        <h2 className="m-0 text-[1.1rem] font-bold tracking-[-0.02em]">
+          Host resources
+        </h2>
+        <p className="mt-1 mb-0 text-[0.84rem] text-dim">
+          Live capacity and runtime information for this machine.
         </p>
       </div>
-      <div className="flex flex-col gap-2 rounded-xl border border-edge bg-panel px-4 py-4">
-        <h3 className="m-0 text-[0.95rem]">Environment</h3>
-        <p className={cn("m-0 text-sm", MONO)}>
-          {info.hostname} · {info.platform}/{info.arch}
-          <br />
-          Docker {info.dockerVersion ?? "unavailable"} · Node {info.nodeVersion}
-          <br />
-          host uptime {formatUptime(info.hostUptimeSec)}
-        </p>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4">
+        <div className="flex min-h-40 flex-col gap-3 rounded-2xl border border-edge bg-panel px-5 py-5">
+          <h3 className="m-0 text-[0.95rem] font-bold">Memory</h3>
+          <p className={cn("m-0", MONO)}>
+            {formatBytes(memUsed)} / {formatBytes(info.memTotalBytes)} (
+            {pct(memUsed, info.memTotalBytes)}%)
+          </p>
+          <Meter value={pct(memUsed, info.memTotalBytes)} />
+        </div>
+        <div className="flex min-h-40 flex-col gap-3 rounded-2xl border border-edge bg-panel px-5 py-5">
+          <h3 className="m-0 text-[0.95rem] font-bold">Disk (project data)</h3>
+          <p className={cn("m-0", MONO)}>
+            {formatBytes(diskUsed)} / {formatBytes(info.diskTotalBytes)} (
+            {pct(diskUsed, info.diskTotalBytes)}%)
+          </p>
+          <Meter value={pct(diskUsed, info.diskTotalBytes)} />
+        </div>
+        <div className="flex min-h-40 flex-col gap-3 rounded-2xl border border-edge bg-panel px-5 py-5">
+          <h3 className="m-0 text-[0.95rem] font-bold">CPU</h3>
+          <p className="m-0">{info.cpuCount} cores</p>
+          <p className={cn("m-0 text-sm", MONO)}>{info.cpuModel}</p>
+          <p className={cn("m-0", MONO)}>
+            load: {info.loadAvg.map((l) => l.toFixed(2)).join(" · ")}
+          </p>
+        </div>
+        <div className="flex min-h-40 flex-col gap-3 rounded-2xl border border-edge bg-panel px-5 py-5">
+          <h3 className="m-0 text-[0.95rem] font-bold">Environment</h3>
+          <p className={cn("m-0 text-sm", MONO)}>
+            {info.hostname} · {info.platform}/{info.arch}
+            <br />
+            Docker {info.dockerVersion ?? "unavailable"} · Node{" "}
+            {info.nodeVersion}
+            <br />
+            host uptime {formatUptime(info.hostUptimeSec)}
+          </p>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

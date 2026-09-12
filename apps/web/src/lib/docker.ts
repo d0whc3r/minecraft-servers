@@ -8,11 +8,13 @@ const exec = promisify(execFile);
 const DOCKER_TIMEOUT_MS = 15_000;
 
 interface DockerPsEntry {
-  Names: string;
+  Names: string | string[];
   State: string;
   Status: string;
   Image: string;
   CreatedAt: string;
+  /** Podman's docker-compatible CLI emits unix seconds; real Docker omits it. */
+  StartedAt?: number | string;
 }
 
 export interface ContainerInfo {
@@ -23,12 +25,42 @@ export interface ContainerInfo {
   uptimeSec: number | null;
 }
 
-function parseUptimeSeconds(status: string): number | null {
-  // Examples: "Up 6 hours", "Up About a minute", "Up 3 days 2 hours",
-  // "Up 5 minutes (healthy)", "Exited (0) 2 days ago", "Restarting (1) 40 seconds ago"
+/** Docker emits "Names": "mc-x"; Podman emits "Names": ["mc-x"]. */
+function containerName(names: DockerPsEntry["Names"]): string {
+  return Array.isArray(names) ? (names[0] ?? "") : (names ?? "");
+}
+
+/**
+ * Health token from the status. Real Docker prose: "Up 2 minutes (healthy)",
+ * "Up 5 seconds (health: starting)". Podman's JSON status is the bare word:
+ * "healthy" / "unhealthy" with no "Up …" prose around it.
+ */
+function parseHealth(status: string): string | null {
+  const paren = /\((?:health:\s*)?(healthy|unhealthy|starting)\)/i.exec(status);
+  if (paren) return paren[1].toLowerCase();
+  const bare = /^(healthy|unhealthy|starting)$/i.exec(status.trim());
+  return bare ? bare[1].toLowerCase() : null;
+}
+
+function parseUptimeSeconds(entry: DockerPsEntry): number | null {
+  // Podman's JSON status carries no "Up …" prose, but StartedAt (unix
+  // seconds) does; real Docker omits the field entirely. Only meaningful for
+  // live containers, which is all deriveState uses it for.
+  const started = Number(entry.StartedAt);
+  if (
+    entry.StartedAt !== undefined &&
+    Number.isFinite(started) &&
+    started > 1e9
+  ) {
+    const seconds = Math.floor(Date.now() / 1000) - started;
+    if (seconds >= 0) return seconds;
+  }
+  // Real Docker prose examples: "Up 6 hours", "Up About a minute",
+  // "Up 3 days 2 hours", "Up 5 minutes (healthy)",
+  // "Exited (0) 2 days ago", "Restarting (1) 40 seconds ago"
   const m =
-    /(?:Up|Restarting|Exited[^)]*\))\s+(?:About\s+)?(.+?)(?:\s+\((healthy|unhealthy|starting)\))?$/i.exec(
-      status,
+    /(?:Up|Restarting|Exited[^)]*\))\s+(?:About\s+)?(.+?)(?:\s+\((?:health:\s*)?(?:healthy|unhealthy|starting)\))?$/i.exec(
+      entry.Status,
     );
   if (!m) return null;
   let seconds = 0;
@@ -65,13 +97,12 @@ export async function listContainers(): Promise<Map<string, ContainerInfo>> {
       } catch {
         continue;
       }
-      const health = /\((healthy|unhealthy|starting)\)/i.exec(entry.Status);
-      map.set(entry.Names, {
-        name: entry.Names,
+      map.set(containerName(entry.Names), {
+        name: containerName(entry.Names),
         state: entry.State,
         statusText: entry.Status,
-        health: health ? health[1].toLowerCase() : null,
-        uptimeSec: parseUptimeSeconds(entry.Status),
+        health: parseHealth(entry.Status),
+        uptimeSec: parseUptimeSeconds(entry),
       });
     }
   } catch {
@@ -91,7 +122,10 @@ export async function isServerStopped(server: string): Promise<boolean> {
   for (const line of stdout.split("\n")) {
     if (!line.trim()) continue;
     const entry: DockerPsEntry = JSON.parse(line);
-    if (entry.Names !== name || typeof entry.State !== "string") {
+    if (
+      containerName(entry.Names) !== name ||
+      typeof entry.State !== "string"
+    ) {
       throw new Error("Unexpected Docker container state response");
     }
     if (entry.State !== "exited" && entry.State !== "dead") return false;

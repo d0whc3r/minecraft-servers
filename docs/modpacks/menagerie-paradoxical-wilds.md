@@ -1,9 +1,10 @@
 # MENAGERIE - Paradoxical Wilds Server
 
-**CurseForge**: https://www.curseforge.com/minecraft/modpacks/menagerie-paradoxical-wilds\
-**Type**: Creature and exploration modpack (Forge)\
-**Minecraft Version**: 1.20.1\
-**Modpack Version**: 2.8.0\
+**CurseForge**: https://www.curseforge.com/minecraft/modpacks/menagerie-paradoxical-wilds  
+**Type**: Creature and exploration modpack (Forge)  
+**Tags**: creatures, exploration, survival  
+**Minecraft Version**: 1.20.1  
+**Modpack Version**: 2.8.0  
 **Memory**: 6GB initial allocation
 
 ## Overview

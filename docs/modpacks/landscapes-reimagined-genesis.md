@@ -1,9 +1,10 @@
 # Landscapes Reimagined Genesis Server
 
-**Modrinth**: https://modrinth.com/modpack/landscapes-reimagined-genesis\
-**Type**: Create and exploration modpack (Fabric)\
-**Minecraft Version**: 1.20.1\
-**Modpack Version**: 3.2 Finale\
+**Modrinth**: https://modrinth.com/modpack/landscapes-reimagined-genesis  
+**Type**: Create and exploration modpack (Fabric)  
+**Tags**: create, tech, exploration, building  
+**Minecraft Version**: 1.20.1  
+**Modpack Version**: 3.2 Finale  
 **Memory**: 8GB initial allocation
 
 ## Overview

@@ -2,6 +2,7 @@
 
 **Modrinth**: https://modrinth.com/modpack/solocraft-modpack  
 **Type**: Survival-focused modpack for solo or small groups  
+**Tags**: solo, survival, lightweight  
 **Minecraft Version**: Auto-detected from modpack  
 **Memory**: 3GB recommended
 

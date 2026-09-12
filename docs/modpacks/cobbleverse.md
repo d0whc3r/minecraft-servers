@@ -2,6 +2,7 @@
 
 **Modrinth**: https://modrinth.com/modpack/cobbleverse  
 **Type**: Fabric-based Pokemon adventure modpack with Cobblemon  
+**Tags**: pokemon, adventure, progression  
 **Minecraft Version**: 1.21.1 (auto-detected)  
 **Memory**: 6GB recommended
 

@@ -120,6 +120,12 @@ manage every container and file on this host. Keep it off the public internet
   (`/data` inside the container) when running in Docker. The password itself
   is never stored in plain text.
 
+- **Native and dev runs also read `apps/web/.env`:** `pnpm dev` and
+  `pnpm start` pick up `MCPANEL_USER` / `MCPANEL_PASSWORD` (and every other
+  `MCPANEL_*` variable) from it, so one file configures the panel everywhere.
+  Variables already exported in the shell take precedence, and an empty
+  `MCPANEL_PASSWORD` still means "generate a random one".
+
 ### Changing the admin password
 
 Pick whichever fits:

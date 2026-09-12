@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/better-mc-neoforge-bmc5  
 **Type**: NeoForge enhanced vanilla+ (2.6M+ downloads)  
+**Tags**: vanilla-plus, exploration, quests, multiplayer  
 **Minecraft Version**: 1.21.1 (NeoForge)  
 **Memory**: 8GB recommended
 

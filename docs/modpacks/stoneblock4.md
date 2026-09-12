@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/ftb-stoneblock-4  
 **Type**: NeoForge kitchen-sink skyblock-in-a-cave (2.8M+ downloads)  
+**Tags**: skyblock, kitchen-sink, tech, quests  
 **Minecraft Version**: 1.21.1 (NeoForge)  
 **Memory**: 8GB recommended
 

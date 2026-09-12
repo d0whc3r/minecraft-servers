@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/homestead-cozy  
 **Type**: Cozy survival / exploration (2.5M+ downloads)  
+**Tags**: cozy, survival, building, farming  
 **Minecraft Version**: 1.20.1 (Forge)  
 **Memory**: 6GB recommended
 

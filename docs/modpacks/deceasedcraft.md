@@ -1,9 +1,10 @@
 # DeceasedCraft Server
 
-**CurseForge**: https://www.curseforge.com/minecraft/modpacks/deceasedcraft\
-**Type**: Urban zombie apocalypse modpack (Forge)\
-**Minecraft Version**: 1.20.1\
-**Modpack Version**: DeceasedCraft Beta 5.10.17\
+**CurseForge**: https://www.curseforge.com/minecraft/modpacks/deceasedcraft  
+**Type**: Urban zombie apocalypse modpack (Forge)  
+**Tags**: zombie-apocalypse, survival, guns, exploration  
+**Minecraft Version**: 1.20.1  
+**Modpack Version**: DeceasedCraft Beta 5.10.17  
 **Memory**: 10GB recommended allocation
 
 ## Overview

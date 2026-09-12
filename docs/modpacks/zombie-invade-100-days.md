@@ -2,6 +2,7 @@
 
 **Modrinth**: https://modrinth.com/modpack/zombie-invade-100-days  
 **Type**: Zombie apocalypse survival (14M+ downloads; #2 most-downloaded modpack on Modrinth)  
+**Tags**: zombie-apocalypse, survival, hardcore, quests  
 **Minecraft Version**: 1.20.1 (Forge)  
 **Memory**: 6GB recommended
 

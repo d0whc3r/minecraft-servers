@@ -20,6 +20,8 @@ export interface ServerStatus {
   rconPort: number | null;
   maxPlayers: number;
   description: string;
+  /** Search/category tags (e.g. "skyblock", "rpg"); empty for untagged servers. */
+  tags: string[];
   /** Official modpack page (CurseForge/Modrinth), null for plain server types. */
   modUrl: string | null;
   /** True when the panel created this server (it can be removed from the panel). */

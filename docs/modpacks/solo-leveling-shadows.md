@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/solo-leveling-shadows
 **Type**: Advanced Solo Leveling RPG modpack with 400+ mods
+**Tags**: anime, rpg, quests, bosses
 **Minecraft Version**: 1.20.1
 **Memory**: 6GB recommended
 

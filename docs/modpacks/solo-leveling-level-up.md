@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/solo-leveling-level-up
 **Type**: Solo Leveling RPG modpack with gates system and skill progression
+**Tags**: anime, rpg, progression, quests
 **Minecraft Version**: 1.20.1
 **Memory**: 4GB recommended
 

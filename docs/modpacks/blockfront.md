@@ -1,9 +1,10 @@
 # BlockFront Server
 
-**Modrinth**: https://modrinth.com/modpack/blockfront-mod-pack\
-**Type**: World War II multiplayer combat modpack (NeoForge)\
-**Minecraft Version**: 1.21.1\
-**Modpack Version**: 0.9.0.30b\
+**Modrinth**: https://modrinth.com/modpack/blockfront-mod-pack  
+**Type**: World War II multiplayer combat modpack (NeoForge)  
+**Tags**: multiplayer, combat, guns, wwii  
+**Minecraft Version**: 1.21.1  
+**Modpack Version**: 0.9.0.30b  
 **Memory**: 4GB initial allocation
 
 ## Overview

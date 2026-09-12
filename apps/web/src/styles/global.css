@@ -1,26 +1,22 @@
 @import "tailwindcss";
 
-/* ---------------------------------------------------------------------------
-   Design tokens (Tailwind v4 @theme)
-   Dark blue-slate base; status colors are semantic, never decorative.
-   Data (ports, versions, uptime, logs) set in mono; UI in system sans.
---------------------------------------------------------------------------- */
+/* A block-inspired operations console: calm surfaces and semantic colour. */
 @theme {
-  --color-base: #10151c;
-  --color-panel: #171e28;
-  --color-raise: #1d2634;
-  --color-edge: #2a3546;
-  --color-edge2: #222c3a;
-  --color-ink: #dbe4ee;
-  --color-dim: #8494a8;
+  --color-base: #0b110f;
+  --color-panel: #121a17;
+  --color-raise: #1a2520;
+  --color-edge: #2c3a34;
+  --color-edge2: #202c27;
+  --color-ink: #eef5f0;
+  --color-dim: #9aac9f;
 
-  --color-ok: #3fd68f;
-  --color-warn: #e8b64c;
-  --color-bad: #ef6a5a;
-  --color-idle: #5d6f84;
+  --color-ok: #69dda0;
+  --color-warn: #f0b45c;
+  --color-bad: #f17767;
+  --color-idle: #71827a;
 
   --font-sans:
-    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Avenir Next", Avenir, "Segoe UI Variable", "Segoe UI", system-ui,
     sans-serif;
   --font-mono:
     ui-monospace, "JetBrains Mono", "Cascadia Code", "Fira Code", Menlo,
@@ -32,10 +28,45 @@
 @layer base {
   html {
     color-scheme: dark;
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
   }
 
   body {
-    @apply flex min-h-dvh flex-col bg-base font-sans text-[15px] leading-normal text-ink;
+    @apply flex min-h-dvh flex-col bg-base font-sans text-[15px] leading-normal text-ink antialiased;
+    background-image:
+      linear-gradient(rgba(105, 221, 160, 0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(105, 221, 160, 0.018) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  ::selection {
+    color: #08100c;
+    background: var(--color-ok);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button,
+  a,
+  summary,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(105, 221, 160, 0.12);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    scroll-margin-top: 5rem;
   }
 
   button:focus-visible,
@@ -43,7 +74,7 @@
   input:focus-visible,
   select:focus-visible {
     outline: 2px solid var(--color-ok);
-    outline-offset: 1px;
+    outline-offset: 2px;
   }
 
   /* Card entrance: one orchestrated page-load moment */
@@ -56,5 +87,106 @@
       opacity: 1;
       transform: none;
     }
+  }
+}
+
+@layer components {
+  .app-header {
+    @apply sticky top-0 z-40 border-b border-edge2 bg-base/90 backdrop-blur-xl;
+  }
+
+  .skip-link {
+    @apply fixed top-3 left-3 z-50 -translate-y-20 rounded-lg bg-ok px-3 py-2 font-semibold text-base no-underline transition-transform focus:translate-y-0;
+  }
+
+  .app-header__inner {
+    @apply mx-auto flex min-h-16 w-full max-w-[1280px] items-center justify-between gap-4 px-[clamp(1rem,3vw,2.5rem)];
+  }
+
+  .brand {
+    @apply inline-flex items-center gap-3 text-ink no-underline;
+  }
+
+  .brand__mark {
+    @apply grid size-9 place-items-center text-ok;
+    filter: drop-shadow(0 0 12px rgba(105, 221, 160, 0.2));
+  }
+
+  .brand__mark svg {
+    @apply size-full;
+    image-rendering: pixelated;
+  }
+
+  .brand__copy {
+    @apply flex flex-col leading-none;
+  }
+
+  .brand__copy strong {
+    @apply text-[0.98rem] font-bold tracking-[-0.01em];
+  }
+
+  .brand__copy small {
+    @apply mt-1 text-[0.68rem] tracking-[0.08em] text-dim;
+  }
+
+  .app-nav {
+    @apply flex items-center gap-1 rounded-xl border border-edge2 bg-panel p-1;
+  }
+
+  .app-nav a {
+    @apply inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-[0.86rem] font-semibold text-dim no-underline transition-colors hover:bg-raise hover:text-ink;
+  }
+
+  .app-nav a[aria-current="page"] {
+    @apply bg-raise text-ink;
+    box-shadow: inset 0 0 0 1px rgba(105, 221, 160, 0.08);
+  }
+
+  .app-nav svg {
+    @apply size-4 fill-current;
+  }
+
+  .app-footer {
+    @apply mx-auto flex w-full max-w-[1280px] items-center justify-between border-t border-edge2 px-[clamp(1rem,3vw,2.5rem)] py-5 text-[0.78rem] text-dim;
+  }
+
+  .page-heading {
+    @apply mb-7 flex flex-wrap items-end justify-between gap-4;
+  }
+
+  .page-heading h1 {
+    @apply m-0 text-[clamp(1.75rem,4vw,2.7rem)] leading-[1.08] font-bold tracking-[-0.045em];
+  }
+
+  .page-heading p {
+    @apply mt-2 mb-0 max-w-2xl text-[0.97rem] leading-relaxed text-dim;
+  }
+
+  .live-label {
+    @apply inline-flex items-center gap-2 rounded-full border border-edge bg-panel px-3 py-2 text-[0.78rem] font-semibold text-dim;
+  }
+
+  .section-label {
+    @apply m-0 text-[0.78rem] font-bold tracking-[0.04em] text-dim;
+  }
+}
+
+@media (max-width: 520px) {
+  .brand__copy small {
+    display: none;
+  }
+
+  .app-nav a {
+    @apply px-2.5;
+  }
+
+  .app-nav a span {
+    @apply sr-only;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 }

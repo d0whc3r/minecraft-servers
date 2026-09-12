@@ -22,6 +22,8 @@ export interface ServerDef {
   rconHost: string;
   maxPlayers: number;
   description: string;
+  /** Search/category tags (doc "**Tags**:" line + TAGS env), lowercase, deduped. */
+  tags: string[];
   /** Official modpack page (CurseForge/Modrinth) so players can verify the pack against their client. */
   modUrl: string | null;
   /** "custom" when the panel created (and may delete) this server. */
@@ -150,17 +152,41 @@ function prettifyName(name: string): string {
     .join(" ");
 }
 
-function readDocMeta(name: string): { title?: string; description?: string } {
+/** "kitchen-sink, tech, magic" → ["kitchen-sink","tech","magic"] (lowercase, deduped). */
+function parseTags(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return [
+    ...new Set(
+      raw
+        // a trailing markdown hard-break "\" would otherwise become a tag
+        .replace(/\\+/g, "")
+        .split(/[,\s]+/)
+        .map((t) => t.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+function readDocMeta(name: string): {
+  title?: string;
+  description?: string;
+  tags?: string[];
+} {
   const docPath = path.join(PROJECT_ROOT, "docs/modpacks", `${name}.md`);
   if (!fs.existsSync(docPath)) return {};
   const raw = fs.readFileSync(docPath, "utf8");
   const lines = raw.split(/\r?\n/);
   let title: string | undefined;
   let description: string | undefined;
+  let tags: string[] | undefined;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!title && line.startsWith("# ") && line.length > 2) {
       title = line.slice(2).trim();
+      continue;
+    }
+    if (!tags && /^\*{0,2}tags\*{0,2}:/i.test(line)) {
+      tags = parseTags(line.replace(/^\*{0,2}tags\*{0,2}:\s*/i, ""));
       continue;
     }
     if (!description && /^## Overview/i.test(line)) {
@@ -171,9 +197,9 @@ function readDocMeta(name: string): { title?: string; description?: string } {
         break;
       }
     }
-    if (title && description) break;
+    if (title && description && tags) break;
   }
-  return { title, description };
+  return { title, description, tags };
 }
 
 function detectPlatform(env: Record<string, string>, type: string): string {
@@ -317,6 +343,7 @@ function buildRegistry() {
       rconHost: rconHost(name),
       maxPlayers: env.MAX_PLAYERS ? Number(env.MAX_PLAYERS) : 20,
       description: doc.description ?? "",
+      tags: [...new Set([...(doc.tags ?? []), ...parseTags(env.TAGS)])],
       modUrl: modpackUrl(env),
       source: isManagedFile(envPath, serverEnv) ? "custom" : "catalog",
       env,

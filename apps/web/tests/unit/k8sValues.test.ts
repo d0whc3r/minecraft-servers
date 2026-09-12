@@ -20,6 +20,7 @@ function def(env: Record<string, string>): ServerDef {
     rconHost: "mc-vanilla.default.svc.cluster.local",
     maxPlayers: 20,
     description: "",
+    tags: [],
     modUrl: null,
     source: "catalog",
     env,

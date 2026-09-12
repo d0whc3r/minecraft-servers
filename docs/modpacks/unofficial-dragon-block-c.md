@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/unofficial-dragon-block-c
 **Type**: Dragon Ball themed modpack with transformations and Ki battles
+**Tags**: anime, rpg, dragons, combat
 **Minecraft Version**: 1.7.10
 **Memory**: 4GB recommended
 

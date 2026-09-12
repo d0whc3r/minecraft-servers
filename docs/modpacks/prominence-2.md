@@ -3,6 +3,7 @@
 **Modrinth**: https://modrinth.com/modpack/prominence-2-fabric  
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/prominence-2-rpg-hasturian-era  
 **Type**: Fabric-based RPG adventure (12M+ downloads)  
+**Tags**: rpg, adventure, quests, magic, exploration  
 **Minecraft Version**: 1.20.1  
 **Memory**: 6GB recommended
 

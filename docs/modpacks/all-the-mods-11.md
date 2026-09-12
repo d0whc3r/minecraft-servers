@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/all-the-mods-11  
 **Type**: NeoForge kitchen-sink (the ATM series, next generation)  
+**Tags**: kitchen-sink, tech, magic, multiplayer  
 **Minecraft Version**: 26.1.2 (NeoForge) — requires the Java 25 image  
 **Memory**: 8GB recommended
 

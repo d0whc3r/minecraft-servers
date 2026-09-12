@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/plants-vs-zombies  
 **Type**: Fabric-based Vanilla+ modpack inspired by Plants vs. Zombies  
+**Tags**: casual, tower-defense, vanilla-plus  
 **Minecraft Version**: 26.1.2 (modpack 3.x)  
 **Memory**: 4GB (4-6GB recommended)
 

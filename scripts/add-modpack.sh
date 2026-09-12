@@ -87,6 +87,7 @@ EOF
 
     cat >> "$config_file" << EOF
 SERVER_NAME=$name
+# TAGS=adventure, quests  # web-panel search/filter tags (comma-separated)
 RCON_PORT=$rcon_port
 MAX_PLAYERS=20
 DIFFICULTY=normal
@@ -106,6 +107,7 @@ TYPE=PAPER
 VERSION=26.2
 MEMORY=$memory
 SERVER_NAME=$name
+# TAGS=adventure, quests  # web-panel search/filter tags (comma-separated)
 RCON_PORT=$rcon_port
 MAX_PLAYERS=20
 DIFFICULTY=normal

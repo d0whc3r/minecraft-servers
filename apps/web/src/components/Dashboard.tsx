@@ -2,24 +2,18 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { AuthMe, ServerStatus, StatusResponse } from "@/types";
 import { api, formatUptime, startPolling } from "@/lib/client";
-import {
-  DataTable,
-  type DataTableColumn,
-  type TableFilter,
-} from "@/components/DataTable";
+import { DataTable, type DataTableColumn } from "@/components/DataTable";
+import { ServerDetailsModal } from "@/components/ServerDetailsModal";
 import {
   Button,
-  Chip,
+  buttonClass,
   cn,
+  CountedFilterGroup,
   CopyValue,
-  Field,
-  Meter,
-  Modal,
+  FilterSearch,
   StateBadge,
   StateBar,
-  inputClass,
   MONO,
-  STATE_LABELS,
 } from "@/components/ui";
 
 type Filter = "all" | "running" | "stopped" | "alerts";
@@ -48,6 +42,8 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showAllTags, setShowAllTags] = useState(false);
   const [view, setView] = useState<View>(initialView);
   const [detail, setDetail] = useState<ServerStatus | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -76,6 +72,22 @@ export default function Dashboard() {
     return startPolling(refresh, 5000);
   }, []);
 
+  const toggleTag = (tag: string) =>
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+
+  // Category tags across every server, most used first: drives the chip row.
+  const allTags = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of status?.servers ?? [])
+      for (const t of s.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+    return [...counts.entries()].sort(
+      ([tagA, countA], [tagB, countB]) =>
+        countB - countA || tagA.localeCompare(tagB),
+    );
+  }, [status]);
+
   const servers = useMemo(() => {
     let list = status?.servers ?? [];
     if (filter === "running")
@@ -85,6 +97,8 @@ export default function Dashboard() {
     if (filter === "stopped")
       list = list.filter((s) => s.state === "stopped" || s.state === "missing");
     if (filter === "alerts") list = list.filter((s) => s.state === "unhealthy");
+    if (selectedTags.length)
+      list = list.filter((s) => s.tags.some((t) => selectedTags.includes(t)));
     const q = query.trim().toLowerCase();
     if (q) {
       list = list.filter(
@@ -92,7 +106,9 @@ export default function Dashboard() {
           s.name.includes(q) ||
           s.title.toLowerCase().includes(q) ||
           s.platform.toLowerCase().includes(q) ||
-          s.mcVersion.includes(q),
+          s.mcVersion.includes(q) ||
+          s.description.toLowerCase().includes(q) ||
+          s.tags.some((t) => t.includes(q)),
       );
     }
     // Running first, then alphabetical
@@ -107,7 +123,7 @@ export default function Dashboard() {
               : 3;
       return rank(a) - rank(b) || a.name.localeCompare(b.name);
     });
-  }, [status, query, filter]);
+  }, [status, query, filter, selectedTags]);
 
   const doAction = async (
     name: string,
@@ -139,6 +155,22 @@ export default function Dashboard() {
 
   const summary = status?.summary;
   const history = historyRef.current;
+  const allServers = status?.servers ?? [];
+  const filterCounts: Record<Filter, number> = {
+    all: allServers.length,
+    running: allServers.filter(
+      (server) => server.state === "running" || server.state === "starting",
+    ).length,
+    stopped: allServers.filter(
+      (server) => server.state === "stopped" || server.state === "missing",
+    ).length,
+    alerts: allServers.filter((server) => server.state === "unhealthy").length,
+  };
+  const visibleTags = showAllTags
+    ? allTags
+    : allTags.filter(
+        ([tag], index) => index < 10 || selectedTags.includes(tag),
+      );
 
   return (
     <>
@@ -166,22 +198,62 @@ export default function Dashboard() {
         </div>
       )}
 
+      <section className="page-heading" aria-labelledby="dashboard-title">
+        <div>
+          <h1 id="dashboard-title">Server overview</h1>
+          <p>
+            Check availability, player activity and connection details across
+            your Minecraft worlds.
+          </p>
+        </div>
+        <span className="live-label" aria-live="polite">
+          <span
+            className={cn(
+              "size-2 rounded-full",
+              error ? "bg-bad" : status ? "bg-ok" : "animate-pulse bg-idle",
+            )}
+          />
+          {error
+            ? "Connection interrupted"
+            : status
+              ? "Live · refreshes every 5s"
+              : "Connecting…"}
+        </span>
+      </section>
+
       <section
         aria-label="Overall summary"
-        className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] overflow-hidden rounded-xl border border-edge bg-panel max-sm:[&>*+*]:border-t max-sm:[&>*+*]:border-edge2 [&>*+*]:border-l [&>*+*]:border-edge2 max-sm:[&>*+*]:border-l-0"
+        className="mb-8 grid grid-cols-2 overflow-hidden border-y border-edge bg-panel/70 md:grid-cols-4 [&>*+*]:border-l [&>*+*]:border-edge2 [&>*:nth-child(odd)]:border-l-0 [&>*:nth-child(n+3)]:border-t [&>*:nth-child(n+3)]:border-edge2 md:[&>*:nth-child(3)]:border-l md:[&>*:nth-child(n+3)]:border-t-0"
       >
         <Stat
           value={summary ? `${summary.running}/${summary.total}` : "…"}
-          label="servers running"
+          label="Servers running"
+          detail={
+            summary
+              ? `${summary.total - summary.running} currently offline`
+              : "Checking availability"
+          }
+          tone="ok"
         />
         <Stat
           value={summary ? String(summary.playersOnline) : "…"}
-          label="players online"
+          label="Players online"
+          detail={
+            summary
+              ? `Capacity for ${summary.playersMax}`
+              : "Reading player count"
+          }
           spark={history.length > 2 ? <Sparkline data={history} /> : null}
         />
         <Stat
           value={summary ? String(summary.unhealthy) : "…"}
-          label="health warnings"
+          label="Health warnings"
+          detail={
+            summary?.unhealthy
+              ? "Needs your attention"
+              : "Everything looks stable"
+          }
+          tone={summary?.unhealthy ? "bad" : "neutral"}
         />
         <Stat
           value={
@@ -189,50 +261,24 @@ export default function Dashboard() {
               ? `${Math.max(0, Math.round((Date.now() - status.now) / 1000))}s`
               : "…"
           }
-          label="since last update"
+          label="Last update"
+          detail="Automatic live monitoring"
         />
       </section>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        {view === "cards" && (
-          <>
-            <input
-              type="search"
-              placeholder="Search by name, modpack, version…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              aria-label="Search servers"
-              className={cn(inputClass, "min-w-[min(320px,100%)]")}
-            />
-            <div
-              role="tablist"
-              aria-label="Filter by status"
-              className="inline-flex divide-x divide-edge overflow-hidden rounded-lg border border-edge"
-            >
-              {FILTERS.map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={filter === key}
-                  className={cn(
-                    "cursor-pointer border-0 px-3.5 py-2 font-sans text-dim",
-                    filter === key
-                      ? "bg-raise font-semibold text-ink"
-                      : "hover:text-ink",
-                  )}
-                  onClick={() => setFilter(key)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="m-0 text-[1.18rem] font-bold tracking-[-0.02em]">
+            Your servers
+          </h2>
+          <p className="mt-1 mb-0 text-[0.84rem] text-dim">
+            {servers.length} shown
+          </p>
+        </div>
         <div
           role="group"
           aria-label="View mode"
-          className="ml-auto inline-flex divide-x divide-edge overflow-hidden rounded-lg border border-edge"
+          className="inline-flex rounded-xl border border-edge bg-panel p-1"
         >
           {(["cards", "table"] as View[]).map((v) => (
             <button
@@ -240,23 +286,100 @@ export default function Dashboard() {
               type="button"
               aria-pressed={view === v}
               className={cn(
-                "cursor-pointer border-0 px-3.5 py-2 font-sans text-dim",
+                "inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-lg border-0 px-2.5 font-sans text-[0.8rem] font-semibold text-dim",
                 view === v
-                  ? "bg-raise font-semibold text-ink"
-                  : "hover:text-ink",
+                  ? "bg-raise text-ink"
+                  : "bg-transparent hover:text-ink",
               )}
               onClick={() => changeView(v)}
             >
-              {v === "cards" ? "Cards" : "Table"}
+              <ViewIcon view={v} />
+              <span className="max-sm:sr-only">
+                {v === "cards" ? "Cards" : "Table"}
+              </span>
             </button>
           ))}
         </div>
       </div>
 
+      <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-edge2 bg-panel/75 p-2.5">
+        <FilterSearch
+          name="server-search"
+          placeholder="Search servers, modpacks, tags or versions"
+          value={query}
+          onChange={setQuery}
+          label="Search servers"
+        />
+        <CountedFilterGroup
+          label="Filter by status"
+          value={filter}
+          onChange={setFilter}
+          options={FILTERS.map(([value, label]) => ({
+            value,
+            label,
+            count: filterCounts[value],
+          }))}
+        />
+      </div>
+
+      {allTags.length > 0 && (
+        <div
+          role="group"
+          aria-label="Filter by tags"
+          className="mb-5 flex flex-wrap items-center gap-1.5"
+        >
+          {visibleTags.map(([tag, count]) => {
+            const active = selectedTags.includes(tag);
+            return (
+              <button
+                key={tag}
+                type="button"
+                aria-pressed={active}
+                className={cn(
+                  "inline-flex min-h-7 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 font-mono text-[0.74rem]",
+                  active
+                    ? "border-ok/50 bg-ok/12 font-semibold text-ok"
+                    : "border-edge bg-panel/75 text-dim hover:border-edge2 hover:text-ink",
+                )}
+                onClick={() => toggleTag(tag)}
+              >
+                #{tag}
+                <span className="text-[0.68rem] opacity-75">{count}</span>
+              </button>
+            );
+          })}
+          {allTags.length > 10 && (
+            <button
+              type="button"
+              aria-expanded={showAllTags}
+              className="inline-flex min-h-7 cursor-pointer items-center rounded-full border border-edge bg-transparent px-2.5 text-[0.74rem] font-semibold text-dim hover:text-ink"
+              onClick={() => setShowAllTags((current) => !current)}
+            >
+              {showAllTags
+                ? "Fewer tags"
+                : `More tags (${allTags.length - 10})`}
+            </button>
+          )}
+          {selectedTags.length > 0 && (
+            <button
+              type="button"
+              className="ml-1 cursor-pointer border-0 bg-transparent p-0 text-[0.78rem] font-semibold text-dim underline underline-offset-3 hover:text-ink"
+              onClick={() => setSelectedTags([])}
+            >
+              Clear tags
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="sr-only" aria-live="polite">
+        {servers.length} servers match the current filters.
+      </div>
+
       {view === "cards" ? (
         <section
           aria-label="Servers"
-          className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3.5"
+          className="grid grid-cols-[repeat(auto-fill,minmax(min(350px,100%),1fr))] gap-4"
         >
           {servers.map((s) => (
             <ServerCard
@@ -264,30 +387,75 @@ export default function Dashboard() {
               server={s}
               isAdmin={isAdmin}
               busy={busy === `${s.name}:start` || busy === `${s.name}:stop`}
+              activeTags={selectedTags}
+              onToggleTag={toggleTag}
               onOpen={() => setDetail(s)}
               onAction={doAction}
             />
           ))}
           {!servers.length && (
-            <p className="col-span-full p-8 text-center text-dim">
-              {status
-                ? "No servers match the current filters."
-                : "Loading server status…"}
-            </p>
+            <div className="col-span-full grid min-h-56 place-items-center rounded-2xl border border-dashed border-edge bg-panel/40 p-8 text-center">
+              <div>
+                <span
+                  className="mx-auto mb-3 grid size-10 place-items-center rounded-xl bg-raise text-xl"
+                  aria-hidden="true"
+                >
+                  ⌕
+                </span>
+                <h3 className="m-0 text-base">
+                  {status ? "No matching servers" : "Loading server status…"}
+                </h3>
+                {status && (
+                  <p className="mt-1.5 mb-0 text-sm text-dim">
+                    Try another search or clear the status filter.
+                  </p>
+                )}
+              </div>
+            </div>
           )}
         </section>
       ) : (
-        <ServersTableView servers={status?.servers ?? []} onOpen={setDetail} />
+        <ServersTableView
+          servers={servers}
+          isAdmin={isAdmin}
+          onOpen={setDetail}
+        />
       )}
 
       {detail && (
-        <ServerDetail
+        <ServerDetailsModal
           server={detail}
           routerPort={status?.router.port ?? null}
-          isAdmin={isAdmin}
           onClose={() => setDetail(null)}
-          onAction={doAction}
-          busy={busy !== null}
+          adminHref={isAdmin ? adminServerHref(detail.name) : undefined}
+          actions={
+            isAdmin ? (
+              detail.state === "running" || detail.state === "starting" ? (
+                <>
+                  <Button
+                    disabled={busy !== null}
+                    onClick={() => doAction(detail.name, "stop")}
+                  >
+                    Stop server
+                  </Button>
+                  <Button
+                    disabled={busy !== null}
+                    onClick={() => doAction(detail.name, "restart")}
+                  >
+                    Restart
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="primary"
+                  disabled={busy !== null}
+                  onClick={() => doAction(detail.name, "start")}
+                >
+                  Start server
+                </Button>
+              )
+            ) : undefined
+          }
         />
       )}
     </>
@@ -297,16 +465,13 @@ export default function Dashboard() {
 /** Sortable/filterable table view of every server (TanStack Table). */
 function ServersTableView({
   servers,
+  isAdmin,
   onOpen,
 }: {
   servers: ServerStatus[];
+  isAdmin: boolean;
   onOpen: (s: ServerStatus) => void;
 }) {
-  const platforms = useMemo(
-    () => [...new Set(servers.map((s) => s.platform))].sort(),
-    [servers],
-  );
-
   const columns = useMemo<DataTableColumn<ServerStatus>[]>(
     () => [
       {
@@ -319,30 +484,35 @@ function ServersTableView({
           const s = row.original;
           return (
             <div className="flex items-center gap-2.5">
-              {s.favicon ? (
+              {s.favicon && (
                 <img
                   className="size-7 rounded-md"
                   src={s.favicon}
                   alt=""
                   width="28"
                   height="28"
+                  loading="lazy"
                 />
-              ) : (
-                <span
-                  aria-hidden="true"
-                  className="grid size-7 flex-none place-items-center rounded-md bg-raise text-[0.95rem]"
-                >
-                  ⛏
-                </span>
               )}
               <div className="min-w-0">
-                <button
-                  type="button"
-                  onClick={() => onOpen(s)}
-                  className="block max-w-[26rem] cursor-pointer truncate border-0 bg-none p-0 text-left font-semibold text-ink hover:underline hover:underline-offset-3"
-                >
-                  {s.title}
-                </button>
+                <div className="flex min-w-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onOpen(s)}
+                    className="block max-w-[26rem] cursor-pointer truncate border-0 bg-transparent p-0 text-left font-semibold text-ink hover:underline hover:underline-offset-3"
+                  >
+                    {s.title}
+                  </button>
+                  {isAdmin && (
+                    <a
+                      href={adminServerHref(s.name)}
+                      className="flex-none text-[0.72rem] font-semibold text-ok hover:underline underline-offset-3"
+                      aria-label={`Manage ${s.title} in admin`}
+                    >
+                      Manage ↗
+                    </a>
+                  )}
+                </div>
                 <span className="block font-mono text-[0.78rem] text-dim">
                   {s.name} · MC {s.mcVersion}
                 </span>
@@ -358,6 +528,13 @@ function ServersTableView({
         accessorKey: "state",
         filterFn: "equalsString",
         cell: ({ row }) => <StateBadge state={row.original.state} />,
+      },
+      {
+        id: "tags",
+        header: "Tags",
+        meta: { label: "Tags" },
+        accessorFn: (s) => s.tags.join(" "),
+        cell: ({ row }) => <TableTags tags={row.original.tags} />,
       },
       {
         id: "players",
@@ -425,28 +602,7 @@ function ServersTableView({
         },
       },
     ],
-    [onOpen],
-  );
-
-  const filters = useMemo<TableFilter[]>(
-    () => [
-      {
-        columnId: "state",
-        label: "Status",
-        kind: "select",
-        options: Object.entries(STATE_LABELS).map(([value, label]) => ({
-          value,
-          label,
-        })),
-      },
-      {
-        columnId: "modpack",
-        label: "Platform",
-        kind: "select",
-        options: platforms.map((p) => ({ value: p, label: p })),
-      },
-    ],
-    [platforms],
+    [isAdmin, onOpen],
   );
 
   return (
@@ -454,33 +610,90 @@ function ServersTableView({
       <DataTable
         data={servers}
         columns={columns}
-        filters={filters}
         initialSorting={[{ id: "server", desc: false }]}
-        searchPlaceholder="Search by name, modpack, version…"
         emptyMessage={servers.length ? "No servers." : "Loading server status…"}
         onRowClick={onOpen}
+        externalFiltering
       />
     </section>
+  );
+}
+
+function TableTags({ tags }: { tags: string[] }) {
+  if (!tags.length) return <span className="text-dim">—</span>;
+  const visible = tags.slice(0, 2);
+  return (
+    <div
+      className="flex min-w-32 max-w-48 items-center gap-2"
+      title={tags.map((tag) => `#${tag}`).join(", ")}
+    >
+      <span className="sr-only">Tags: {tags.join(", ")}</span>
+      <span
+        aria-hidden="true"
+        className="min-w-0 truncate font-mono text-[0.72rem] text-dim"
+      >
+        {visible.join(" · ")}
+      </span>
+      {tags.length > visible.length && (
+        <span
+          aria-hidden="true"
+          className="inline-flex h-5 flex-none items-center rounded-md bg-ok/10 px-1.5 font-mono text-[0.66rem] font-semibold text-ok"
+        >
+          +{tags.length - visible.length}
+        </span>
+      )}
+    </div>
   );
 }
 
 function Stat({
   value,
   label,
+  detail,
   spark,
+  tone = "neutral",
 }: {
   value: string;
   label: string;
+  detail: string;
   spark?: ReactNode;
+  tone?: "ok" | "bad" | "neutral";
 }) {
   return (
-    <div className="relative flex flex-col gap-0.5 px-5 py-4">
-      <span className="font-mono text-[1.7rem] leading-[1.1] font-semibold">
+    <div className="relative flex min-h-32 flex-col justify-center gap-1 px-5 py-5">
+      <span className="text-[0.78rem] font-semibold text-dim">{label}</span>
+      <span
+        className={cn(
+          "font-mono text-[2rem] leading-none font-semibold tracking-[-0.04em]",
+          tone === "ok" && "text-ok",
+          tone === "bad" && "text-bad",
+        )}
+      >
         {value}
       </span>
-      <span className="text-[0.88rem] text-dim">{label}</span>
+      <span className="mt-1 text-[0.75rem] text-dim">{detail}</span>
       {spark}
     </div>
+  );
+}
+
+function ViewIcon({ view }: { view: View }) {
+  return view === "cards" ? (
+    <svg
+      viewBox="0 0 16 16"
+      className="size-3.5 fill-current"
+      aria-hidden="true"
+    >
+      <path d="M1 1h6v6H1zm8 0h6v6H9zM1 9h6v6H1zm8 0h6v6H9z" />
+    </svg>
+  ) : (
+    <svg
+      viewBox="0 0 16 16"
+      className="size-3.5 fill-current"
+      aria-hidden="true"
+    >
+      <path d="M1 2h14v3H1zm0 4.5h14v3H1zM1 11h14v3H1z" />
+    </svg>
   );
 }
 
@@ -515,103 +728,131 @@ function ServerCard({
   server: s,
   isAdmin,
   busy,
+  activeTags,
+  onToggleTag,
   onOpen,
   onAction,
 }: {
   server: ServerStatus;
   isAdmin: boolean;
   busy: boolean;
+  activeTags: string[];
+  onToggleTag: (tag: string) => void;
   onOpen: () => void;
   onAction: (name: string, action: "start" | "stop" | "restart") => void;
 }) {
   const players = s.players;
   return (
-    <article className="relative flex animate-rise flex-col gap-2.5 overflow-hidden rounded-xl border border-edge bg-panel py-3.5 pr-4 pl-[18px] motion-reduce:animate-none">
+    <article className="group relative flex animate-rise flex-col gap-4 overflow-hidden rounded-2xl border border-edge bg-panel px-5 pt-5 pb-4 transition-[border-color,transform] hover:-translate-y-0.5 hover:border-[#405249] motion-reduce:animate-none motion-reduce:transform-none">
       <StateBar state={s.state} />
-      <header className="flex items-start gap-2.5">
-        {s.favicon ? (
+      <header className="flex items-start gap-3.5">
+        {s.favicon && (
           <img
-            className="mt-1 size-7 rounded-md"
+            className="size-11 rounded-xl border border-edge bg-raise [image-rendering:pixelated]"
             src={s.favicon}
             alt=""
-            width="28"
-            height="28"
+            width="44"
+            height="44"
+            loading="lazy"
           />
-        ) : (
-          <span
-            aria-hidden="true"
-            className="mt-1 grid size-7 place-items-center rounded-md bg-raise text-[0.95rem]"
-          >
-            ⛏
-          </span>
         )}
         <div className="min-w-0 flex-1">
-          <h3 className="m-0 text-[1.02rem] leading-tight">
+          <h3 className="m-0 text-[1.05rem] leading-snug font-bold tracking-[-0.015em]">
             <button
               type="button"
               onClick={onOpen}
-              className="cursor-pointer bg-none p-0 text-left font-inherit text-ink hover:underline hover:underline-offset-3"
+              className="cursor-pointer border-0 bg-transparent p-0 text-left font-inherit text-ink hover:text-ok"
             >
               {s.title}
             </button>
           </h3>
-          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 overflow-hidden font-mono text-[0.8rem] text-ellipsis whitespace-nowrap text-dim">
-            <span className="min-w-0 overflow-hidden text-ellipsis">
-              {s.name} ·
-            </span>
-            {s.modUrl ? (
-              <a
-                href={s.modUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={`Open the official ${s.platform} page to verify the modpack against your client`}
-                className="inline-flex flex-none items-center gap-0.5 rounded-full border border-ok/50 bg-ok/10 px-2 py-px font-semibold text-ok transition-colors hover:bg-ok/25"
-              >
-                {s.platform} ↗
-              </a>
-            ) : (
-              <span className="flex-none">{s.platform}</span>
-            )}
-            <span>· {s.mcVersion}</span>
+          <span className="mt-0.5 block truncate font-mono text-[0.74rem] text-dim">
+            {s.name}
           </span>
         </div>
         <StateBadge state={s.state} />
       </header>
 
-      <div className="flex flex-col gap-1.5">
-        <KeyRow label="Players">
-          <span className={MONO}>
-            {players
+      <div className="flex flex-wrap items-center gap-2 text-[0.77rem] text-dim">
+        {s.modUrl ? (
+          <a
+            href={s.modUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Open the official ${s.platform} page`}
+            className="rounded-md bg-ok/10 px-2 py-1 font-semibold text-ok no-underline hover:bg-ok/18"
+          >
+            {s.platform} ↗
+          </a>
+        ) : (
+          <span className="rounded-md bg-raise px-2 py-1">{s.platform}</span>
+        )}
+        <span>MC {s.mcVersion}</span>
+      </div>
+
+      {s.tags.length > 0 && (
+        <div className="-mt-2 flex flex-wrap gap-1.5">
+          {s.tags.slice(0, 3).map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              aria-pressed={activeTags.includes(tag)}
+              title={`Show every ${tag} server`}
+              className={cn(
+                "cursor-pointer rounded-full border px-2 py-0.5 font-mono text-[0.7rem]",
+                activeTags.includes(tag)
+                  ? "border-ok/50 bg-ok/12 text-ok"
+                  : "border-edge bg-panel text-dim hover:text-ink",
+              )}
+              onClick={() => onToggleTag(tag)}
+            >
+              #{tag}
+            </button>
+          ))}
+          {s.tags.length > 3 && (
+            <span
+              className="inline-flex items-center rounded-full border border-edge px-2 py-0.5 font-mono text-[0.7rem] text-dim"
+              title={s.tags
+                .slice(3)
+                .map((tag) => `#${tag}`)
+                .join(", ")}
+            >
+              +{s.tags.length - 3}
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="rounded-xl border border-edge2 bg-base/55 px-3 py-2.5">
+        <span className="mb-1 block text-[0.7rem] font-semibold text-dim">
+          Connect address
+        </span>
+        <CopyValue value={s.connect} />
+      </div>
+
+      <div className="grid grid-cols-3 divide-x divide-edge2 border-y border-edge2 py-3">
+        <Metric
+          label="Players"
+          value={
+            players
               ? `${players.online}/${players.max}`
               : s.state === "running"
                 ? "—"
-                : "0"}
-          </span>
-        </KeyRow>
-        <Meter value={players?.online ?? 0} max={players?.max ?? 1} />
-        <KeyRow label="Uptime">
-          <span className={MONO}>
-            {s.state === "running" || s.state === "starting"
+                : "0"
+          }
+        />
+        <Metric
+          label="Uptime"
+          value={
+            s.state === "running" || s.state === "starting"
               ? formatUptime(s.uptimeSec)
-              : "—"}
-          </span>
-        </KeyRow>
-        <KeyRow label="Connect">
-          <CopyValue value={s.connect} />
-        </KeyRow>
-        <KeyRow label="RAM">
-          <span className={MONO}>{s.memory}</span>
-        </KeyRow>
-        {s.state === "running" && s.cpuPerc !== null && (
-          <KeyRow label="CPU · Mem">
-            <span className={MONO}>
-              {s.cpuPerc.toFixed(1)}% · {s.memUsed ?? "—"}
-            </span>
-          </KeyRow>
-        )}
+              : "—"
+          }
+        />
+        <Metric label="Memory" value={s.memUsed ?? s.memory} />
       </div>
 
-      <footer className="mt-auto flex gap-2">
+      <footer className="mt-auto flex items-center gap-2">
         {isAdmin &&
           (s.state === "running" || s.state === "starting" ? (
             <Button disabled={busy} onClick={() => onAction(s.name, "stop")}>
@@ -626,134 +867,37 @@ function ServerCard({
               Start
             </Button>
           ))}
-        <Button onClick={onOpen}>Details</Button>
+        {isAdmin && (
+          <a
+            href={adminServerHref(s.name)}
+            className={buttonClass("ghost")}
+            aria-label={`Manage ${s.title} in admin`}
+          >
+            Manage
+          </a>
+        )}
+        <Button className="ml-auto" variant="ghost" onClick={onOpen}>
+          View details
+        </Button>
       </footer>
     </article>
   );
 }
 
-function KeyRow({ label, children }: { label: string; children: ReactNode }) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4 text-[0.88rem]">
-      <span className="text-dim">{label}</span>
-      {children}
+    <div className="min-w-0 px-3 first:pl-0 last:pr-0">
+      <span className="block text-[0.68rem] font-semibold text-dim">
+        {label}
+      </span>
+      <span className="mt-1 block truncate font-mono text-[0.82rem] font-semibold text-ink">
+        {value}
+      </span>
     </div>
   );
 }
 
-/** Full player-facing address: "<server>.<domain>" plus the router port. */
-function connectAddress(connect: string, routerPort: number | null): string {
-  return routerPort ? `${connect}:${routerPort}` : connect;
-}
-
-function ServerDetail({
-  server: s,
-  routerPort,
-  isAdmin,
-  onClose,
-  onAction,
-  busy,
-}: {
-  server: ServerStatus;
-  routerPort: number | null;
-  isAdmin: boolean;
-  onClose: () => void;
-  onAction: (name: string, action: "start" | "stop" | "restart") => void;
-  busy: boolean;
-}) {
-  return (
-    <Modal title={s.title} onClose={onClose} wide>
-      <div className="flex flex-col gap-4">
-        <div>
-          <p className="m-0">
-            <StateBadge state={s.state} />
-            {s.statusText && (
-              <span className="text-dim"> · {s.statusText}</span>
-            )}
-          </p>
-          {s.description && <p className="text-dim">{s.description}</p>}
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {s.modUrl ? (
-              <a
-                href={s.modUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Open the official modpack page to verify the version your client needs"
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-ok/50 bg-ok/10 px-3.5 py-2 text-sm font-semibold text-ok transition-colors hover:bg-ok/25"
-              >
-                Official {s.platform} page ↗
-              </a>
-            ) : (
-              <Chip>{s.platform}</Chip>
-            )}
-            <Chip>MC {s.mcVersion}</Chip>
-            <Chip>{s.memory} RAM</Chip>
-            <Chip tone="mono">{s.connect}</Chip>
-            {s.pingMs !== null && <Chip>{s.pingMs} ms</Chip>}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3.5">
-          <Field label="Players online">
-            {s.players && s.players.names.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {s.players.names.map((n) => (
-                  <Chip key={n}>{n}</Chip>
-                ))}
-              </div>
-            ) : (
-              <span className={MONO}>
-                {s.players ? `${s.players.online}/${s.players.max}` : "—"}
-              </span>
-            )}
-          </Field>
-          <Field label="MOTD">
-            <span className={MONO}>{s.motd ?? "—"}</span>
-          </Field>
-          <Field label="Reported version">
-            <span className={MONO}>{s.versionName ?? s.mcVersion}</span>
-          </Field>
-        </div>
-
-        <Field label="Connect address (host:port via mc-router)">
-          <CopyValue value={connectAddress(s.connect, routerPort)} />
-        </Field>
-
-        {isAdmin && (
-          <div className="flex flex-wrap gap-2">
-            {s.state === "running" || s.state === "starting" ? (
-              <>
-                <Button
-                  disabled={busy}
-                  onClick={() => onAction(s.name, "stop")}
-                >
-                  Stop server
-                </Button>
-                <Button
-                  disabled={busy}
-                  onClick={() => onAction(s.name, "restart")}
-                >
-                  Restart
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="primary"
-                disabled={busy}
-                onClick={() => onAction(s.name, "start")}
-              >
-                Start server
-              </Button>
-            )}
-            <Button onClick={() => (location.href = "/admin")}>
-              Manage in admin
-            </Button>
-          </div>
-        )}
-        <p className="m-0 text-sm text-dim">
-          For more actions (logs, console, backups), use the admin area.
-        </p>
-      </div>
-    </Modal>
-  );
+function adminServerHref(name: string): string {
+  const encodedName = encodeURIComponent(name);
+  return `/admin?server=${encodedName}#admin-server-${encodedName}`;
 }

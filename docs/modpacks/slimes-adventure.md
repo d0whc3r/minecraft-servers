@@ -2,6 +2,7 @@
 
 **Modrinth**: https://modrinth.com/modpack/slimes-adventure  
 **Type**: Adventure and exploration modpack  
+**Tags**: adventure, exploration, casual  
 **Minecraft Version**: 1.21.1 (Fabric)  
 **Memory**: 4GB recommended
 

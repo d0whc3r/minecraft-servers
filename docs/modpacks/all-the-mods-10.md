@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/all-the-mods-10
 **Type**: Ultimate Kitchen Sink Modpack with 400+ mods
+**Tags**: kitchen-sink, tech, magic, quests, multiplayer
 **Minecraft Version**: 1.21.1
 **Memory**: 8GB recommended
 

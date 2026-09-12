@@ -5,6 +5,9 @@ Keep factual claims tied to the selected release, not merely to the project in g
 
 # [PACK NAME] Server
 
+**Tags**: [lowercase comma-separated gameplay/theme tags, e.g. `skyblock, tech, quests` — the web
+panel uses them for search and filtering]
+
 ## Overview
 
 [One short paragraph identifying the exact pack release and explaining what kind of server this is.]

@@ -1,6 +1,7 @@
 # Vanilla Minecraft (Paper)
 
 **Type**: Optimized Vanilla Server  
+**Tags**: vanilla, performance, lightweight  
 **Minecraft Version**: 26.2  
 **Server Software**: Paper (Spigot/Bukkit fork)
 

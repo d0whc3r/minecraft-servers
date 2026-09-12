@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/cursed-walking-a-modern-zombie-apocalypse  
 **Type**: Forge-based zombie survival (8M+ downloads)  
+**Tags**: zombie-apocalypse, survival, hardcore, guns  
 **Minecraft Version**: 1.20.1  
 **Memory**: 8GB recommended
 

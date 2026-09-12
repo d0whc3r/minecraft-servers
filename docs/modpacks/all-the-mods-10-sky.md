@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/all-the-mods-10-sky  
 **Type**: Forge-based skyblock kitchen sink (3M+ downloads)  
+**Tags**: skyblock, kitchen-sink, tech, quests  
 **Minecraft Version**: 1.21.1  
 **Memory**: 8GB recommended
 

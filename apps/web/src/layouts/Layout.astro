@@ -21,56 +21,59 @@ const isAdmin = path.startsWith("/admin");
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0b110f" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title}</title>
   </head>
   <body>
-    <header
-      class="flex flex-col items-start justify-between gap-2.5 border-b border-edge2 bg-panel px-[clamp(1rem,4vw,2rem)] py-2.5 sm:flex-row sm:items-center"
-    >
-      <a class="flex items-center gap-2.5 text-ink no-underline" href="/">
-        <svg
-          class="size-6.5 [image-rendering:pixelated]"
-          viewBox="0 0 16 16"
-          aria-hidden="true"
-        >
-          <rect width="16" height="16" rx="2" fill="#3fd68f"></rect>
-          <!-- creeper face, pixel style -->
-          <rect x="3" y="3" width="4" height="4" fill="#0e1319"></rect>
-          <rect x="9" y="3" width="4" height="4" fill="#0e1319"></rect>
-          <rect x="6" y="7" width="4" height="3" fill="#0e1319"></rect>
-          <rect x="4" y="10" width="3" height="4" fill="#0e1319"></rect>
-          <rect x="9" y="10" width="3" height="4" fill="#0e1319"></rect>
-        </svg>
-        <span class="text-[1.02rem] font-semibold tracking-[0.01em]"
-          >Minecraft Panel</span
-        >
-      </a>
-      <nav class="flex gap-1 text-sm" aria-label="Sections">
-        <a
-          href="/"
-          aria-current={isAdmin ? undefined : "page"}
-          class="rounded-lg px-3 py-1.5 text-dim no-underline hover:bg-raise hover:text-ink aria-[current=page]:bg-raise aria-[current=page]:font-semibold aria-[current=page]:text-ink"
-        >
-          Dashboard
+    <a class="skip-link" href="#main-content">
+      Skip to main content
+    </a>
+    <header class="app-header">
+      <div class="app-header__inner">
+        <a class="brand" href="/" aria-label="Minecraft Panel home">
+          <span class="brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M3 3h18v18H3z" fill="currentColor"></path>
+              <path
+                d="M6 6h5v5H6zm7 0h5v5h-5zm-4 5h6v4H9zm-2 4h4v4H7zm6 0h4v4h-4z"
+                fill="#0b1210"
+              ></path>
+            </svg>
+          </span>
+          <span class="brand__copy">
+            <strong>Minecraft Panel</strong>
+            <small>Server control</small>
+          </span>
         </a>
-        <a
-          href="/admin"
-          aria-current={isAdmin ? "page" : undefined}
-          class="rounded-lg px-3 py-1.5 text-dim no-underline hover:bg-raise hover:text-ink aria-[current=page]:bg-raise aria-[current=page]:font-semibold aria-[current=page]:text-ink"
-        >
-          Admin
-        </a>
-      </nav>
+        <nav class="app-nav" aria-label="Sections">
+          <a href="/" aria-current={isAdmin ? undefined : "page"}>
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M3 3h6v6H3zm8 0h6v6h-6zM3 11h6v6H3zm8 0h6v6h-6z"></path>
+            </svg>
+            <span>Dashboard</span>
+          </a>
+          <a href="/admin" aria-current={isAdmin ? "page" : undefined}>
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M10 2 4 4.5v4.8c0 4.2 2.55 7.13 6 8.7 3.45-1.57 6-4.5 6-8.7V4.5L10 2Zm0 3.25a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5Zm3.25 8.4A5.8 5.8 0 0 1 10 15.8a5.8 5.8 0 0 1-3.25-2.15v-.45c0-1.45 1.45-2.45 3.25-2.45s3.25 1 3.25 2.45v.45Z"></path>
+            </svg>
+            <span>Admin</span>
+          </a>
+        </nav>
+      </div>
     </header>
-    <main class="mx-auto w-full max-w-[1180px] flex-1 p-[clamp(1rem,3vw,2rem)]">
+    <main
+      id="main-content"
+      tabindex="-1"
+      class="mx-auto w-full max-w-[1280px] flex-1 p-[clamp(1rem,3vw,2.5rem)]"
+    >
       <slot />
     </main>
-    <footer
-      class="flex items-center justify-between border-t border-edge2 px-[clamp(1rem,4vw,2rem)] py-4 text-[0.85rem] text-dim"
-    >
-      <span>minecraft-servers · management panel</span>
-      <span class="font-mono text-[0.92em]">docker + rcon</span>
+    <footer class="app-footer">
+      <span class="inline-flex items-center gap-2">
+        <span class="size-1.5 rounded-full bg-ok"></span> Management panel
+      </span>
+      <span>Docker + RCON</span>
     </footer>
   </body>
 </html>

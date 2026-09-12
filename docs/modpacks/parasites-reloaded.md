@@ -1,9 +1,10 @@
 # Parasites: Reloaded Server
 
-**Modrinth**: https://modrinth.com/modpack/parasites-reloaded\
-**Type**: Hardcore post-apocalyptic survival modpack (Forge)\
-**Minecraft Version**: 1.12.2\
-**Modpack Version**: Published as 1.3.0\
+**Modrinth**: https://modrinth.com/modpack/parasites-reloaded  
+**Type**: Hardcore post-apocalyptic survival modpack (Forge)  
+**Tags**: hardcore, survival, horror, parasites  
+**Minecraft Version**: 1.12.2  
+**Modpack Version**: Published as 1.3.0  
 **Memory**: 6GB initial allocation
 
 ## Overview

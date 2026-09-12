@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/solo-leveling-reawakening
 **Type**: RPG-themed modpack with Solo Leveling progression system
+**Tags**: anime, rpg, progression
 **Minecraft Version**: 1.21.1
 **Memory**: 4GB recommended
 

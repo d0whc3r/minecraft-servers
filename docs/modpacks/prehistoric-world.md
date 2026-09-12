@@ -1,5 +1,7 @@
 # Prehistoric World Server
 
+**Tags**: dinosaurs, adventure, exploration, building
+
 ## Overview
 
 Prehistoric World is a Forge adventure modpack centered on fossils, dinosaur

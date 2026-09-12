@@ -2,6 +2,7 @@
 
 **Modrinth**: https://modrinth.com/modpack/cobblemon-fabric  
 **Type**: Official Cobblemon modpack (10M+ downloads)  
+**Tags**: pokemon, multiplayer, casual, adventure  
 **Minecraft Version**: 1.21.1 (Fabric)  
 **Memory**: 6GB recommended
 

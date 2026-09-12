@@ -2,6 +2,7 @@
 
 **CurseForge**: https://www.curseforge.com/minecraft/modpacks/amazing-fps-booster
 **Type**: Performance optimization modpack (more powerful than OptiFine)
+**Tags**: performance, vanilla-plus, lightweight
 **Minecraft Version**: 1.20.6
 **Memory**: 2GB recommended
 

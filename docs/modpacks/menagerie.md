@@ -1,6 +1,7 @@
 # Menagerie
 
 **Type**: Modpack Collection (AUTO_CURSEFORGE)  
+**Tags**: creatures, exploration, adventure  
 **Minecraft Version**: Auto-detected from modpack  
 **Modpack Page**: [CurseForge - Menagerie](https://www.curseforge.com/minecraft/modpacks/menagerie)
 

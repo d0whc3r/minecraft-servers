@@ -1,6 +1,7 @@
 # RLCraft
 
 **Type**: Hardcore Survival Modpack  
+**Tags**: hardcore, survival, rpg, dragons  
 **Minecraft Version**: 1.12.2  
 **Modpack Page**: [CurseForge - RLCraft](https://www.curseforge.com/minecraft/modpacks/rlcraft)
 
