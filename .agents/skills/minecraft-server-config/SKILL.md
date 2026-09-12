@@ -41,8 +41,10 @@ with the language and conventions of the files being edited.
 4. Select the installation mode supported by both `itzg/minecraft-server` and this repository. Do
    not falsify `TYPE`, invent IDs or versions, substitute Paper for a mod loader, or present a
    result as runnable while a required fact remains unverified.
-5. Create or update the profile and its guide, then update the documentation indexes and counts
-   derived from the current repository files.
+5. Create or update the profile and its guide. For a new guide, start from
+   [the modpack guide template](assets/modpack-guide-template.md), replace every placeholder, and
+   remove sections that do not apply. Then update the documentation indexes and counts derived from
+   the current repository files.
 6. Run static validation and the relevant tests. Start the server and follow first boot only when
    requested; static validation alone does not prove that a modpack starts.
 
@@ -60,8 +62,9 @@ or handing off the server.
 - This repository hosts Minecraft Java Edition servers. A client-only mod does not justify a
   fabricated server profile.
 - `SERVER_NAME` must match `config/modpacks/<slug>.env`; use lowercase letters, digits, and hyphens.
-- Pin the selected release and exact Minecraft version. `JAVA_VERSION` selects an image tag such as
-  `java17`, not a loader version or bare Java number.
+- Pin the selected release and exact Minecraft version. Every modded profile must set an explicit,
+  verified `JAVA_VERSION`; it selects an image tag such as `java17`, not a loader version or bare
+  Java number. Do not use `latest` as a compatibility decision.
 - Choose an unused `RCON_PORT` from 26565 through 26664 by checking all profiles. Keep
   `ENABLE_RCON=true` and obtain the password from shared configuration.
 - Do not add `SERVER_PORT` or publish a per-server game port. Compose keeps game traffic on port

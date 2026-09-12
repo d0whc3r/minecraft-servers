@@ -10,7 +10,8 @@ choices.
 - Set `SERVER_NAME=<slug>` to the filename stem using lowercase letters, digits, and hyphens.
 - Include `TYPE`, `VERSION`, `JAVA_VERSION`, `MEMORY`, the pinned release selector, and settings
   specific to the pack. The local validator requires an explicit `VERSION=` even when Auto
-  CurseForge can detect Minecraft.
+  CurseForge can detect Minecraft. For a modded server, `JAVA_VERSION` must be an image tag whose
+  Java major was verified for the exact pack, Minecraft version, and loader combination.
 - Select an unused `RCON_PORT` from 26565 through 26664 after checking every profile. Use existing
   helpers when appropriate. Set `ENABLE_RCON=true`; the password comes from shared configuration.
 - Do not add `SERVER_PORT` or publish a game port for an individual server. Compose fixes the
@@ -27,14 +28,20 @@ registration. Do not treat another pack's `add-modpack.sh` template as evidence 
 
 ## Guide and indexes
 
-Create `docs/modpacks/<slug>.md` with:
+For a new guide, copy [the modpack guide template](../assets/modpack-guide-template.md) to
+`docs/modpacks/<slug>.md`, replace every placeholder, and remove instructional comments and sections
+that do not apply. Adapt an existing guide in place instead of overwriting it with the template.
+
+The completed guide must include:
 
 - the selected pack, Minecraft, loader, and Java versions;
 - concrete source links and the date they were checked;
 - chosen resources and any special installation steps;
 - client installation requirements;
 - the connection hostname; and
-- the repository's real start, log, and backup commands.
+- the repository's real validation, start, log, stop, and backup commands;
+- whether a real first boot was performed; and
+- any remaining manual step or unresolved fact.
 
 Clearly distinguish author requirements, local choices, and unverified details. Do not add an
 unverified mod list, progression guide, or hardware recommendation.

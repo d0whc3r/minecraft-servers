@@ -35,6 +35,29 @@ entries before extraction and reject absolute paths or traversal outside the tem
 If a required fact cannot be verified, identify the missing fact precisely and do not describe the
 configuration as ready to start.
 
+## Verify Java compatibility
+
+Treat Java selection as a compatibility result, not a Minecraft-version lookup alone. Resolve and
+record all of the following before setting `JAVA_VERSION`:
+
+1. Check the selected pack release or server-pack instructions for an explicit Java requirement or
+   bundled launcher setting.
+2. Check the exact loader version's supported Java range. Older loader or mod combinations can
+   reject a JVM that is newer than Minecraft's minimum, while newer releases can require a newer
+   JVM.
+3. If the pack does not declare Java, use current official Minecraft and loader documentation to
+   derive the compatible major. Label the result as derived rather than author-declared.
+4. Verify that the corresponding `itzg/minecraft-server` tag exists and supports the host
+   architecture using the current
+   [Java image-tag documentation](https://docker-minecraft-server.readthedocs.io/en/latest/versions/java/)
+   or its linked machine-readable tag listing.
+5. Set the tag explicitly, such as `JAVA_VERSION=java17`, and cite the sources and conclusion in the
+   guide. `latest` tracks the newest runtime and is not evidence of compatibility.
+
+Do not infer Java from a nearby profile, a generic online table, or the loader family without its
+version. A successful metadata lookup also does not prove that the pack boots on the chosen JVM;
+state whether first boot was actually tested.
+
 ## Select the installation mode
 
 Check the current [itzg installation documentation](https://docker-minecraft-server.readthedocs.io/en/latest/types-and-platforms/)

@@ -13,15 +13,19 @@ private shared `.env`, and do not show complete Compose output that can contain 
    `scripts/common.sh`, without starting containers. Prefer `config --quiet`, or process
    `config --format json` in memory and display only non-sensitive fields. Verify the Java image,
    release, container name, volumes, hostname, and that only RCON is published on `127.0.0.1`.
-3. Run relevant tests, beginning with `pnpm run test:quick` for a new profile. Check touched-file
+3. Confirm that the resolved image tag matches the `JAVA_VERSION` justified in the guide and that
+   the profile pins the same Minecraft and pack release documented there.
+4. Run relevant tests, beginning with `pnpm run test:quick` for a new profile. Check touched-file
    formatting and run `git diff --check`. Avoid tests that only assert the wording of static
    configuration.
 
 ## First boot when requested
 
 Use `start-server.sh`, follow the first boot until `Done!`, and inspect installation errors and final
-state. Correct verified incompatibilities within scope and retest. Do not switch releases, delete
-worlds, or remove content mods as an improvised workaround.
+state. Confirm the running JVM major with `docker exec mc-<slug> java -version` and verify from the
+logs that the expected Minecraft and loader versions were installed. Correct verified
+incompatibilities within scope and retest. Do not switch releases, delete worlds, or remove content
+mods as an improvised workaround.
 
 Static validation does not prove that the pack starts. State explicitly whether a real first boot
 was performed.
