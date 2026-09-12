@@ -1,0 +1,4 @@
+interface:
+  display_name: "Minecraft Server Config"
+  short_description: "Turn modpack URLs into validated server profiles"
+  default_prompt: "Use $minecraft-server-config to verify this modpack URL and create a validated server profile in this repository."
