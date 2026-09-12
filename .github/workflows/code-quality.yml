@@ -22,7 +22,7 @@ jobs:
       - name: Install helm
         uses: azure/setup-helm@v5
         with:
-          version: v4.2.4
+          version: v4.3.0
 
       - name: Lint and render charts
         run: make helm-template
