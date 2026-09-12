@@ -1,63 +1,89 @@
-# SkyFactory 4
+# SkyFactory 4 Server
 
-Servidor de SkyFactory 4 fijado a una versión reproducible y configurado para
-crear el mundo vacío clásico del pack.
+**CurseForge**: https://www.curseforge.com/minecraft/modpacks/skyfactory-4\
+**Type**: Classic void-world skyblock modpack (Forge)\
+**Minecraft Version**: 1.12.2\
+**Modpack Version**: 4.2.4\
+**Memory**: 6GB allocated, 4GB official minimum
 
-## Versión fijada
+## Overview
 
-| Componente                      | Versión                                     |
-| ------------------------------- | ------------------------------------------- |
-| SkyFactory 4                    | 4.2.4 (release)                             |
-| Archivo principal de CurseForge | `SkyFactory 4-4.2.4.zip` (`3565683`)        |
-| Server pack de referencia       | `SkyFactory-4_Server_4_2_4.zip` (`3565687`) |
-| Minecraft                       | 1.12.2                                      |
-| Forge                           | 14.23.5.2860                                |
-| Java                            | 8                                           |
-| Memoria configurada             | 6 GB                                        |
+SkyFactory 4 is a progression-focused skyblock pack that starts players in a
+void world with minimal resources. This profile pins release 4.2.4 and includes
+the official Topography settings required to generate the classic world.
 
-`AUTO_CURSEFORGE` usa el archivo principal con manifest, no el ZIP de servidor.
-El server pack oficial se ha usado como referencia para Forge, memoria y
-propiedades del mundo.
+## Quick Start
 
-## Mundo SkyFactory
+```bash
+./scripts/validate-config.sh skyfactory4
+./scripts/start-server.sh skyfactory4
+docker logs -f mc-skyfactory4
+# Wait for: "Done! For help, type 'help'"
+```
 
-La configuración incluye los valores indicados por la guía multijugador
-oficial:
+## Server Details
 
-```env
+| Setting           | Value                             |
+| ----------------- | --------------------------------- |
+| **Route**         | `skyfactory4.<MC_ROUTER_DOMAIN>`  |
+| **RCON Port**     | 26565                             |
+| **Memory**        | 6GB                               |
+| **Type**          | CurseForge (Forge)                |
+| **Release Pin**   | Main file 3565683 (version 4.2.4) |
+| **Server Pack**   | Matching file 3565687             |
+| **Loader**        | Forge 14.23.5.2860                |
+| **Java**          | 8                                 |
+| **Max Players**   | 10                                |
+| **Game Settings** | Normal survival, PvP enabled      |
+
+## Connection
+
+- **Address**: `skyfactory4.<MC_ROUTER_DOMAIN>` through mc-router
+- **Version**: Minecraft 1.12.2 with SkyFactory 4 version 4.2.4
+- **Client**: Install SkyFactory 4 version 4.2.4 from CurseForge
+
+Client and server must use the same modpack release.
+
+## Configuration
+
+Configuration file: `config/modpacks/skyfactory4.env`
+
+```bash
+TYPE=AUTO_CURSEFORGE
+CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/skyfactory-4/files/3565683
+CF_SLUG=skyfactory-4
+CF_FILE_ID=3565683
+VERSION=1.12.2
+JAVA_VERSION=java8
+MEMORY=6G
 LEVEL_TYPE=DEFAULT
 GENERATOR_SETTINGS={"Topography-Preset":"Sky Factory 4"}
 SPAWN_PROTECTION=0
+RCON_PORT=26565
 ```
 
-Deben estar presentes antes del primer arranque. Si `servers/skyfactory4/data`
-ya contiene un mundo normal, cambiar estas variables no lo convierte en
-skyblock: haz una copia de seguridad y genera un mundo nuevo de forma
-deliberada.
+`AUTO_CURSEFORGE` uses the main file because it contains the manifest. The
+matching server ZIP was used to verify Forge, memory, and server properties, but
+must not replace the main file as the automatic installer's input.
 
-También se permiten vuelo, Nether y command blocks porque el server pack
-oficial los habilita para las mecánicas del modpack.
+## World Generation
 
-## Arranque y acceso
+The following values must be present before the first world is generated:
 
-```bash
-./scripts/start-server.sh skyfactory4
-docker logs -f mc-skyfactory4
+```properties
+level-type=DEFAULT
+generator-settings={"Topography-Preset":"Sky Factory 4"}
+spawn-protection=0
 ```
 
-- Ruta de juego: `skyfactory4.<MC_ROUTER_DOMAIN>`
-- Cliente requerido: SkyFactory 4 4.2.4
-- RCON local: `127.0.0.1:26565`
-- Datos: `servers/skyfactory4/data`
-- Backups: `backups/skyfactory4/`
+Changing these settings does not convert an existing normal world to skyblock.
+Back up the current world and deliberately generate a new one if the initial
+world type is incorrect. Flight, the Nether, and command blocks are enabled to
+match the official server pack.
 
-El perfil conserva las decisiones locales del repositorio: máximo de 10
-jugadores, dificultad normal, PvP habilitado y `ONLINE_MODE=false`. Activa el
-modo online si el servidor va a ser público.
+## Multiplayer Islands
 
-## Islas multijugador
-
-La guía oficial documenta estos comandos de Topography:
+The official guide documents these Topography commands:
 
 ```text
 /topography spawn [player]
@@ -70,21 +96,38 @@ La guía oficial documenta estos comandos de Topography:
 /topography island accept
 ```
 
-Prestige es opcional y no se activa desde este perfil. Si se quiere usar, debe
-configurarse expresamente en `prestige.cfg` después de que el pack lo genere.
+Prestige is optional and is not enabled by this profile. Configure
+`prestige.cfg` explicitly after the pack generates it if Prestige is desired.
 
-## Actualizaciones
+## Performance Tips
 
-Antes de cambiar desde una versión anterior a 4.2.4, abre las tumbas existentes
-y realiza un backup: las notas oficiales avisan de un cambio de mod de tumbas
-que puede hacer inaccesibles las antiguas.
+- The official server pack recommends at least 4GB; this profile allocates 6GB.
+- Start with the configured 10-chunk view distance and monitor actual usage.
+- Use `docker stats mc-skyfactory4` to observe memory and CPU consumption.
+- Back up before updates and before intentionally replacing a world.
 
-## Fuentes verificadas
+## Troubleshooting
 
-Comprobadas el 12 de septiembre de 2026:
+### A normal overworld was generated
 
-- [Proyecto oficial en CurseForge](https://www.curseforge.com/minecraft/modpacks/skyfactory-4)
-- [Archivo principal 4.2.4](https://www.curseforge.com/minecraft/modpacks/skyfactory-4/files/3565683)
-- [Server pack 4.2.4](https://www.curseforge.com/minecraft/modpacks/skyfactory-4/files/3565687)
-- [Guía multijugador oficial](https://github.com/DarkPacks/SkyFactory-4/wiki/Multiplayer-Instructions)
-- [Variables de generación de itzg/minecraft-server](https://docker-minecraft-server.readthedocs.io/en/latest/configuration/server-properties/#level-type-and-generator-settings)
+Confirm that both `LEVEL_TYPE` and `GENERATOR_SETTINGS` match the configuration
+above. These values only affect creation of a new world.
+
+### Client cannot join
+
+Verify that the client uses SkyFactory 4 version 4.2.4 on Minecraft 1.12.2.
+
+### Updating from an older release
+
+Open existing graves and create a backup first. The 4.2.4 release notes warn
+that a tomb mod change can make old graves inaccessible.
+
+## Resources
+
+Verified on September 12, 2026:
+
+- [Official CurseForge project](https://www.curseforge.com/minecraft/modpacks/skyfactory-4)
+- [Main 4.2.4 file](https://www.curseforge.com/minecraft/modpacks/skyfactory-4/files/3565683)
+- [4.2.4 server pack](https://www.curseforge.com/minecraft/modpacks/skyfactory-4/files/3565687)
+- [Official multiplayer guide](https://github.com/DarkPacks/SkyFactory-4/wiki/Multiplayer-Instructions)
+- [itzg world-generation variables](https://docker-minecraft-server.readthedocs.io/en/latest/configuration/server-properties/#level-type-and-generator-settings)

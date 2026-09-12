@@ -1,52 +1,72 @@
-# MENAGERIE - Paradoxical Wilds
+# MENAGERIE - Paradoxical Wilds Server
 
-An exploration and creature modpack built around Marvelous Menagerie: Paradoxical.
-This is a separate CurseForge project from the existing `menagerie` profile, with
-its own world, container, and backups.
+**CurseForge**: https://www.curseforge.com/minecraft/modpacks/menagerie-paradoxical-wilds\
+**Type**: Creature and exploration modpack (Forge)\
+**Minecraft Version**: 1.20.1\
+**Modpack Version**: 2.8.0\
+**Memory**: 6GB initial allocation
 
-## Version and Configuration
+## Overview
 
-- **Modpack**: [2.8.0, released July 16, 2026](https://www.curseforge.com/minecraft/modpacks/menagerie-paradoxical-wilds/files/8445852)
-- **Minecraft**: 1.20.1
-- **Loader**: Forge, automatically selected from the pack manifest
-- **Java image**: `itzg/minecraft-server:java17`
-- **Config**: [menagerie-paradoxical-wilds.env](../../config/modpacks/menagerie-paradoxical-wilds.env)
-- **Starting RAM allocation**: 6G, adjustable with `MEMORY` (not an author-specified minimum)
-- **Players**: 20 slots; normal survival, PvP enabled
-- **Distances**: view 10 chunks, simulation 8 chunks
-- **RCON**: `127.0.0.1:26593`, using credentials from the shared `.env`
+MENAGERIE - Paradoxical Wilds is an exploration and creature modpack built
+around Marvelous Menagerie: Paradoxical. It is a separate CurseForge project
+from the older `menagerie` profile and has its own world, container, and backups.
 
-`CF_PAGE_URL` points to the exact main pack file, so restarts retain version 2.8.0.
-The [AUTO_CURSEFORGE installer](https://docker-minecraft-server.readthedocs.io/en/latest/types-and-platforms/mod-platforms/auto-curseforge/)
-reads that file's manifest to install the loader and mods; its input must be the
-main pack rather than the separate server ZIP.
-
-## Start and Connect
-
-Configure the shared `.env` as described in [Quick Start](../QUICKSTART.md),
-including `EULA`, `CF_API_KEY`, `RCON_PASSWORD`, and `MC_ROUTER_DOMAIN`.
+## Quick Start
 
 ```bash
 ./scripts/validate-config.sh menagerie-paradoxical-wilds
 ./scripts/start-server.sh menagerie-paradoxical-wilds
 docker logs -f mc-menagerie-paradoxical-wilds
+# Wait for: "Done! For help, type 'help'"
 ```
 
-The first start downloads and installs the pack. Wait for `Done!` in the logs.
-Players need **Menagerie: Paradoxical Wilds 2.8.0** and connect through mc-router:
+## Server Details
 
-```text
-menagerie-paradoxical-wilds.<MC_ROUTER_DOMAIN>
-```
+| Setting           | Value                                            |
+| ----------------- | ------------------------------------------------ |
+| **Route**         | `menagerie-paradoxical-wilds.<MC_ROUTER_DOMAIN>` |
+| **RCON Port**     | 26593                                            |
+| **Memory**        | 6GB                                              |
+| **Type**          | CurseForge (Forge)                               |
+| **Release Pin**   | Main file 8445852 (version 2.8.0)                |
+| **Java**          | 17                                               |
+| **Max Players**   | 20                                               |
+| **Game Settings** | Normal survival, PvP enabled                     |
 
-For example, with `MC_ROUTER_DOMAIN=192.168.1.10.nip.io`, use
+## Connection
+
+- **Address**: `menagerie-paradoxical-wilds.<MC_ROUTER_DOMAIN>` through mc-router
+- **Version**: Minecraft 1.20.1 with Paradoxical Wilds 2.8.0
+- **Client**: Install the same 2.8.0 release from CurseForge
+
+For example, when `MC_ROUTER_DOMAIN=192.168.1.10.nip.io`, players connect to
 `menagerie-paradoxical-wilds.192.168.1.10.nip.io`.
+
+## Configuration
+
+Configuration file: `config/modpacks/menagerie-paradoxical-wilds.env`
+
+```bash
+TYPE=AUTO_CURSEFORGE
+CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/menagerie-paradoxical-wilds/files/8445852
+VERSION=1.20.1
+JAVA_VERSION=java17
+MEMORY=6G
+SERVER_NAME=menagerie-paradoxical-wilds
+LEVEL_TYPE=minecraft:default
+RCON_PORT=26593
+```
+
+`CF_PAGE_URL` points to the exact main file. `AUTO_CURSEFORGE` reads its manifest
+to install the matching Forge loader and mods; the separate server ZIP must not
+be used as the manifest input.
 
 ## Data and Updates
 
-- World and installed files: `servers/menagerie-paradoxical-wilds/data/`
-- Extra mods: `servers/menagerie-paradoxical-wilds/mods/`
-- Backups: `backups/menagerie-paradoxical-wilds/`
+- **World and installed files**: `servers/menagerie-paradoxical-wilds/data/`
+- **Additional local mods**: `servers/menagerie-paradoxical-wilds/mods/`
+- **Backups**: `backups/menagerie-paradoxical-wilds/`
 
 Before changing the pinned release:
 
@@ -55,5 +75,37 @@ Before changing the pinned release:
 ./scripts/stop-server.sh menagerie-paradoxical-wilds
 ```
 
-Update `CF_PAGE_URL` to the desired main pack file, verify its Minecraft and Java
-requirements, then start the server again. Clients must use the same release.
+Update the main-file URL only after checking its Minecraft, loader, and Java
+requirements. Clients must move to the same release.
+
+## Performance Tips
+
+- The 6GB allocation is a local starting point, not an author-specified minimum.
+- Begin with the configured 10-chunk view and 8-chunk simulation distances.
+- Use `docker stats mc-menagerie-paradoxical-wilds` to inspect resource usage.
+- Make a backup before pack updates or large world changes.
+
+## Troubleshooting
+
+### CurseForge installation fails
+
+Confirm that the shared `.env` contains the required `CF_API_KEY`, then inspect
+`docker logs mc-menagerie-paradoxical-wilds` for the exact download failure.
+
+### Client cannot join
+
+Verify that the client is running Paradoxical Wilds 2.8.0 on Minecraft 1.20.1.
+The older `menagerie` pack is a different project and is not compatible.
+
+### The wrong pack version is installed
+
+Ensure `CF_PAGE_URL` still ends in `/files/8445852`. A project-level URL can
+resolve a different release over time.
+
+## Resources
+
+Verified on September 12, 2026:
+
+- [Official CurseForge project](https://www.curseforge.com/minecraft/modpacks/menagerie-paradoxical-wilds)
+- [Pinned 2.8.0 main file](https://www.curseforge.com/minecraft/modpacks/menagerie-paradoxical-wilds/files/8445852)
+- [itzg Auto CurseForge documentation](https://docker-minecraft-server.readthedocs.io/en/latest/types-and-platforms/mod-platforms/auto-curseforge/)

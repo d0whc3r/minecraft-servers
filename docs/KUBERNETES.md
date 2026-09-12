@@ -1,6 +1,6 @@
 # Kubernetes
 
-The same system — 28 modpacks behind one mc-router entry point, managed from
+The same system — 32 modpacks behind one mc-router entry point, managed from
 the web panel — runs on Kubernetes with **only the Helm charts in `charts/`**.
 The panel gets `MCPANEL_RUNTIME=kubernetes` and does everything itself: when
 you press **Start** on a modpack it renders `config/modpacks/<server>.env`

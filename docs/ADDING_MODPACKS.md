@@ -51,7 +51,7 @@ Options:
 | `skyfactory4`    | SkyFactory 4                | AUTO_CURSEFORGE | 1.12.2  | 4G     |
 | `vanilla`        | Vanilla Optimized           | PAPER           | 26.2    | 2G     |
 
-> The script's templates are independent from the 29 pre-configured servers already in
+> The script's templates are independent from the 32 pre-configured servers already in
 > `config/modpacks/`. The pre-configured servers are started directly with
 > `./scripts/start-server.sh <name>` — no need to "add" them first.
 

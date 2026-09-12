@@ -146,7 +146,7 @@ Available servers (full catalog in [Modpacks](MODPACKS.md)):
 | `zombie-invade-100-days` | 1.20.1  | 6G     | Horde siege survival                   |
 | `pixelmon`               | 1.21.1  | 6G     | Classic Pokémon mod                    |
 | `prominence-2`           | 1.20.1  | 6G     | RPG adventure                          |
-| …                        |         |        | 29 total — see [Modpacks](MODPACKS.md) |
+| …                        |         |        | 32 total — see [Modpacks](MODPACKS.md) |
 
 > CurseForge modpacks require `CF_API_KEY` in `.env`. First start downloads the whole
 > modpack — give it 5–10 minutes and watch `docker logs -f mc-<name>`.

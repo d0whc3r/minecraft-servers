@@ -8,7 +8,7 @@ and quick start, see the [main README](../README.md).
 | Document                                          | Description                                  |
 | ------------------------------------------------- | -------------------------------------------- |
 | [Quick Start](QUICKSTART.md)                      | First server in ~5 minutes, daily operations |
-| [Modpack Catalog](MODPACKS.md)                    | The 29 pre-configured servers: versions, RAM |
+| [Modpack Catalog](MODPACKS.md)                    | The 32 pre-configured servers: versions, RAM |
 | [Adding Modpacks](ADDING_MODPACKS.md)             | Templates and manual creation of new servers |
 | [Environment Variables](ENVIRONMENT_VARIABLES.md) | Complete per-server configuration reference  |
 
@@ -41,25 +41,28 @@ and quick start, see the [main README](../README.md).
 
 One page per pre-configured server with requirements, connection info, and tuning tips:
 
-| Server                       | Guide                                                                  |
-| ---------------------------- | ---------------------------------------------------------------------- |
-| All The Mods 10              | [all-the-mods-10](modpacks/all-the-mods-10.md)                         |
-| Amazing FPS Booster          | [amazing-fps-booster](modpacks/amazing-fps-booster.md)                 |
-| Cobbleverse                  | [cobbleverse](modpacks/cobbleverse.md)                                 |
-| DeceasedCraft                | [deceasedcraft](modpacks/deceasedcraft.md)                             |
-| Menagerie                    | [menagerie](modpacks/menagerie.md)                                     |
-| Menagerie: Paradoxical Wilds | [menagerie-paradoxical-wilds](modpacks/menagerie-paradoxical-wilds.md) |
-| My Hero Adventure            | [my-hero-adventure](modpacks/my-hero-adventure.md)                     |
-| Plants vs. Zombies+          | [plants-vs-zombies](modpacks/plants-vs-zombies.md)                     |
-| RLCraft                      | [rlcraft](modpacks/rlcraft.md)                                         |
-| SkyFactory 4                 | [skyfactory4](modpacks/skyfactory4.md)                                 |
-| Slimes Adventure             | [slimes-adventure](modpacks/slimes-adventure.md)                       |
-| SoloCraft                    | [solocraft-modpack](modpacks/solocraft-modpack.md)                     |
-| Solo Leveling: Level Up      | [solo-leveling-level-up](modpacks/solo-leveling-level-up.md)           |
-| Solo Leveling: Reawakening   | [solo-leveling-reawakening](modpacks/solo-leveling-reawakening.md)     |
-| Solo Leveling: Shadows       | [solo-leveling-shadows](modpacks/solo-leveling-shadows.md)             |
-| Unofficial Dragon Block C    | [unofficial-dragon-block-c](modpacks/unofficial-dragon-block-c.md)     |
-| Vanilla (Paper)              | [vanilla](modpacks/vanilla.md)                                         |
+| Server                        | Guide                                                                      |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| Aged                          | [aged](modpacks/aged.md)                                                   |
+| All The Mods 10               | [all-the-mods-10](modpacks/all-the-mods-10.md)                             |
+| Amazing FPS Booster           | [amazing-fps-booster](modpacks/amazing-fps-booster.md)                     |
+| Cobbleverse                   | [cobbleverse](modpacks/cobbleverse.md)                                     |
+| DeceasedCraft                 | [deceasedcraft](modpacks/deceasedcraft.md)                                 |
+| Landscapes Reimagined Genesis | [landscapes-reimagined-genesis](modpacks/landscapes-reimagined-genesis.md) |
+| Menagerie                     | [menagerie](modpacks/menagerie.md)                                         |
+| Menagerie: Paradoxical Wilds  | [menagerie-paradoxical-wilds](modpacks/menagerie-paradoxical-wilds.md)     |
+| My Hero Adventure             | [my-hero-adventure](modpacks/my-hero-adventure.md)                         |
+| Parasites: Reloaded           | [parasites-reloaded](modpacks/parasites-reloaded.md)                       |
+| Plants vs. Zombies+           | [plants-vs-zombies](modpacks/plants-vs-zombies.md)                         |
+| RLCraft                       | [rlcraft](modpacks/rlcraft.md)                                             |
+| SkyFactory 4                  | [skyfactory4](modpacks/skyfactory4.md)                                     |
+| Slimes Adventure              | [slimes-adventure](modpacks/slimes-adventure.md)                           |
+| SoloCraft                     | [solocraft-modpack](modpacks/solocraft-modpack.md)                         |
+| Solo Leveling: Level Up       | [solo-leveling-level-up](modpacks/solo-leveling-level-up.md)               |
+| Solo Leveling: Reawakening    | [solo-leveling-reawakening](modpacks/solo-leveling-reawakening.md)         |
+| Solo Leveling: Shadows        | [solo-leveling-shadows](modpacks/solo-leveling-shadows.md)                 |
+| Unofficial Dragon Block C     | [unofficial-dragon-block-c](modpacks/unofficial-dragon-block-c.md)         |
+| Vanilla (Paper)               | [vanilla](modpacks/vanilla.md)                                             |
 
 ## Archive
 

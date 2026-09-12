@@ -1,60 +1,55 @@
 # DeceasedCraft Server
 
-DeceasedCraft is a Forge modpack for Minecraft Java Edition focused on urban
-exploration, zombie hordes, firearms, vehicles, quests, and technical progression.
+**CurseForge**: https://www.curseforge.com/minecraft/modpacks/deceasedcraft\
+**Type**: Urban zombie apocalypse modpack (Forge)\
+**Minecraft Version**: 1.20.1\
+**Modpack Version**: DeceasedCraft Beta 5.10.17\
+**Memory**: 10GB recommended allocation
 
-## Pinned Release
+## Overview
 
-| Item                 | Value                                         |
-| -------------------- | --------------------------------------------- |
-| Modpack release      | `DeceasedCraft_Beta-5.10.17`                  |
-| CurseForge project   | `deceasedcraft` (project 490660)              |
-| Main file            | 8448820, release channel, uploaded 2026-07-17 |
-| Matching server pack | 8448977                                       |
-| Minecraft            | 1.20.1                                        |
-| Loader               | Forge 47.4.0                                  |
-| Java image           | `itzg/minecraft-server:java17`                |
-| Memory               | 10G                                           |
+DeceasedCraft focuses on urban exploration, zombie hordes, firearms, vehicles,
+quests, and technical progression. The profile pins the regular 5.10.17 release,
+not the optional alpha Distant Horizons edition.
 
-The profile deliberately pins the regular main file, not the optional alpha DH
-Edition. The main archive's manifest was inspected on 2026-09-12 and declares
-Minecraft 1.20.1, Forge 47.4.0, and the standard CurseForge `overrides` layout.
-Although its internal version field still says `5.10.16`, CurseForge publishes the
-archive itself as release `5.10.17`.
+## Quick Start
 
-Version 5.10.x is an open beta. The author warns that its endgame is incomplete and
-that beta worlds are not guaranteed to remain compatible with the eventual 6.0
-release. The older 5.5.5 branch is the complete 1.18.2 experience; this repository
-uses the newest stable file because no older client or world was requested.
+```bash
+./scripts/validate-config.sh deceasedcraft
+./scripts/start-server.sh deceasedcraft
+docker logs -f mc-deceasedcraft
+# Wait for: "Done! For help, type 'help'"
+```
 
-## Requirements and Local Choices
+## Server Details
 
-- The author specifies 8GB as the minimum server allocation and 10GB or more as
-  recommended. This profile starts at 10G; adjust `MEMORY`, `INIT_MEMORY`, and
-  `MAX_MEMORY` together if the host requires another limit.
-- Java 17 is required. The image tag is pinned because newer Java runtimes are not
-  a safe substitute for this Forge 1.20.1 pack.
-- Command blocks are enabled because the author says multiblocks and vehicle spawns
-  depend on them.
-- Nether access is disabled to follow the pack's intended dimension setup. The pack
-  also states that it does not include the End.
-- `ONLINE_MODE=false`, hard difficulty, PvP, and a 20-player limit follow the local
-  repository's existing gameplay/access convention; they are not author requirements.
-- Players must install the same `DeceasedCraft_Beta-5.10.17` client pack with a
-  proper CurseForge-compatible launcher. The server pack is not a client pack.
+| Setting           | Value                                       |
+| ----------------- | ------------------------------------------- |
+| **Route**         | `deceasedcraft.<MC_ROUTER_DOMAIN>`          |
+| **RCON Port**     | 26583                                       |
+| **Memory**        | 10GB                                        |
+| **Type**          | CurseForge (Forge)                          |
+| **Release Pin**   | Main file 8448820                           |
+| **Server Pack**   | Matching file 8448977                       |
+| **Loader**        | Forge 47.4.0                                |
+| **Java**          | 17                                          |
+| **Max Players**   | 20                                          |
+| **Game Settings** | Hard survival, PvP enabled, Nether disabled |
 
-## Installation
+## Connection
 
-The server uses `TYPE=AUTO_CURSEFORGE`. It selects the main modpack archive rather
-than the 552.7MB server ZIP because the automated installer needs `manifest.json` to
-resolve the exact loader and mods. A matching official server pack does exist, but
-no manual extraction is required for this profile.
+- **Address**: `deceasedcraft.<MC_ROUTER_DOMAIN>` through mc-router
+- **Version**: Minecraft 1.20.1 with DeceasedCraft Beta 5.10.17
+- **Client**: Install the regular 5.10.17 client pack with a CurseForge-compatible launcher
 
-Oculus and Colorwheel are explicitly excluded from the dedicated server. Both are
-client-side rendering/shader mods and Colorwheel requires Oculus; leaving Colorwheel
-without Oculus can fail during dedicated-server mod loading.
+Client and server must use the same modpack release. The separate server pack is
+not suitable as a client installation.
 
-```dotenv
+## Configuration
+
+Configuration file: `config/modpacks/deceasedcraft.env`
+
+```bash
 TYPE=AUTO_CURSEFORGE
 CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/deceasedcraft/files/8448820
 CF_SLUG=deceasedcraft
@@ -65,55 +60,53 @@ JAVA_VERSION=java17
 MEMORY=10G
 ENABLE_COMMAND_BLOCK=true
 ALLOW_NETHER=false
+RCON_PORT=26583
 ```
 
-The Java 17 image currently includes a CurseForge API key. A private key can still
-be provided as `CF_API_KEY` in the repository's shared `.env` if the bundled key is
-rate-limited or unavailable. Do not put a key in the modpack profile.
+`AUTO_CURSEFORGE` uses the pinned main file because its manifest identifies the
+exact Minecraft and Forge versions. The matching server ZIP is a reference
+artifact and does not need to be extracted manually.
 
-## Start and Connect
+Oculus and Colorwheel are excluded because they are client-side rendering mods
+and their dependency relationship can fail during dedicated-server loading.
 
-```bash
-./scripts/validate-config.sh deceasedcraft
-./scripts/start-server.sh deceasedcraft
-docker logs -f mc-deceasedcraft
-```
+## World Generation
 
-Wait until the log contains `Done!`. The first installation downloads the full pack
-and can take substantially longer than a normal restart.
+Command blocks are enabled for pack mechanics such as multiblocks and vehicle
+spawns. The Nether is disabled to match the intended dimension setup. If a new
+world does not start in a medium or large Suburb Residential District, the
+author recommends generating another world because progression may be affected.
 
-Players connect through mc-router at:
+## Performance Tips
 
-```text
-deceasedcraft.<MC_ROUTER_DOMAIN>
-```
+- The author specifies 8GB as the minimum server allocation and recommends 10GB or more.
+- Keep `MEMORY`, `INIT_MEMORY`, and `MAX_MEMORY` aligned when changing the limit.
+- Generated cities are expensive; reduce view distance before removing content.
+- Run `./scripts/backup.sh deceasedcraft` before updates or world regeneration.
 
-For example, with the repository's nip.io setup the hostname can look like
-`deceasedcraft.192.168.1.10.nip.io`. RCON is available only on the host loopback at
-port 26583.
+## Troubleshooting
 
-## Operations
+### Server fails while loading rendering mods
 
-```bash
-./scripts/stop-server.sh deceasedcraft
-./scripts/restart-server.sh deceasedcraft
-./scripts/backup.sh deceasedcraft
-./scripts/router.sh status
-docker logs mc-deceasedcraft
-```
+Verify that `CF_EXCLUDE_MODS` still contains both `oculus` and `colorwheel` and
+that the server is using the regular pinned main file.
 
-If a newly generated world does not start in a medium or large Suburb Residential
-District, the author recommends generating another world because progression may be
-affected. Back up an existing world before replacing or regenerating it.
+### World generation blocks progression
 
-## Sources
+Check the starting district against the author's server guide. Back up an
+existing world before deliberately generating a replacement.
 
-Checked on 2026-09-12:
+### Upgrade from beta 5.10.x
 
-- [DeceasedCraft project and author requirements](https://www.curseforge.com/minecraft/modpacks/deceasedcraft)
-- [Pinned DeceasedCraft 5.10.17 main file](https://www.curseforge.com/minecraft/modpacks/deceasedcraft/files/8448820)
+The author does not guarantee that beta worlds will remain compatible with the
+eventual 6.0 release. Always make a verified backup before changing the pin.
+
+## Resources
+
+Verified on September 12, 2026:
+
+- [Official CurseForge project](https://www.curseforge.com/minecraft/modpacks/deceasedcraft)
+- [Pinned 5.10.17 main file](https://www.curseforge.com/minecraft/modpacks/deceasedcraft/files/8448820)
 - [Matching 5.10.17 server pack](https://www.curseforge.com/minecraft/modpacks/deceasedcraft/files/8448977)
-- [DeceasedCraft server guide](https://deceasedcraft.wiki.gg/wiki/Getting_Started_With_a_Server)
+- [Official server guide](https://deceasedcraft.wiki.gg/wiki/Getting_Started_With_a_Server)
 - [itzg Auto CurseForge documentation](https://docker-minecraft-server.readthedocs.io/en/latest/types-and-platforms/mod-platforms/auto-curseforge/)
-- [Oculus project (client environment)](https://www.curseforge.com/minecraft/mc-mods/oculus)
-- [Colorwheel project (client environment)](https://www.curseforge.com/minecraft/mc-mods/colorwheel)
