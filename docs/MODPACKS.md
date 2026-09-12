@@ -23,6 +23,7 @@ Paper servers work without it.
 | `amazing-fps-booster`           | Amazing FPS Booster                                                        | 1.20.6     | 2G     | CurseForge |
 | `better-mc-bmc4`                | Better MC [FORGE] BMC4                                                     | 1.20.1     | 6G     | CurseForge |
 | `better-mc-bmc5`                | Better MC [NEOFORGE] BMC5                                                  | 1.21.1     | 8G     | CurseForge |
+| `blockfront`                    | [BlockFront](modpacks/blockfront.md)                                       | 1.21.1     | 4G     | Modrinth   |
 | `cobblemon`                     | Cobblemon Official [Fabric]                                                | 1.21.1     | 6G     | Modrinth   |
 | `cobbleverse`                   | Cobbleverse                                                                | 1.21.1     | 6G     | Modrinth   |
 | `cursed-walking`                | Cursed Walking                                                             | 1.20.1     | 8G     | CurseForge |
@@ -36,6 +37,7 @@ Paper servers work without it.
 | `parasites-reloaded`            | [Parasites: Reloaded](modpacks/parasites-reloaded.md)                      | 1.12.2     | 6G     | Modrinth   |
 | `pixelmon`                      | The Pixelmon Modpack                                                       | 1.21.1     | 6G     | Modrinth   |
 | `plants-vs-zombies`             | Plants vs. Zombies+                                                        | 26.1.2     | 4G     | CurseForge |
+| `prehistoric-world`             | [Prehistoric World](modpacks/prehistoric-world.md)                         | 1.20.1     | 8G     | Modrinth   |
 | `prominence-2`                  | Prominence II: Hasturian Era                                               | 1.20.1     | 6G     | Modrinth   |
 | `rlcraft`                       | RLCraft                                                                    | 1.12.2     | 6G     | CurseForge |
 | `skyfactory4`                   | [SkyFactory 4](modpacks/skyfactory4.md)                                    | 1.12.2     | 6G     | CurseForge |
@@ -50,7 +52,7 @@ Paper servers work without it.
 | `zombie-invade-100-days`        | Zombie Invade 100 Days                                                     | 1.20.1     | 6G     | Modrinth   |
 
 > [!TIP]
-> Running **all** servers at once needs ~189GB of RAM. Start with the ones you
+> Running **all** servers at once needs ~201GB of RAM. Start with the ones you
 > actually play, and use `./scripts/list-servers.sh` to see what's running.
 
 ## First Start Notes

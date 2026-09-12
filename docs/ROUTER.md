@@ -146,7 +146,7 @@ ships with (see the [upstream README](https://github.com/itzg/mc-router)):
 - **Docker auto-scaling**: with the `mc-router.auto-scale-up`/`-down` labels
   (and a _writable_ Docker socket) mc-router can start a stopped server when a
   player connects and stop it again when the last one leaves. That maps
-  perfectly onto this repo — register all 32 modpacks and only pay RAM for the
+  perfectly onto this repo — register all 34 modpacks and only pay RAM for the
   ones someone is actually playing. It would need compose changes (writable
   socket, labels per server), so it's a future option, not enabled here.
 

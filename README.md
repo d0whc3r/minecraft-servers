@@ -8,7 +8,7 @@ browser (web panel).
 
 ## Features
 
-- 🚀 **Multi-server**: 32 pre-configured modpacks, ready to start (add as many as you want)
+- 🚀 **Multi-server**: 34 pre-configured modpacks, ready to start (add as many as you want)
 - 🧩 **One template, many servers**: a single `docker-compose.yml` instantiated per server — no compose edits to add servers
 - 🌐 **One entry point**: [mc-router](docs/ROUTER.md) fronts every server and routes by hostname — a single port for all of them, no per-server ports
 - 🖥️ **Three ways to manage**: bash scripts, a [terminal dashboard](docs/TUI.md), and a [web panel](apps/web/README.md) with live logs and RCON console
@@ -96,7 +96,7 @@ connects to `vanilla.192.168.1.10.nip.io` with zero DNS/hosts setup. Details:
 
 ## Modpacks
 
-32 servers come pre-configured — from `vanilla` (light, no API key) to
+34 servers come pre-configured — from `vanilla` (light, no API key) to
 RLCraft, All The Mods 10/11, DawnCraft, Cobblemon… Start any with
 `./scripts/start-server.sh <name>`.
 
@@ -119,7 +119,7 @@ config/modpacks/<name>.env   server configuration
 | Doc                                                    | Contents                                          |
 | ------------------------------------------------------ | ------------------------------------------------- |
 | [Quick Start](docs/QUICKSTART.md)                      | Detailed setup, first steps, daily operations     |
-| [Modpack Catalog](docs/MODPACKS.md)                    | The 32 pre-configured servers: versions, RAM      |
+| [Modpack Catalog](docs/MODPACKS.md)                    | The 34 pre-configured servers: versions, RAM      |
 | [Web Panel](apps/web/README.md)                        | Browser dashboard + admin panel (Astro/React)     |
 | [Terminal UI](docs/TUI.md)                             | Keyboard-driven dashboard (mc-tui)                |
 | [Router](docs/ROUTER.md)                               | The single entry point: domains, nip.io, API      |

@@ -138,7 +138,7 @@ minecraft-servers/
 │   ├── diagnose-failed-servers.sh  # Log analysis helper for failed starts
 │   └── analyze-java-versions.sh    # Java version report (used by CI)
 ├── config/
-│   ├── modpacks/               # Per-server .env files (32 pre-configured)
+│   ├── modpacks/               # Per-server .env files (34 pre-configured)
 │   └── templates/              # Configuration templates
 ├── servers/<name>/             # Runtime data (git-ignored)
 │   ├── data/                   # World, configs, logs
