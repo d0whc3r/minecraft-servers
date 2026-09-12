@@ -1,202 +1,90 @@
 # SkyFactory 4
 
-**Type**: Skyblock Modpack  
-**Minecraft Version**: 1.12.2  
-**Modpack Page**: [CurseForge - SkyFactory 4](https://www.curseforge.com/minecraft/modpacks/skyfactory-4)
+Servidor de SkyFactory 4 fijado a una versión reproducible y configurado para
+crear el mundo vacío clásico del pack.
 
-## Overview
+## Versión fijada
 
-SkyFactory 4 is a classic skyblock modpack featuring tech progression in a void world. Start on a single tree and build up through resource generation, automation, and dimensional exploration. Includes Tinkers' Construct, Thermal Expansion, Applied Energistics 2, and custom progression systems.
+| Componente                      | Versión                                     |
+| ------------------------------- | ------------------------------------------- |
+| SkyFactory 4                    | 4.2.4 (release)                             |
+| Archivo principal de CurseForge | `SkyFactory 4-4.2.4.zip` (`3565683`)        |
+| Server pack de referencia       | `SkyFactory-4_Server_4_2_4.zip` (`3565687`) |
+| Minecraft                       | 1.12.2                                      |
+| Forge                           | 14.23.5.2860                                |
+| Java                            | 8                                           |
+| Memoria configurada             | 6 GB                                        |
 
-## Resource Requirements
+`AUTO_CURSEFORGE` usa el archivo principal con manifest, no el ZIP de servidor.
+El server pack oficial se ha usado como referencia para Forge, memoria y
+propiedades del mundo.
 
-### Minimum
+## Mundo SkyFactory
 
-- **RAM**: 4GB allocated to server
-- **CPU**: 2+ cores
-- **Disk Space**: 3GB initial, 10GB+ with player bases
-- **Network**: 512Kbps upload per player
-
-### Recommended
-
-- **RAM**: 6GB for smoother performance
-- **CPU**: 4 cores
-- **Disk Space**: 15GB+ for established servers
-- **SSD**: Recommended for better chunk loading
-
-## Configuration
-
-### Server Config File
-
-Location: `config/modpacks/skyfactory4.env`
+La configuración incluye los valores indicados por la guía multijugador
+oficial:
 
 ```env
-TYPE=AUTO_CURSEFORGE
-VERSION=1.12.2
-MEMORY=6G
-CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/skyfactory-4
-SERVER_NAME=skyfactory4
-MAX_PLAYERS=10
-DIFFICULTY=normal
-VIEW_DISTANCE=10
+LEVEL_TYPE=DEFAULT
+GENERATOR_SETTINGS={"Topography-Preset":"Sky Factory 4"}
+SPAWN_PROTECTION=0
 ```
 
-### Memory Tuning
+Deben estar presentes antes del primer arranque. Si `servers/skyfactory4/data`
+ya contiene un mundo normal, cambiar estas variables no lo convierte en
+skyblock: haz una copia de seguridad y genera un mundo nuevo de forma
+deliberada.
 
-- 1-3 players: 4GB
-- 4-7 players: 5GB
-- 8-10 players: 6GB
-- 10+ players: 8GB
+También se permiten vuelo, Nether y command blocks porque el server pack
+oficial los habilita para las mecánicas del modpack.
 
-## Starting the Server
+## Arranque y acceso
 
 ```bash
-# Start SkyFactory 4 server
 ./scripts/start-server.sh skyfactory4
-
-# Monitor startup (first start: 3-5 minutes)
 docker logs -f mc-skyfactory4
 ```
 
-## Connecting
+- Ruta de juego: `skyfactory4.<MC_ROUTER_DOMAIN>`
+- Cliente requerido: SkyFactory 4 4.2.4
+- RCON local: `127.0.0.1:26565`
+- Datos: `servers/skyfactory4/data`
+- Backups: `backups/skyfactory4/`
 
-- **Address**: `skyfactory4.<MC_ROUTER_DOMAIN>` (mc-router; e.g. `skyfactory4.192.168.1.10.nip.io`)
-- **Client**: Install SkyFactory 4 from CurseForge
-- **Version**: Must match server (1.12.2)
+El perfil conserva las decisiones locales del repositorio: máximo de 10
+jugadores, dificultad normal, PvP habilitado y `ONLINE_MODE=false`. Activa el
+modo online si el servidor va a ser público.
 
-## Gameplay Notes
+## Islas multijugador
 
-### Starting Island
+La guía oficial documenta estos comandos de Topography:
 
-Each player spawns on their own small island. World is void - falling = death!
-
-### Early Game Progression
-
-1. **Tree farming**: Use saplings and dirt to expand
-2. **Cobblestone generation**: Use water + lava
-3. **Ore generation**: Sieving gravel/sand/dust
-4. **Basic machines**: Crafting table → Furnace → Basic machines
-
-### Mid-Game
-
-- **Applied Energistics 2**: Storage and autocrafting
-- **Thermal Expansion**: Power generation and automation
-- **Tinkers' Construct**: Custom tools and weapons
-
-### Late Game
-
-- **Extreme Reactors**: Massive power generation
-- **Refined Storage**: Alternative to AE2
-- **Prestige System**: Reset progress for rewards
-
-## Server-Specific Settings
-
-### Spawn Protection
-
-Edit `servers/skyfactory4/data/server.properties`:
-
-```properties
-# Disable spawn protection (skyblock)
-spawn-protection=0
-
-# Allow nether
-allow-nether=true
-
-# Peaceful mode or not (recommended: normal)
-difficulty=2
+```text
+/topography spawn [player]
+/topography island
+/topography island home [player]
+/topography island new [player]
+/topography island set [player] x z
+/topography island info [player]
+/topography island invite
+/topography island accept
 ```
 
-### Island Spacing
+Prestige es opcional y no se activa desde este perfil. Si se quiere usar, debe
+configurarse expresamente en `prestige.cfg` después de que el pack lo genere.
 
-Players spawn on separate islands. Configure spacing in:
-`servers/skyfactory4/data/config/skyfactory.cfg`
+## Actualizaciones
 
-## Performance Tips
+Antes de cambiar desde una versión anterior a 4.2.4, abre las tumbas existentes
+y realiza un backup: las notas oficiales avisan de un cambio de mod de tumbas
+que puede hacer inaccesibles las antiguas.
 
-SkyFactory 4 is generally lighter than modern modpacks:
+## Fuentes verificadas
 
-- **Stable TPS**: Usually maintains 20 TPS with 4GB RAM
-- **Chunk Loading**: Players should use minimal chunk loaders
-- **Automation**: Excessive cobblestone generators can cause lag
+Comprobadas el 12 de septiembre de 2026:
 
-### Common Lag Sources
-
-1. **Too many sieves running**: Limit to 4-5 per player
-2. **Huge AE2 systems**: Use level emitters to control crafting
-3. **Animal farms**: Use industrial alternatives (Rancher, etc.)
-
-## Backup Recommendations
-
-```bash
-# Daily backups recommended
-./scripts/backup.sh skyfactory4
-
-# Worlds typically 200MB-2GB after extended play
-```
-
-## Admin Commands
-
-```bash
-# Enter console
-docker exec -it mc-skyfactory4 rcon-cli
-
-# Common commands
-op PlayerName
-tp @a 0 64 0          # Teleport all to spawn
-gamemode 1 PlayerName # Creative mode
-
-# Exit
-exit
-```
-
-## Troubleshooting
-
-### Players Falling Through World
-
-This is normal - void world! Players need to:
-
-1. Be careful near edges
-2. Build platforms before moving
-3. Use flight items (Angel Ring, etc.) later
-
-### Islands Not Generating
-
-Check config: `servers/skyfactory4/data/config/skyfactory.cfg`
-
-Ensure spawn type is set correctly.
-
-## Mod Highlights
-
-### Prestige System
-
-Unique to SF4 - allows resetting progress for powerful bonuses.
-
-### Bonsai Trees
-
-Automated tree farming in small space - essential early game.
-
-### Culinary Construct
-
-Custom food creation for powerful buffs.
-
-### Mystical Agriculture
-
-Resource farming through crops - late game essential.
-
-## Community & Support
-
-- **Modpack Discord**: [SkyFactory Discord](https://discord.gg/playcdu)
-- **Wiki**: [SkyFactory 4 Wiki](https://ftb.fandom.com/wiki/FTB_SkyFactory_4)
-- **Reddit**: [r/SkyFactory](https://reddit.com/r/SkyFactory)
-
-## Recommended Rules
-
-1. **No griefing** other islands
-2. **Request permission** before visiting other islands
-3. **Limit chunk loaders**: 1-2 per player
-4. **Regular backups**: Before major builds
-
-## Additional Resources
-
-- [SkyFactory 4 Quest Book](https://ftb.fandom.com/wiki/FTB_SkyFactory_4/Quests)
-- [Progression Guide](https://ftb.fandom.com/wiki/FTB_SkyFactory_4/Getting_Started)
+- [Proyecto oficial en CurseForge](https://www.curseforge.com/minecraft/modpacks/skyfactory-4)
+- [Archivo principal 4.2.4](https://www.curseforge.com/minecraft/modpacks/skyfactory-4/files/3565683)
+- [Server pack 4.2.4](https://www.curseforge.com/minecraft/modpacks/skyfactory-4/files/3565687)
+- [Guía multijugador oficial](https://github.com/DarkPacks/SkyFactory-4/wiki/Multiplayer-Instructions)
+- [Variables de generación de itzg/minecraft-server](https://docker-minecraft-server.readthedocs.io/en/latest/configuration/server-properties/#level-type-and-generator-settings)

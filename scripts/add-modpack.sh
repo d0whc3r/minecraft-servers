@@ -20,7 +20,7 @@ declare -A TEMPLATES=(
   ["rlcraft"]="RLCraft,AUTO_CURSEFORGE,1.12.2,6G,https://www.curseforge.com/minecraft/modpacks/rlcraft,RLCraft"
   ["bmc4"]="Better MC BMC4,AUTO_CURSEFORGE,1.20.1,6G,https://www.curseforge.com/minecraft/modpacks/better-mc-forge-bmc4,Better MC BMC4"
   ["pixelmon"]="The Pixelmon Modpack,MODRINTH,1.21.1,6G,the-pixelmon-modpack,Pixelmon"
-  ["deceasedcraft"]="DeceasedCraft,AUTO_CURSEFORGE,1.20.1,6G,https://www.curseforge.com/minecraft/modpacks/deceasedcraft,DeceasedCraft"
+  ["deceasedcraft"]="DeceasedCraft,AUTO_CURSEFORGE,1.20.1,10G,https://www.curseforge.com/minecraft/modpacks/deceasedcraft/files/8448820,DeceasedCraft"
   ["cursed-walking"]="Cursed Walking,AUTO_CURSEFORGE,1.20.1,8G,https://www.curseforge.com/minecraft/modpacks/cursed-walking-a-modern-zombie-apocalypse,Cursed Walking"
   ["vanilla"]="Vanilla Optimized,PAPER,26.2,2G,,Vanilla Server"
 )

@@ -141,12 +141,12 @@ Available servers (full catalog in [Modpacks](MODPACKS.md)):
 | `better-mc-bmc5`         | 1.21.1  | 8G     | BMC4 successor (NeoForge)              |
 | `cursed-walking`         | 1.20.1  | 8G     | Zombie survival                        |
 | `dawncraft`              | 1.18.2  | 8G     | RPG soulslike adventure                |
-| `deceasedcraft`          | 1.20.1  | 6G     | Urban zombie apocalypse                |
+| `deceasedcraft`          | 1.20.1  | 10G    | Urban zombie apocalypse                |
 | `homestead`              | 1.20.1  | 6G     | Cozy survival                          |
 | `zombie-invade-100-days` | 1.20.1  | 6G     | Horde siege survival                   |
 | `pixelmon`               | 1.21.1  | 6G     | Classic Pokémon mod                    |
 | `prominence-2`           | 1.20.1  | 6G     | RPG adventure                          |
-| …                        |         |        | 28 total — see [Modpacks](MODPACKS.md) |
+| …                        |         |        | 29 total — see [Modpacks](MODPACKS.md) |
 
 > CurseForge modpacks require `CF_API_KEY` in `.env`. First start downloads the whole
 > modpack — give it 5–10 minutes and watch `docker logs -f mc-<name>`.

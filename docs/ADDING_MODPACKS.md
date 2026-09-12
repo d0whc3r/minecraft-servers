@@ -44,14 +44,14 @@ Options:
 | `atm10sky`       | All The Mods 10: To the Sky | AUTO_CURSEFORGE | 1.21.1  | 8G     |
 | `bmc4`           | Better MC BMC4              | AUTO_CURSEFORGE | 1.20.1  | 6G     |
 | `cursed-walking` | Cursed Walking              | AUTO_CURSEFORGE | 1.20.1  | 8G     |
-| `deceasedcraft`  | DeceasedCraft               | AUTO_CURSEFORGE | 1.20.1  | 6G     |
+| `deceasedcraft`  | DeceasedCraft               | AUTO_CURSEFORGE | 1.20.1  | 10G    |
 | `pixelmon`       | The Pixelmon Modpack        | MODRINTH        | 1.21.1  | 6G     |
 | `prominence2`    | Prominence II RPG           | AUTO_CURSEFORGE | 1.20.1  | 6G     |
 | `rlcraft`        | RLCraft                     | AUTO_CURSEFORGE | 1.12.2  | 6G     |
 | `skyfactory4`    | SkyFactory 4                | AUTO_CURSEFORGE | 1.12.2  | 4G     |
 | `vanilla`        | Vanilla Optimized           | PAPER           | 26.2    | 2G     |
 
-> The script's templates are independent from the 28 pre-configured servers already in
+> The script's templates are independent from the 29 pre-configured servers already in
 > `config/modpacks/`. The pre-configured servers are started directly with
 > `./scripts/start-server.sh <name>` — no need to "add" them first.
 
