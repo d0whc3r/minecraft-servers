@@ -27,6 +27,12 @@ if ! validate_server_name "$SERVER_NAME"; then
   exit 2
 fi
 
+# Serialize per-server operations: a restart racing a backup/restore would
+# interleave container stop/start with the world on disk
+if ! acquire_server_lock "$SERVER_NAME" "restart"; then
+  exit 1
+fi
+
 # Get container name
 CONTAINER_NAME=$(get_container_name "$SERVER_NAME")
 

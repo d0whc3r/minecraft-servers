@@ -92,7 +92,8 @@ matrix.
   versions each chunk needs (`scripts/ci/generate-test-matrix.sh`)
 - `test`: per chunk — setup deps/docker, create `.env`, filter modpacks,
   pre-pull the required images, run `tests/bats/server-startup.bats`
-  (`US1-TC007`), upload logs as artifacts
+  (one `US1-TC007` test per modpack, so results report each server
+  individually), upload logs as artifacts
 - `summarize`: collects artifacts and publishes a run summary
   (`scripts/ci/generate-summary.sh`)
 
@@ -153,7 +154,13 @@ workflow's `env` block **and** in `scripts/ci/create-test-env.sh`.
 4. **US1-TC004:** Script accessibility checks (fast, no Docker)
 5. **US1-TC005:** Dynamic modpack detection (fast, no Docker)
 6. **US1-TC006:** Modpack name extraction (fast, no Docker)
-7. **US1-TC007:** Full server startup and readiness (slow, Docker, manual E2E)
+7. **US1-TC007:** Full server startup and readiness (slow, Docker, manual E2E) —
+   one dynamically generated test per modpack (template in
+   `server-startup.bats`); run a single server with
+   `bats tests/bats/server-startup.bats --filter <server>` or several at once
+   with `bats --jobs N --no-parallelize-across-files
+tests/bats/server-startup.bats` (the flag skips bats' across-files mode,
+   which needs GNU parallel; within-file jobs only need `flock`)
 8. **US1-TC008:** Compose files render router-only wiring (fast)
 9. **US1-TC009:** `router.sh` argument validation (fast, no Docker)
 10. **US1-TC010:** `common.sh` cross-script API completeness (fast, no Docker)
@@ -170,7 +177,7 @@ workflow's `env` block **and** in `scripts/ci/create-test-env.sh`.
 | --------------- | --------------------- | -------------------------------- |
 | **Linting**     | `pnpm run lint`       | `code-quality.yml`               |
 | **Quick Tests** | `pnpm run test:quick` | `bats-tests.yml` + pre-push hook |
-| **Full Tests**  | `pnpm run test`       | `e2e-tests.yml` (manual)         |
+| **Full Tests**  | `pnpm run test:full`  | `e2e-tests.yml` (manual)         |
 | **Environment** | Local `.env` file     | Workflow `env` block             |
 | **CF_API_KEY**  | Manual `.env` setup   | GitHub secret                    |
 

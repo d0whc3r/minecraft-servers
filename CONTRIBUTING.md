@@ -117,11 +117,15 @@ tools are pinned in `apps/tui/go.mod`'s `tool` block and run with `go tool`.
 ### Running Tests
 
 ```bash
-# Run all BATS tests (includes the slow server-startup E2E test)
+# Fast suite: syntax + config validation (no Docker daemon needed) —
+# this is what `pnpm test` runs
 pnpm test
 
-# Fast validation suite only (no server startup)
-pnpm run test:quick
+# Full suite: ALSO starts every modpack server (slow, needs Docker)
+pnpm run test:full
+
+# Run the E2E startup test of a single server
+pnpm exec bats tests/bats/server-startup.bats --filter <server-name>
 ```
 
 ### Test Guidelines

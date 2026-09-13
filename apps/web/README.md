@@ -141,15 +141,17 @@ MCPANEL_USER=myadmin MCPANEL_PASSWORD='a long passphrase' pnpm --filter @minecra
 rm -rf apps/web/data
 pnpm --filter @minecraft-servers/web start
 
-# 3. Change the password but keep the session key (browser sessions
-#    stay signed in): regenerate only auth.json, then restart.
+# 3. Change the password but keep the session key: regenerate only
+#    auth.json, then restart. Browser sessions are signed out (tokens carry
+#    the credential version, so a password change revokes them all).
 rm apps/web/data/auth.json
 MCPANEL_PASSWORD='new-pass' pnpm --filter @minecraft-servers/web start
 ```
 
 Other useful facts:
 
-- Sessions last **24 h** (HMAC-signed cookie, `HttpOnly`, `SameSite=Lax`).
+- Sessions last **24 h** (HMAC-signed cookie, `HttpOnly`, `SameSite=Lax`);
+  changing the password signs out every browser instantly.
 - Sign-in is rate limited: **8 failed attempts per IP every 10 minutes**.
 - `MCPANEL_PUBLIC_VIEW=false` locks the dashboard behind the login too.
 - Forgot the password and lost the console log? Just `rm -rf apps/web/data`

@@ -1,10 +1,17 @@
 #!/usr/bin/env bats
-# Test Suite: End-to-end server startup
+# Test Suite: End-to-end server startup (one test per server)
 #
 # US1-TC007 starts every selected modpack and waits until the server logs
 # "Done!". It is slow (minutes per server) and needs a running Docker
 # daemon plus a prepared .env, which is why it only runs in the manual
 # e2e-tests.yml workflow (the fast suite lives in config-validation.bats).
+#
+# Unlike the fast suite, this file does not declare its cases statically:
+# it registers one dynamically generated test per modpack (bats_test_function,
+# BATS >= 1.6) at load time, all sharing the same test_server_startup
+# template. Every server is therefore reported (and can fail) on its own,
+# bats --filter <name> runs a single server's test, and bats --jobs N runs
+# N servers at once (needs GNU parallel, preinstalled on CI runners).
 # The set of modpacks under test is narrowed with TEST_MODPACKS.
 #
 # Isolation: real servers keep their containers, worlds and backups. Every
@@ -17,14 +24,53 @@
 #   - MC_ROUTER_PORT/MC_ROUTER_API_PORT moved off the real router ports
 #   - RCON_PORT_OFFSET=1000            published RCON becomes 27565-27664,
 #                                      so tests can run beside live servers
-# Every server's test data is deleted as soon as its check finishes, and
-# teardown removes whatever a crash may have left behind.
+# Containers and compose projects are named per server (mc-test-<server>),
+# every server publishes its own loopback RCON port and writes data under
+# its own directory, so parallel tests never fight over these resources.
+# Each server's test data is deleted as soon as its check finishes; the
+# shared test router is torn down by whichever test finishes last (tracked
+# through a runner registry file), and teardown removes whatever a crash
+# may have left behind.
 
 # Isolation knobs (keep in sync with the defaults in scripts/common.sh)
 TEST_CONTAINER_PREFIX="mc-test-"
 TEST_DATA_BASE_DIR="$(pwd)/.tmp/e2e-data"
 TEST_ROUTER_PORT=25600
 TEST_ROUTER_API_PORT=25601
+RUNNERS_REGISTRY="${TEST_DATA_BASE_DIR}/.active-runners"
+
+# The suite may be invoked from anywhere; everything below (config lookups,
+# ./scripts/*.sh, compose files) expects the project root as cwd. This file
+# lives two directories below it (tests/bats/).
+cd "$(cd "${BATS_TEST_DIRNAME:-$(dirname "${BATS_TEST_FILENAME:-.}")}/../.." && pwd)" || exit 1
+
+# ---------------------------------------------------------------------------
+# Test selection (top-level: runs when bats loads this file, before any test)
+# TEST_MODPACKS (set by scripts/ci/filter-modpacks.sh) holds a space-
+# separated list; without it every config under config/modpacks is tested.
+# ---------------------------------------------------------------------------
+TEST_SERVERS=()
+if [ -n "${TEST_MODPACKS:-}" ]; then
+    for modpack_name in $TEST_MODPACKS; do
+        if [ -f "config/modpacks/${modpack_name}.env" ]; then
+            # Guard against duplicates (bats aborts on repeated test names)
+            [[ " ${TEST_SERVERS[*]-} " == *" ${modpack_name} "* ]] || TEST_SERVERS+=("$modpack_name")
+        fi
+    done
+else
+    while IFS= read -r -d '' file; do
+        TEST_SERVERS+=("$(basename "$file" .env)")
+    done < <(find config/modpacks -name "*.env" -type f -print0 | sort -z)
+fi
+
+if [ "${#TEST_SERVERS[@]}" -gt 0 ]; then
+    for server in "${TEST_SERVERS[@]}"; do
+        bats_test_function --description "US1-TC007: server '${server}' fully starts and becomes ready" \
+            -- "test_server_startup" "$server"
+    done
+else
+    bats_test_function --description "US1-TC007: no modpack configs selected" -- "test_no_servers_selected"
+fi
 
 setup() {
     # Scripts and configs are referenced relative to the project root
@@ -43,20 +89,40 @@ setup() {
     export CONTAINER_CREATE_TIMEOUT="${CONTAINER_CREATE_TIMEOUT:-30}"
 
     mkdir -p "$SERVERS_BASE_DIR"
+    # Register this test's process so the last one out can tear the shared
+    # test router down without killing tests still running in parallel
+    echo "$$" >> "$RUNNERS_REGISTRY"
 }
 
 teardown() {
-    # Remove the dedicated test router (the real minecraft-router is a
-    # different project/container and stays untouched). Bounded with timeout:
-    # a wedged container runtime must not stall the suite forever.
-    timeout 120 docker compose -p "${ROUTER_PROJECT_NAME:-minecraft-router-test}" \
-        -f docker-compose.router.yml down -v > /dev/null 2>&1 || true
+    # Safety net for a container the test body could not remove (crash, or a
+    # bats abort before its own cleanup ran): only ever touches test containers
+    if [ -n "${TEST_SERVER_UNDER_TEST:-}" ]; then
+        timeout 60 docker rm -f "${TEST_CONTAINER_PREFIX}${TEST_SERVER_UNDER_TEST}" > /dev/null 2>&1 || true
+    fi
 
-    # Safety net for data of servers whose check was interrupted: only ever
-    # touches the dedicated test tree, never the real servers/ and backups/
-    if [ -d "${SERVERS_BASE_DIR:-/nonexistent}" ]; then
-        remove_tree "${SERVERS_BASE_DIR}/servers"
-        remove_tree "${SERVERS_BASE_DIR}/backups"
+    # Drop this process from the runner registry; only the last running test
+    # removes the dedicated test router (the real minecraft-router is a
+    # different project/container and stays untouched) and sweeps leftover
+    # data of servers whose check was interrupted. Bounded with timeout: a
+    # wedged container runtime must not stall the suite forever.
+    local remaining=0
+    if [ -f "$RUNNERS_REGISTRY" ]; then
+        grep -v "^$$\$" "$RUNNERS_REGISTRY" > "${RUNNERS_REGISTRY}.next" 2> /dev/null || true
+        mv "${RUNNERS_REGISTRY}.next" "$RUNNERS_REGISTRY"
+        remaining=$(wc -l < "$RUNNERS_REGISTRY")
+    fi
+
+    if [ "$remaining" -eq 0 ]; then
+        timeout 120 docker compose -p "${ROUTER_PROJECT_NAME:-minecraft-router-test}" \
+            -f docker-compose.router.yml down -v > /dev/null 2>&1 || true
+
+        # Only ever touches the dedicated test tree, never the real
+        # servers/ and backups/ trees
+        if [ -d "${SERVERS_BASE_DIR:-/nonexistent}" ]; then
+            remove_tree "${SERVERS_BASE_DIR}/servers"
+            remove_tree "${SERVERS_BASE_DIR}/backups"
+        fi
     fi
 }
 
@@ -82,15 +148,41 @@ capture_server_logs() {
 }
 
 # Delete the test world/mods/backup data of one server. Called as soon as its
-# check finishes so sequential runs never accumulate gigabytes on disk.
+# check finishes so nothing accumulates on disk between runs.
 cleanup_test_server_data() {
     local modpack_name="$1"
     remove_tree "${SERVERS_BASE_DIR}/servers/${modpack_name}"
     remove_tree "${SERVERS_BASE_DIR}/backups/${modpack_name}"
 }
 
-# Test Case: US1-TC007 - servers fully start and become ready (end-to-end)
-@test "US1-TC007: All servers fully start and become ready" {
+# Bring the server container down and clean its data. Shared by every exit
+# path of the template below.
+remove_test_server() {
+    local modpack_name="$1" server_pid="$2" container_name="$3"
+
+    kill -- -$server_pid > /dev/null 2>&1 || true
+    capture_server_logs "$modpack_name" "$container_name"
+    ./scripts/stop-server.sh "$modpack_name" > /dev/null 2>&1 || true
+    timeout 60 docker rm -f "$container_name" > /dev/null 2>&1 || true
+    cleanup_test_server_data "$modpack_name"
+}
+
+# Fallback when the selection above found nothing (keeps bats reporting a
+# defined result instead of an empty suite)
+test_no_servers_selected() {
+    skip "No modpack configs found for this test run (TEST_MODPACKS='${TEST_MODPACKS:-}')"
+}
+
+# ---------------------------------------------------------------------------
+# US1-TC007 template: start one modpack and wait until its server logs the
+# Minecraft readiness banner. Registered once per server, so $1 is the
+# modpack name. Any failure reports against that single server only.
+# ---------------------------------------------------------------------------
+test_server_startup() {
+    local modpack_name="$1"
+    local container_name="${TEST_CONTAINER_PREFIX}${modpack_name}"
+    TEST_SERVER_UNDER_TEST="$modpack_name"
+
     # The end-to-end test needs a Docker daemon; skip cleanly when unavailable
     if ! docker info > /dev/null 2>&1; then
         skip "Docker daemon is not running"
@@ -98,233 +190,146 @@ cleanup_test_server_data() {
 
     local max_wait_time="$MAX_WAIT_TIME"
     local check_interval=5 # Check logs every 5 seconds
-    local failed_servers=()
-    local successful_servers=()
-    local total_servers=0
 
-    # Get modpack configurations - respect TEST_MODPACKS environment variable if set
-    local modpack_configs=()
-    if [ -n "${TEST_MODPACKS:-}" ]; then
-        echo "🔍 Using filtered modpacks from TEST_MODPACKS: $TEST_MODPACKS"
-        # Convert space-separated string to array
-        local test_modpacks_array=($TEST_MODPACKS)
-        for modpack_name in "${test_modpacks_array[@]}"; do
-            local config_file="config/modpacks/${modpack_name}.env"
-            if [ -f "$config_file" ]; then
-                modpack_configs+=("$config_file")
-            else
-                echo "⚠️  Warning: Config file not found: $config_file"
-            fi
-        done
-    else
-        echo "🔍 No TEST_MODPACKS filter set, testing all modpacks"
-        # Fallback to all modpacks if no filter is set
-        while IFS= read -r -d '' file; do
-            modpack_configs+=("$file")
-        done < <(find config/modpacks -name "*.env" -type f -print0 | sort -z)
-    fi
-
-    [ ${#modpack_configs[@]} -gt 0 ] || skip "No modpack configs found for this test chunk"
-
-    echo "🚀 Testing full startup for ${#modpack_configs[@]} modpack(s) in this chunk..."
-    echo "📋 Modpacks to test: $(for config in "${modpack_configs[@]}"; do basename "$config" .env; done | tr '\n' ' ')"
-    echo "⏱️  Max wait time per server: ${max_wait_time}s"
-    echo "🔍 Check interval: ${check_interval}s"
+    echo "🚀 Testing full startup for '$modpack_name'"
+    echo "📋 Config: config/modpacks/${modpack_name}.env"
+    echo "📦 Container: $container_name"
+    echo "⏱️  Max wait time: ${max_wait_time}s, check interval: ${check_interval}s"
     echo "🧪 Isolation: containers '${CONTAINER_NAME_PREFIX}*', data under ${SERVERS_BASE_DIR}"
     echo "---"
 
-    for config_file in "${modpack_configs[@]}"; do
-        total_servers=$((total_servers + 1))
-        local modpack_name
-        modpack_name=$(basename "$config_file" .env)
-        local container_name="${CONTAINER_NAME_PREFIX}${modpack_name}"
+    # Start the server in background (own process group so a failure
+    # timeout can kill its whole tree, compose children included)
+    echo "🚀 Starting server '$modpack_name'..."
+    setsid ./scripts/start-server.sh "$modpack_name" &
+    local server_pid=$!
 
-        echo ""
-        echo "[$total_servers/${#modpack_configs[@]}] Testing: $modpack_name"
-        echo "Monitoring: Check every ${check_interval}s, max ${max_wait_time}s"
-        echo "Container: $container_name"
-
-        # Start the server in background (own process group so a failure
-        # timeout can kill its whole tree, compose children included)
-        echo "🚀 Starting server '$modpack_name'..."
-        setsid ./scripts/start-server.sh "$modpack_name" &
-        local server_pid=$!
-
-        # Wait for container to be created
-        echo "⏳ Waiting for container creation..."
-        local wait_container=0
-        while [ $wait_container -lt "$CONTAINER_CREATE_TIMEOUT" ]; do
-            if docker ps -a --filter "name=${container_name}" --format "{{.Names}}" | grep -q "^${container_name}$"; then
-                echo "  ✅ Container created successfully"
-                break
-            fi
-            sleep 1
-            wait_container=$((wait_container + 1))
-        done
-
-        if [ $wait_container -ge "$CONTAINER_CREATE_TIMEOUT" ]; then
-            echo "  ❌ Container not created after ${CONTAINER_CREATE_TIMEOUT}s"
-            failed_servers+=("$modpack_name:container_not_created")
-            kill -- -$server_pid > /dev/null 2>&1 || true
-            cleanup_test_server_data "$modpack_name"
-            continue
+    # Wait for container to be created
+    echo "⏳ Waiting for container creation..."
+    local wait_container=0
+    while [ $wait_container -lt "$CONTAINER_CREATE_TIMEOUT" ]; do
+        if docker ps -a --filter "name=${container_name}" --format "{{.Names}}" | grep -q "^${container_name}$"; then
+            echo "  ✅ Container created successfully"
+            break
         fi
-
-        # Monitor logs until server is ready or fails
-        local elapsed=0
-        local server_ready=false
-        local last_log_line=""
-        local last_progress_time=0
-
-        echo "→ Monitoring startup progress..."
-        echo "   📊 Progress updates every 5 seconds"
-        echo "   🔍 Checking for 'Done!' message"
-
-        while [ $elapsed -lt "$max_wait_time" ]; do
-            # CRITICAL: Check container status FIRST before any operation
-            local container_status
-            container_status=$(docker inspect "${container_name}" --format='{{.State.Status}}' 2> /dev/null || echo "not_found")
-
-            if [ "$container_status" != "running" ]; then
-                # Container is not running - could be exited, dead, or removed
-                local exit_code
-                exit_code=$(docker inspect "${container_name}" --format='{{.State.ExitCode}}' 2> /dev/null || echo "unknown")
-
-                echo "  ❌ Container stopped (status: $container_status, exit code: $exit_code)"
-                echo "  📄 Last 20 log lines:"
-                docker logs "$container_name" 2>&1 | tail -20 | sed 's/^/     /'
-
-                if [ "$exit_code" = "unknown" ]; then
-                    failed_servers+=("$modpack_name:container_disappeared")
-                else
-                    failed_servers+=("$modpack_name:stopped_exit_$exit_code")
-                fi
-
-                kill -- -$server_pid > /dev/null 2>&1 || true
-                capture_server_logs "$modpack_name" "$container_name"
-                docker rm -f "$container_name" > /dev/null 2>&1 || true
-                cleanup_test_server_data "$modpack_name"
-                break
-            fi
-
-            # Container is running - safe to get logs
-            # Show progress more frequently (every 5 seconds instead of 15)
-            if [ $((elapsed - last_progress_time)) -ge 5 ] || [ $elapsed -eq 0 ]; then
-                local current_log_tail
-                current_log_tail=$(docker logs "$container_name" 2>&1 | tail -3 | tr '\n' ' | ' | sed 's/  */ /g' | sed 's/| $//')
-
-                if [ "$current_log_tail" != "$last_log_line" ] && [ -n "$current_log_tail" ]; then
-                    echo "  📝 [${elapsed}s] $modpack_name: ${current_log_tail:0:120}..."
-                    last_log_line="$current_log_tail"
-                    last_progress_time=$elapsed
-                fi
-            fi
-
-            # Check for server ready message (most reliable indicator)
-            local current_logs
-            current_logs=$(docker logs "$container_name" 2>&1)
-
-            if echo "$current_logs" | grep -q 'Done ([0-9.]*s)! For help, type "help"'; then
-                server_ready=true
-                echo "  ✅ Server '$modpack_name' fully ready after ${elapsed}s!"
-                break
-            fi
-
-            # Alternative check for older Minecraft versions
-            if echo "$current_logs" | grep -q 'Done! For help, type "help"'; then
-                server_ready=true
-                echo "  ✅ Server '$modpack_name' fully ready after ${elapsed}s!"
-                break
-            fi
-
-            # Check for fatal errors. Autopause/knockd noise is filtered
-            # first: when the daemon cannot grab the interface (rootless
-            # podman) it logs "Failed to start knockd daemon" yet the
-            # server itself starts fine. Exceptions are only fatal when
-            # they hit the main/server thread — background workers can
-            # throw survivable exceptions while the server keeps loading.
-            if echo "$current_logs" | grep -v -i "autopause\|knockd" | grep -q -i "java.lang.OutOfMemoryError\|Server crashed\|Failed to start\|Could not reserve enough space\|Exception in thread \"main\"\|Exception in thread \"Server thread\""; then
-                echo "  ❌ Fatal error detected in '$modpack_name' logs"
-                echo "  📄 Last 20 log lines:"
-                echo "$current_logs" | tail -20 | sed 's/^/     /'
-                failed_servers+=("$modpack_name:fatal_error")
-                kill -- -$server_pid > /dev/null 2>&1 || true
-                capture_server_logs "$modpack_name" "$container_name"
-                docker rm -f "$container_name" > /dev/null 2>&1 || true
-                cleanup_test_server_data "$modpack_name"
-                break
-            fi
-
-            sleep "$check_interval"
-            elapsed=$((elapsed + check_interval))
-        done
-
-        # Verify result
-        if [ "$server_ready" = true ]; then
-            echo "  ✅ Completed in ${elapsed}s"
-            successful_servers+=("$modpack_name")
-
-            # Clean up container, then the test data it generated
-            capture_server_logs "$modpack_name" "$container_name"
-            ./scripts/stop-server.sh "$modpack_name" > /dev/null 2>&1 || true
-            docker rm -f "$container_name" > /dev/null 2>&1 || true
-            cleanup_test_server_data "$modpack_name"
-        else
-            # Only add timeout if server wasn't already marked as failed
-            if ! echo "${failed_servers[*]}" | grep -q "$modpack_name"; then
-                # Check one last time if container is still running
-                local final_status
-                final_status=$(docker inspect "${container_name}" --format='{{.State.Status}}' 2> /dev/null || echo "not_found")
-
-                if [ "$final_status" = "running" ]; then
-                    echo "  ⏰ Timeout after ${max_wait_time}s (container still running)"
-                    echo "  Last 20 log lines:"
-                    docker logs "$container_name" 2>&1 | tail -20 | sed 's/^/    /'
-                    failed_servers+=("$modpack_name:timeout")
-                else
-                    local final_exit_code
-                    final_exit_code=$(docker inspect "${container_name}" --format='{{.State.ExitCode}}' 2> /dev/null || echo "unknown")
-                    echo "  ⏰ Timeout - container stopped (status: $final_status, exit: $final_exit_code)"
-                    echo "  Last 20 log lines:"
-                    docker logs "$container_name" 2>&1 | tail -20 | sed 's/^/    /'
-                    failed_servers+=("$modpack_name:timeout_stopped_$final_exit_code")
-                fi
-
-                # Clean up container, then the test data it generated
-                kill -- -$server_pid > /dev/null 2>&1 || true
-                capture_server_logs "$modpack_name" "$container_name"
-                ./scripts/stop-server.sh "$modpack_name" > /dev/null 2>&1 || true
-                docker rm -f "$container_name" > /dev/null 2>&1 || true
-                cleanup_test_server_data "$modpack_name"
-            fi
-        fi
+        sleep 1
+        wait_container=$((wait_container + 1))
     done
 
-    # Final summary
-    echo ""
-    echo "🎯 === FINAL TEST SUMMARY ==="
-    echo "📊 Total servers tested: $total_servers"
-    echo "✅ Successful: ${#successful_servers[@]}"
-    echo "❌ Failed: ${#failed_servers[@]}"
-
-    if [ ${#successful_servers[@]} -gt 0 ]; then
-        echo ""
-        echo "✅ SUCCESSFUL SERVERS:"
-        for server in "${successful_servers[@]}"; do
-            echo "  🟢 $server"
-        done
+    if [ $wait_container -ge "$CONTAINER_CREATE_TIMEOUT" ]; then
+        echo "  ❌ Container not created after ${CONTAINER_CREATE_TIMEOUT}s"
+        kill -- -$server_pid > /dev/null 2>&1 || true
+        cleanup_test_server_data "$modpack_name"
+        fail "container not created after ${CONTAINER_CREATE_TIMEOUT}s"
     fi
 
-    if [ ${#failed_servers[@]} -gt 0 ]; then
-        echo ""
-        echo "❌ FAILED SERVERS:"
-        for server in "${failed_servers[@]}"; do
-            echo "  🔴 $server"
-        done
-        echo ""
-        echo "💡 Check the test artifacts for detailed logs"
+    # Monitor logs until server is ready or fails
+    local elapsed=0
+    local server_ready=false
+    local last_log_line=""
+    local last_progress_time=0
+
+    echo "→ Monitoring startup progress..."
+    echo "   📊 Progress updates every 5 seconds"
+    echo "   🔍 Checking for 'Done!' message"
+
+    while [ $elapsed -lt "$max_wait_time" ]; do
+        # CRITICAL: Check container status FIRST before any operation
+        local container_status
+        container_status=$(docker inspect "${container_name}" --format='{{.State.Status}}' 2> /dev/null || echo "not_found")
+
+        if [ "$container_status" != "running" ]; then
+            # Container is not running - could be exited, dead, or removed
+            local exit_code
+            exit_code=$(docker inspect "${container_name}" --format='{{.State.ExitCode}}' 2> /dev/null || echo "unknown")
+
+            echo "  ❌ Container stopped (status: $container_status, exit code: $exit_code)"
+            echo "  📄 Last 20 log lines:"
+            docker logs "$container_name" 2>&1 | tail -20 | sed 's/^/     /'
+
+            remove_test_server "$modpack_name" "$server_pid" "$container_name"
+
+            if [ "$exit_code" = "unknown" ]; then
+                fail "container disappeared during startup (last status: $container_status)"
+            fi
+            fail "container stopped during startup (exit code: $exit_code)"
+        fi
+
+        # Container is running - safe to get logs
+        # Show progress more frequently (every 5 seconds instead of 15)
+        if [ $((elapsed - last_progress_time)) -ge 5 ] || [ $elapsed -eq 0 ]; then
+            local current_log_tail
+            current_log_tail=$(docker logs "$container_name" 2>&1 | tail -3 | tr '\n' ' | ' | sed 's/  */ /g' | sed 's/| $//')
+
+            if [ "$current_log_tail" != "$last_log_line" ] && [ -n "$current_log_tail" ]; then
+                echo "  📝 [${elapsed}s] $modpack_name: ${current_log_tail:0:120}..."
+                last_log_line="$current_log_tail"
+                last_progress_time=$elapsed
+            fi
+        fi
+
+        # Check for server ready message (most reliable indicator)
+        local current_logs
+        current_logs=$(docker logs "$container_name" 2>&1)
+
+        if echo "$current_logs" | grep -q 'Done ([0-9.]*s)! For help, type "help"'; then
+            server_ready=true
+            echo "  ✅ Server '$modpack_name' fully ready after ${elapsed}s!"
+            break
+        fi
+
+        # Alternative check for older Minecraft versions
+        if echo "$current_logs" | grep -q 'Done! For help, type "help"'; then
+            server_ready=true
+            echo "  ✅ Server '$modpack_name' fully ready after ${elapsed}s!"
+            break
+        fi
+
+        # Check for fatal errors. Autopause/knockd noise is filtered
+        # first: when the daemon cannot grab the interface (rootless
+        # podman) it logs "Failed to start knockd daemon" yet the
+        # server itself starts fine. Exceptions are only fatal when
+        # they hit the main/server thread — background workers can
+        # throw survivable exceptions while the server keeps loading.
+        if echo "$current_logs" | grep -v -i "autopause\|knockd" | grep -q -i "java.lang.OutOfMemoryError\|Server crashed\|Failed to start\|Could not reserve enough space\|Exception in thread \"main\"\|Exception in thread \"Server thread\""; then
+            echo "  ❌ Fatal error detected in '$modpack_name' logs"
+            echo "  📄 Last 20 log lines:"
+            echo "$current_logs" | tail -20 | sed 's/^/     /'
+
+            remove_test_server "$modpack_name" "$server_pid" "$container_name"
+            fail "fatal error detected in logs after ${elapsed}s"
+        fi
+
+        sleep "$check_interval"
+        elapsed=$((elapsed + check_interval))
+    done
+
+    # Verify result
+    if [ "$server_ready" != true ]; then
+        # The wait budget ran out without a readiness banner; report what
+        # the container was doing when the time came
+        local final_status
+        final_status=$(docker inspect "${container_name}" --format='{{.State.Status}}' 2> /dev/null || echo "not_found")
+
+        echo "  ⏰ Timeout after ${max_wait_time}s"
+        echo "  Last 20 log lines:"
+        docker logs "$container_name" 2>&1 | tail -20 | sed 's/^/    /'
+
+        if [ "$final_status" = "running" ]; then
+            remove_test_server "$modpack_name" "$server_pid" "$container_name"
+            fail "timeout after ${max_wait_time}s (container still running, never became ready)"
+        fi
+        local final_exit_code
+        final_exit_code=$(docker inspect "${container_name}" --format='{{.State.ExitCode}}' 2> /dev/null || echo "unknown")
+        remove_test_server "$modpack_name" "$server_pid" "$container_name"
+        fail "timeout after ${max_wait_time}s (container stopped, status: $final_status, exit: $final_exit_code)"
     fi
 
-    # Assert all servers succeeded
-    [ ${#failed_servers[@]} -eq 0 ]
+    echo "  ✅ Completed in ${elapsed}s"
+
+    # Clean up container, then the test data it generated
+    capture_server_logs "$modpack_name" "$container_name"
+    ./scripts/stop-server.sh "$modpack_name" > /dev/null 2>&1 || true
+    timeout 60 docker rm -f "$container_name" > /dev/null 2>&1 || true
+    cleanup_test_server_data "$modpack_name"
 }

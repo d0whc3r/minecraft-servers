@@ -7,7 +7,6 @@
 
 BIN     := bin/mc-tui
 TUI     := apps/tui
-WEB     := web
 DIST    := dist
 COVER   := coverage
 TMP     := .tmp

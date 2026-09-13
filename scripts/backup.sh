@@ -8,7 +8,6 @@ set -euo pipefail
 
 # Load common functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/common.sh"
 
 BACKUP_RETENTION=3
@@ -25,6 +24,12 @@ SERVER_NAME="$1"
 # Validate server name
 if ! validate_server_name "$SERVER_NAME"; then
   exit 2
+fi
+
+# One backup/restore/start/stop per server at a time: a concurrent backup
+# would interleave stop/tar/start and archive a mid-write world
+if ! acquire_server_lock "$SERVER_NAME" "backup"; then
+  exit 1
 fi
 
 # Check if server config exists
@@ -61,9 +66,10 @@ info "Backup file: $BACKUP_FILENAME"
 # Record start time
 START_TIME=$(date +%s)
 
-# Stop server temporarily for atomic backup
+# Stop server temporarily for atomic backup. -t gives the JVM time to save
+# the world (the default 10s can cut off slow worlds mid-write)
 info "Stopping server temporarily for backup..."
-if ! docker stop "$CONTAINER_NAME" > /dev/null 2>&1; then
+if ! docker stop -t 60 "$CONTAINER_NAME" > /dev/null 2>&1; then
   error "Failed to stop server container"
   exit 1
 fi
@@ -73,7 +79,7 @@ sleep 5
 
 # Create backup archive
 info "Creating backup archive..."
-if ! tar czf "$BACKUP_PATH" -C "$PROJECT_ROOT/servers/${SERVER_NAME}" data/ 2> /dev/null; then
+if ! tar czf "$BACKUP_PATH" -C "$(dirname "$SERVER_DATA_DIR")" data/ 2> /dev/null; then
   # Restart server on failure
   warning "Backup failed, restarting server..."
   docker start "$CONTAINER_NAME" > /dev/null 2>&1
@@ -93,7 +99,6 @@ if ! docker start "$CONTAINER_NAME" > /dev/null 2>&1; then
   error "Server may need manual restart: docker start $CONTAINER_NAME"
   exit 1
 fi
-
 # Calculate backup size and compression ratio
 BACKUP_SIZE=$(stat -f%z "$BACKUP_PATH" 2> /dev/null || stat -c%s "$BACKUP_PATH" 2> /dev/null || echo "0")
 BACKUP_SIZE_MB=$((BACKUP_SIZE / 1024 / 1024))
@@ -112,19 +117,16 @@ DURATION=$((END_TIME - START_TIME))
 
 # Clean up old backups (keep only $BACKUP_RETENTION most recent)
 info "Checking backup retention (keeping $BACKUP_RETENTION most recent)..."
-BACKUP_FILES=("$BACKUP_DIR"/*.tar.gz)
-if [[ ${#BACKUP_FILES[@]} -gt $BACKUP_RETENTION ]]; then
-  # Sort by modification time (newest first), skip first N, delete rest
-  TO_DELETE=$(ls -t "$BACKUP_DIR"/*.tar.gz 2> /dev/null | tail -n +$((BACKUP_RETENTION + 1)) || true)
-  if [[ -n "$TO_DELETE" ]]; then
-    echo "$TO_DELETE" | while read -r old_backup; do
-      if [[ -f "$old_backup" ]]; then
-        info "Deleting old backup: $(basename "$old_backup")"
-        rm -f "$old_backup" "${old_backup}.sha256"
-      fi
-    done
-  fi
-fi
+find "$BACKUP_DIR" -maxdepth 1 -name '*.tar.gz' -type f -printf '%T@ %p\0' 2> /dev/null \
+  | sort -rz \
+  | tail -z -n +$((BACKUP_RETENTION + 1)) \
+  | while IFS= read -r -d '' old_backup; do
+    old_backup="${old_backup#* }"
+    if [[ -f "$old_backup" ]]; then
+      info "Deleting old backup: $(basename "$old_backup")"
+      rm -f "$old_backup" "${old_backup}.sha256"
+    fi
+  done
 
 # Success output
 success "Backup completed successfully!"
@@ -140,13 +142,10 @@ echo "Duration: ${DURATION}s"
 # List current backups
 echo ""
 echo "Current backups for $SERVER_NAME:"
-ls -la "$BACKUP_DIR"/*.tar.gz 2> /dev/null | while read -r line; do
-  if [[ -n "$line" ]]; then
-    filename=$(basename "$(echo "$line" | awk '{print $9}')")
-    size=$(echo "$line" | awk '{print $5}')
-    size_mb=$((size / 1024 / 1024))
-    echo "  $filename (${size_mb}MB)"
-  fi
+for backup_file in "$BACKUP_DIR"/*.tar.gz; do
+  [ -f "$backup_file" ] || continue
+  file_size=$(stat -c%s "$backup_file" 2> /dev/null || stat -f%z "$backup_file" 2> /dev/null || echo "0")
+  echo "  $(basename "$backup_file") ($((file_size / 1024 / 1024))MB)"
 done
 
 exit 0

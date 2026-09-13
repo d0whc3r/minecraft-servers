@@ -133,7 +133,8 @@ if [ -t 0 ]; then
   if [ -z "${CF_API_KEY:-}" ]; then
     info "CurseForge API key, needed to download CurseForge modpacks."
     info "Get one at https://console.curseforge.com/ (leave empty to add later)."
-    read -r -p "CF_API_KEY: " CF_API_KEY
+    read -r -s -p "CF_API_KEY: " CF_API_KEY
+    echo ""
   fi
   if [ -z "${RCON_PASSWORD:-}" ]; then
     read -r -s -p "RCON password (empty = generate): " RCON_PASSWORD
@@ -147,7 +148,10 @@ fi
 
 if [ -z "${RCON_PASSWORD:-}" ]; then
   RCON_PASSWORD="$(head -c 24 /dev/urandom | base64 | tr -d '/+=' | cut -c1-24)"
-  info "Generated RCON password: ${RCON_PASSWORD}"
+  # Never print the generated value: it would land in terminal scrollback and
+  # CI logs. It is stored in the shared Secret; read it from there if needed.
+  info "Generated RCON password and stored it in Secret '${SHARED_ENV_SECRET}'."
+  info "  View it with: kubectl -n ${NAMESPACE} get secret ${SHARED_ENV_SECRET} -o jsonpath='{.data.RCON_PASSWORD}' | base64 -d"
 fi
 MC_ROUTER_DOMAIN="${MC_ROUTER_DOMAIN:-mc.local}"
 
@@ -268,7 +272,9 @@ if ! kubectl -n "$NAMESPACE" rollout status deployment/minecraft-router --timeou
 fi
 
 # A TCP connect is the only real proof of exposure; everything else is wishes.
-port_open() { timeout 3 bash -c "exec 3<>/dev/tcp/$1/$2" 2> /dev/null; }
+# Host/port travel as positional args (never interpolated into the code
+# string, so a crafted host or port cannot inject shell).
+port_open() { timeout 3 bash -c 'exec 3<>/dev/tcp/$1/$2' _ "$1" "$2" 2> /dev/null; }
 
 EXPOSED_AT=""
 NODE_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' 2> /dev/null || true)"

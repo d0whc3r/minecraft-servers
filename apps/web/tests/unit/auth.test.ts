@@ -28,7 +28,7 @@ describe("ensureAuthConfigured / verifyCredentials", () => {
   it("generates a random password when nothing is configured", async () => {
     const auth = await loadAuth();
     const { generatedPassword } = auth.ensureAuthConfigured();
-    expect(generatedPassword).toMatch(/^[0-9a-f]{12}$/);
+    expect(generatedPassword).toMatch(/^[0-9a-f]{32}$/);
     expect(auth.verifyCredentials("admin", generatedPassword!)).toBe(true);
     expect(auth.verifyCredentials("admin", "wrong")).toBe(false);
   });
@@ -81,6 +81,39 @@ describe("session tokens", () => {
     vi.setSystemTime(Date.now() + 25 * 60 * 60 * 1000);
     expect(auth.verifySessionToken(token)).toBe(false);
     vi.useRealTimers();
+  });
+
+  it("revokes outstanding tokens when the password changes", async () => {
+    process.env.MCPANEL_PASSWORD = "old-password";
+    const first = await loadAuth();
+    first.ensureAuthConfigured();
+    const oldToken = first.createSessionToken().token;
+    expect(first.verifySessionToken(oldToken)).toBe(true);
+
+    // Credential change on next boot: same module reload semantics as the
+    // panel restarting with a new MCPANEL_PASSWORD
+    vi.resetModules();
+    process.env.MCPANEL_PASSWORD = "new-password";
+    const second = await loadAuth();
+    second.ensureAuthConfigured();
+    expect(second.verifySessionToken(oldToken)).toBe(false);
+    expect(second.createSessionToken()).toBeDefined();
+    expect(second.verifySessionToken(second.createSessionToken().token)).toBe(
+      true,
+    );
+  });
+
+  it("keeps sessions valid across a restart with the same password", async () => {
+    process.env.MCPANEL_PASSWORD = "stable-password";
+    const first = await loadAuth();
+    first.ensureAuthConfigured();
+    const token = first.createSessionToken().token;
+
+    vi.resetModules();
+    process.env.MCPANEL_PASSWORD = "stable-password";
+    const second = await loadAuth();
+    second.ensureAuthConfigured();
+    expect(second.verifySessionToken(token)).toBe(true);
   });
 });
 

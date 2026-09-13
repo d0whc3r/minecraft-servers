@@ -14,6 +14,10 @@ services:
     image: itzg/mc-router:${MC_ROUTER_VERSION:-latest}
     container_name: ${ROUTER_CONTAINER_NAME:-minecraft-router}
     restart: unless-stopped
+    # No healthcheck here on purpose: the image is a static binary on a
+    # scratch base (no shell, no curl/wget), so an in-container check is not
+    # possible. scripts/router.sh status probes the API port from the host,
+    # and the Helm chart's httpGet probes cover the k8s deployment.
     ports:
       # The one public port every player connects to
       - '${MC_ROUTER_PORT:-25565}:25565'

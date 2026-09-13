@@ -14,7 +14,9 @@ services:
     # 2. SERVER_CONFIG_FILE - Server-specific config (overrides .env)
     env_file:
       - .env
-      - ${SERVER_CONFIG_FILE}
+      # :? fails with a clear message instead of an opaque compose error when
+      # the template is rendered without a server config
+      - ${SERVER_CONFIG_FILE:?SERVER_CONFIG_FILE must point to a server config (scripts/start-server.sh sets it)}
     # Route announcements for mc-router (docker-compose.router.yml): players
     # connect to ${SERVER_NAME}.${MC_ROUTER_DOMAIN} and mc-router forwards the
     # session to this container over minecraft-network. Game ports are NEVER
@@ -39,7 +41,14 @@ services:
       - ${SERVER_BACKUP_DIR:-./backups}:/backups
     networks:
       - minecraft-network
-    # restart: unless-stopped
+    # Survive daemon restarts/reboots. `docker stop` (backups) still marks the
+    # server as intentionally stopped, so this does not fight the backup flow.
+    restart: unless-stopped
+    # Hard cap so a runaway JVM/native allocation cannot OOM the host and take
+    # every other server down with it. Derived from the server config's MEMORY
+    # (JVM heap) by scripts/common.sh: heap + ~35% off-heap headroom. Override
+    # with DOCKER_MEM_LIMIT (e.g. in .env) for an exact value.
+    mem_limit: ${DOCKER_MEM_LIMIT:-4g}
     stdin_open: true
     tty: true
     healthcheck:

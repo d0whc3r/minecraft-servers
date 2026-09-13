@@ -134,7 +134,6 @@ validation_success() {
 
 # System requirement checks
 validate_system_requirements() {
-  local section="system"
 
   if [[ "$JSON_OUTPUT" == false ]]; then
     info "Validating system requirements..."
@@ -208,7 +207,9 @@ validate_system_requirements() {
 get_server_list() {
   if [[ "$ALL_SERVERS" == true ]]; then
     # Get all configured servers
-    for config_file in config/modpacks/*.env; do
+    local config_dir
+    config_dir=$(config_modpacks_dir)
+    for config_file in "$config_dir"/*.env; do
       if [[ -f "$config_file" ]]; then
         basename "$config_file" .env
       fi
@@ -221,7 +222,6 @@ get_server_list() {
 # Validate server name format
 validate_server_name() {
   local server_name="$1"
-  local section="server:$server_name"
 
   if [[ ! "$server_name" =~ ^[a-z0-9-]+$ ]]; then
     validation_error "Invalid server name format: $server_name (must be lowercase alphanumeric with hyphens)"
@@ -235,7 +235,6 @@ validate_config_file() {
   local server_name="$1"
   local config_file
   config_file=$(get_config_file "$server_name")
-  local section="server:$server_name"
 
   if [[ ! -f "$config_file" ]]; then
     validation_error "Configuration file missing: $config_file"
@@ -305,7 +304,6 @@ validate_config_file() {
 validate_server_directories() {
   local server_name="$1"
   local server_dir="servers/$server_name"
-  local section="server:$server_name"
 
   # Check main server directory
   if [[ ! -d "$server_dir" ]]; then
@@ -352,8 +350,6 @@ validate_server_directories() {
 
 # Validate port conflicts
 validate_port_conflicts() {
-  local current_server="$1"
-
   # Use common.sh function for comprehensive port conflict checking
   if ! check_port_conflicts; then
     validation_error "Port conflicts detected across server configurations"
@@ -362,6 +358,34 @@ validate_port_conflicts() {
 
   validation_success "No port conflicts detected"
   return 0
+}
+
+# Validate the shared .env: the known-bad values a fresh copy of
+# .env.example carries must not reach production servers. Opt out for
+# throwaway environments with MC_ALLOW_DEFAULT_RCON_PASSWORD=1 (the CI test
+# env sets it).
+validate_shared_env() {
+  local env_file
+  env_file="$(repo_root)/.env"
+
+  if [[ ! -f "$env_file" ]]; then
+    validation_warning "Shared .env not found (copy .env.example and edit it)"
+    return 0
+  fi
+
+  local rcon_password
+  rcon_password=$(get_env_value "$env_file" RCON_PASSWORD)
+  if [[ "$rcon_password" == "minecraft" ]]; then
+    if [[ "${MC_ALLOW_DEFAULT_RCON_PASSWORD:-0}" == "1" ]]; then
+      validation_warning "Default RCON password allowed via MC_ALLOW_DEFAULT_RCON_PASSWORD=1"
+    else
+      validation_error "RCON_PASSWORD is still the default 'minecraft' - one known password unlocks every server's console. Set a long random value in .env"
+    fi
+  elif [[ -n "$rcon_password" ]]; then
+    validation_success "RCON_PASSWORD is not the default value"
+  else
+    validation_warning "RCON_PASSWORD is empty in .env"
+  fi
 }
 
 # Validate individual server
@@ -375,11 +399,13 @@ validate_server() {
   validate_server_name "$server_name"
   validate_config_file "$server_name"
   validate_server_directories "$server_name"
-  validate_port_conflicts "$server_name"
+  validate_port_conflicts
 }
 
 # Main validation function
 validate_all() {
+  validate_shared_env
+
   if [[ "$SYSTEM_ONLY" == false ]]; then
     local servers
     servers=$(get_server_list)

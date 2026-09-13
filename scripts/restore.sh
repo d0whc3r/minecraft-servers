@@ -8,7 +8,6 @@ set -euo pipefail
 
 # Load common functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/common.sh"
 
 # Validate arguments
@@ -36,6 +35,12 @@ fi
 # Validate server name
 if ! validate_server_name "$SERVER_NAME"; then
   exit 2
+fi
+
+# One backup/restore/start/stop per server at a time: a restore racing a
+# backup (or a start) could wipe data mid-archive or mid-world-write
+if ! acquire_server_lock "$SERVER_NAME" "restore"; then
+  exit 1
 fi
 
 # Check if server config exists
@@ -68,9 +73,10 @@ if [[ ! -f "$CHECKSUM_PATH" ]]; then
   exit 3
 fi
 
-# Verify backup integrity
+# Verify backup integrity. sha256sum -c resolves the stored (basename) path
+# relative to the current directory, so run it from the backup's directory
 info "Verifying backup integrity..."
-if ! sha256sum -c "$CHECKSUM_PATH" > /dev/null 2>&1; then
+if ! (cd "$(dirname "$CHECKSUM_PATH")" && sha256sum -c "$(basename "$CHECKSUM_PATH")" > /dev/null 2>&1); then
   error "Backup integrity check failed!"
   error "The backup file may be corrupted or modified."
   exit 4
@@ -108,7 +114,7 @@ SERVER_WAS_RUNNING=false
 if container_running "$CONTAINER_NAME"; then
   SERVER_WAS_RUNNING=true
   info "Stopping running server..."
-  if ! docker stop "$CONTAINER_NAME" > /dev/null 2>&1; then
+  if ! docker stop -t 60 "$CONTAINER_NAME" > /dev/null 2>&1; then
     error "Failed to stop server container"
     exit 1
   fi
@@ -131,7 +137,7 @@ fi
 
 # Extract backup
 info "Extracting backup archive..."
-if ! tar xzf "$BACKUP_PATH" -C "$PROJECT_ROOT/servers/${SERVER_NAME}" 2> /dev/null; then
+if ! tar xzf "$BACKUP_PATH" -C "$(dirname "$SERVER_DATA_DIR")" 2> /dev/null; then
   error "Failed to extract backup archive"
   # Try to restart server if it was running
   if [[ "$SERVER_WAS_RUNNING" == true ]]; then

@@ -260,7 +260,7 @@ The project includes npm/pnpm scripts for development, testing, and deployment. 
 
 ### Testing Scripts
 
-- `pnpm test` - Run all BATS tests (includes the slow E2E server-startup test)
+- `pnpm test` - Run all BATS tests (includes the slow E2E server-startup tests, one per server)
 - `pnpm run test:quick` - Run the fast validation suite (`config-validation.bats`, no server startup; used in pre-push hook and CI)
 
 ### Code Quality Scripts

@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "Minecraft Servers Management Panel",
+  "short_name": "Minecraft Panel",
+  "description": "Monitor and manage your private Minecraft servers.",
+  "lang": "en",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b110f",
+  "theme_color": "#0b110f",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

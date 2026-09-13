@@ -628,6 +628,7 @@ function ServersTab({ push }: { push: Push }) {
 
       <div className="mb-5 flex flex-wrap items-center gap-2">
         <select
+          name="admin-platform-filter"
           className={cn(inputClass, "w-auto min-w-44")}
           value={platformFilter}
           onChange={(event) => setPlatformFilter(event.target.value)}
@@ -641,6 +642,7 @@ function ServersTab({ push }: { push: Push }) {
           ))}
         </select>
         <select
+          name="admin-tag-filter"
           className={cn(inputClass, "w-auto min-w-44")}
           value={tagFilter}
           onChange={(event) => setTagFilter(event.target.value)}
@@ -938,6 +940,8 @@ function LogsModal({
       <div className="mb-2.5 flex flex-wrap items-center gap-3">
         <input
           type="search"
+          name="log-filter"
+          autoComplete="off"
           className={cn(inputClass, "min-w-45 flex-1")}
           placeholder="Filter lines…"
           value={filter}
@@ -946,6 +950,7 @@ function LogsModal({
         />
         <label className="inline-flex items-center gap-1.5 text-[0.88rem] text-dim">
           <input
+            name="follow-logs"
             type="checkbox"
             checked={follow}
             onChange={(e) => setFollow(e.target.checked)}
@@ -1041,6 +1046,9 @@ function RconModal({
         <span className="font-mono font-bold text-ok">&gt;</span>
         <input
           ref={inputRef}
+          name="rcon-command"
+          autoComplete="off"
+          spellCheck={false}
           className={cn(inputClass, "flex-1 font-mono")}
           value={cmd}
           onChange={(e) => setCmd(e.target.value)}
@@ -1274,6 +1282,7 @@ function BackupsTab({ push }: { push: Push }) {
 
       <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-edge2 bg-panel/75 p-2.5">
         <select
+          name="backup-server-filter"
           className={cn(inputClass, "w-auto min-w-55")}
           value={selected ?? ""}
           onChange={(event) => {

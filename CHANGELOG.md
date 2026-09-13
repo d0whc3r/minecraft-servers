@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `restore.sh` integrity check never passed when run from the repo root: the
+  sha256 checksum stores a bare filename, so verification now runs from the
+  backup's own directory
+- `auto-restart.sh` aborted on its first restart (`((count++))` returning 1
+  under `set -e`); the monitor now survives full check cycles
+- `health-check.sh --json` emitted the JSON array markers to stderr, producing
+  unusable output; the whole array now lands on stdout (`jq`-ready)
+- `list-servers.sh --format=json` built JSON by string interpolation (no
+  escaping); objects are now assembled with `jq`
+- The Go TUI broke on podman and older Docker CLIs: `docker ps --format`
+  used the `{{.Label "key"}}` function; it now reads `{{.Labels}}` and parses
+  the `mc-router.host` entry itself
+- All management scripts work from any working directory (paths derive from
+  the script location instead of `$PWD`)
+- `add-modpack.sh --rcon-port` rejected free ports by consulting the global
+  conflict checker; it now checks only the requested port, and port
+  auto-assignment is serialized against concurrent runs
+
+### Security
+
+- Per-server operation locks (`flock`): backup, restore, start, stop and
+  restart serialize per server so a backup can no longer archive a mid-write
+  world or race a restore
+- `validate-config.sh` rejects the default `RCON_PASSWORD=minecraft` (opt out
+  for throwaway environments with `MC_ALLOW_DEFAULT_RCON_PASSWORD=1`)
+- `k8s-bootstrap.sh` no longer prints the generated RCON password to stdout
+  and reads `CF_API_KEY` with hidden input
+- `k8s-bootstrap.sh` / `k8s-install.sh` TCP probes pass host/port as shell
+  positional args instead of interpolating them into `bash -c`
+- Panel sessions are revocable: tokens carry the auth record's
+  `tokenVersion`, bumped whenever credentials change; the generated
+  first-boot password is now 128-bit
+- Panel container mounts the Docker socket read-only and runs with
+  `no-new-privileges`; `docker-compose.yml` re-enables
+  `restart: unless-stopped` and adds a per-server `mem_limit` derived from
+  the JVM heap (`DOCKER_MEM_LIMIT` to override)
+
+### Changed
+
+- CI: pnpm store cache enabled, new Go job (gofmt/vet/test), shellcheck and
+  actionlint gates in `code-quality.yml`
+- `minecraft-server` Helm chart: memory requests/limits derived from
+  `env.MEMORY` when `resources` is empty, `automountServiceAccountToken:
+false`, backup sidecar receives only RCON credentials (chart 0.2.0)
+- `pnpm test` runs the fast bats suite; `pnpm run test:full` launches the
+  full server-startup E2E suite
+- `engines.node` raised to `>=20.6.0` (the start script uses
+  `node --env-file-if-exists`)
+
 ### Added
 
 - Initial release of Minecraft Multi-Server System

@@ -138,6 +138,7 @@ export function CreateServerModal({
           <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3.5">
             <Field label="Server type">
               <select
+                name="server-type"
                 className={cn(inputClass, "w-full")}
                 value={type}
                 disabled={catalog.status !== "ready"}
@@ -153,6 +154,7 @@ export function CreateServerModal({
             </Field>
             <Field label="Server name (players connect via <name>.domain)">
               <input
+                name="server-name"
                 className={cn(inputClass, "font-mono")}
                 value={name}
                 onChange={(e) =>
@@ -166,6 +168,8 @@ export function CreateServerModal({
                 placeholder="my-server"
                 pattern="[a-z0-9][a-z0-9\-]{0,38}[a-z0-9]"
                 maxLength={40}
+                autoComplete="off"
+                spellCheck={false}
                 required
               />
             </Field>
@@ -173,6 +177,7 @@ export function CreateServerModal({
           {typeSpec?.modpackRequired && (
             <Field label={`Modpack (${typeSpec.label}: URL or slug)`}>
               <input
+                name="modpack"
                 className={cn(inputClass, "font-mono")}
                 value={modpack}
                 onChange={(e) => setModpack(e.target.value)}
@@ -181,6 +186,8 @@ export function CreateServerModal({
                     ? "https://modrinth.com/modpack/…"
                     : "https://www.curseforge.com/minecraft/modpacks/…"
                 }
+                autoComplete="off"
+                spellCheck={false}
                 required
               />
             </Field>
@@ -188,14 +195,18 @@ export function CreateServerModal({
           <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3.5">
             <Field label="Minecraft version">
               <input
+                name="minecraft-version"
                 className={cn(inputClass, "font-mono")}
                 value={version}
                 onChange={(e) => setVersion(e.target.value)}
                 placeholder={typeSpec?.defaultVersion || "pack decides"}
+                autoComplete="off"
+                spellCheck={false}
               />
             </Field>
             <Field label="Memory">
               <select
+                name="memory"
                 className={cn(inputClass, "w-full")}
                 value={memory}
                 onChange={(e) => setMemory(e.target.value)}
@@ -209,6 +220,7 @@ export function CreateServerModal({
             </Field>
             <Field label="Max players">
               <input
+                name="max-players"
                 className={inputClass}
                 type="number"
                 min={1}
@@ -220,6 +232,7 @@ export function CreateServerModal({
             </Field>
             <Field label="Difficulty">
               <select
+                name="difficulty"
                 className={cn(inputClass, "w-full")}
                 value={difficulty}
                 onChange={(e) => setDifficulty(e.target.value)}
@@ -234,15 +247,18 @@ export function CreateServerModal({
           </div>
           <Field label="MOTD (optional)">
             <input
+              name="motd"
               className={inputClass}
               value={motd}
               onChange={(e) => setMotd(e.target.value)}
               placeholder="Welcome to my server!"
               maxLength={120}
+              autoComplete="off"
             />
           </Field>
           <Field label="Extra settings (optional, one KEY=VALUE per line)">
             <textarea
+              name="extra-settings"
               className={cn(inputClass, "min-h-20 font-mono text-[0.85rem]")}
               value={extraEnv}
               onChange={(e) => setExtraEnv(e.target.value)}
@@ -252,6 +268,7 @@ export function CreateServerModal({
           </Field>
           <label className="inline-flex items-center gap-1.5 text-[0.88rem] text-dim">
             <input
+              name="start-now"
               type="checkbox"
               checked={startNow}
               onChange={(e) => setStartNow(e.target.checked)}

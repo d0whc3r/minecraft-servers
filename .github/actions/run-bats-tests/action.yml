@@ -31,12 +31,18 @@ runs:
         echo "Timeout: ${{ inputs.timeout }} minutes"
         echo "---"
 
-        timeout ${{ fromJSON(inputs.timeout) }}m pnpm exec bats --jobs ${{ inputs.parallel-jobs }} --timing ${{ inputs.test-pattern }}
+        # --no-parallelize-across-files: each job runs a single test file, so
+        # parallelism comes from --jobs within the file (flock-based) and the
+        # GNU parallel binary is not needed
+        timeout ${{ fromJSON(inputs.timeout) }}m pnpm exec bats --jobs ${{ inputs.parallel-jobs }} --no-parallelize-across-files --timing ${{ inputs.test-pattern }}
 
     - name: Cleanup test containers
       if: always()
       shell: bash
       run: |
         docker ps -a --filter "name=mc-" --format "{{.Names}}" | xargs -r docker rm -f || true
+        # The server-startup suite tears its router down itself when the last
+        # test finishes; this catches runs that crashed before that could happen
+        docker compose -p minecraft-router-test -f docker-compose.router.yml down -v || true
         docker network prune -f || true
         docker volume prune -f || true

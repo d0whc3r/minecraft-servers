@@ -16,6 +16,9 @@ interface AuthRecord {
   user: string;
   salt: string;
   hash: string;
+  /** Bumped on every credential change; live tokens carry the version they
+   * were issued with, so a bump revokes every outstanding session at once. */
+  tokenVersion?: number;
 }
 
 let cachedAuth: AuthRecord | null = null;
@@ -71,26 +74,52 @@ export function ensureAuthConfigured(): {
   }
   fs.mkdirSync(PANEL_DATA_DIR, { recursive: true });
   const user = envUser || "admin";
-  // 6 random bytes = 12 hex chars (~48 bits): fine for a first-boot
-  // convenience secret that the operator is told to replace or store.
+  // 16 random bytes = 32 hex chars (128 bits): copy-paste friendly first-boot
+  // secret that the operator is told to replace or store.
   const generatedPassword = envPass
     ? undefined
-    : crypto.randomBytes(6).toString("hex");
-  const password = envPass || generatedPassword!;
-  const salt = crypto.randomBytes(16).toString("hex");
-  const record: AuthRecord = { user, salt, hash: scryptHash(password, salt) };
+    : crypto.randomBytes(16).toString("hex");
+
+  // Rewriting credentials when MCPANEL_PASSWORD is set must also revoke the
+  // sessions issued for the old ones: bump tokenVersion (a re-render of the
+  // SAME password keeps the version, so panel restarts don't log everyone out).
+  let record: AuthRecord;
+  if (envPass) {
+    const existing = loadAuthRecord();
+    if (existing && scryptHash(envPass, existing.salt) === existing.hash) {
+      record = existing;
+      cachedAuth = record;
+      bootstrapped = true;
+      return { user: record.user };
+    }
+    record = {
+      user,
+      salt: crypto.randomBytes(16).toString("hex"),
+      hash: "",
+      tokenVersion: (existing?.tokenVersion ?? 0) + 1,
+    };
+    record.hash = scryptHash(envPass, record.salt);
+  } else {
+    record = {
+      user,
+      salt: crypto.randomBytes(16).toString("hex"),
+      hash: "",
+      tokenVersion: (loadAuthRecord()?.tokenVersion ?? 0) + 1,
+    };
+    record.hash = scryptHash(generatedPassword!, record.salt);
+  }
   fs.writeFileSync(AUTH_FILE, JSON.stringify(record, null, 2), { mode: 0o600 });
   cachedAuth = record;
   bootstrapped = true;
   if (generatedPassword) {
     // eslint-disable-next-line no-console
     console.log(
-      `\n  ┌──────────────────────────────────────────────────────┐\n` +
-        `  │  Minecraft Servers admin panel                       │\n` +
-        `  │  User: ${user.padEnd(50)}│\n` +
-        `  │  Generated password: ${generatedPassword.padEnd(35)}│\n` +
-        `  │  (store it now, or set MCPANEL_PASSWORD instead)     │\n` +
-        `  └──────────────────────────────────────────────────────┘\n`,
+      `\n  ┌────────────────────────────────────────────────────────────┐\n` +
+        `  │  Minecraft Servers admin panel                             │\n` +
+        `  │  User: ${user.padEnd(54)}│\n` +
+        `  │  Generated password: ${generatedPassword.padEnd(34)}│\n` +
+        `  │  (store it now, or set MCPANEL_PASSWORD instead)           │\n` +
+        `  └────────────────────────────────────────────────────────────┘\n`,
     );
   }
   return { user, generatedPassword };
@@ -115,24 +144,37 @@ function sign(payload: string): string {
   return crypto.createHmac("sha256", getSecret()).update(payload).digest("hex");
 }
 
+/** Tokens carry the auth-record's tokenVersion; changing credentials bumps
+ * the stored version and every previously issued token stops verifying. */
 export function createSessionToken(): { token: string; expires: Date } {
+  // Align with the current auth record (no-op once bootstrapped) so the
+  // minted version always matches what verification will read back
+  ensureAuthConfigured();
   const exp = Date.now() + SESSION_TTL_MS;
-  const payload = String(exp);
+  const version = loadAuthRecord()?.tokenVersion ?? 0;
+  const payload = `${exp}.${version}`;
   return { token: `${payload}.${sign(payload)}`, expires: new Date(exp) };
 }
 
 export function verifySessionToken(token: string | undefined): boolean {
   if (!token) return false;
-  const dot = token.indexOf(".");
-  if (dot <= 0) return false;
-  const payload = token.slice(0, dot);
-  const sig = token.slice(dot + 1);
+  // Signature is everything after the LAST dot: the payload itself now
+  // contains a dot between expiry and tokenVersion
+  const lastDot = token.lastIndexOf(".");
+  if (lastDot <= 0) return false;
+  const payload = token.slice(0, lastDot);
+  const sig = token.slice(lastDot + 1);
   const expected = sign(payload);
   const a = Buffer.from(sig);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
-  const exp = Number(payload);
-  return Number.isFinite(exp) && exp > Date.now();
+  const versionDot = payload.lastIndexOf(".");
+  if (versionDot <= 0) return false;
+  const exp = Number(payload.slice(0, versionDot));
+  const version = Number(payload.slice(versionDot + 1));
+  if (!Number.isFinite(exp) || exp <= Date.now()) return false;
+  if (!Number.isFinite(version)) return false;
+  return version === (loadAuthRecord()?.tokenVersion ?? 0);
 }
 
 export const sessionCookieName = SESSION_COOKIE;

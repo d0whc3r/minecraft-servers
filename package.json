@@ -14,15 +14,17 @@
   "license": "ISC",
   "packageManager": "pnpm@12.4.1",
   "engines": {
-    "node": ">=18.0.0",
+    "node": ">=24.0.0",
     "pnpm": ">=10.0.0"
   },
   "scripts": {
-    "test": "bats tests/bats/",
+    "test": "bats tests/bats/config-validation.bats",
     "test:quick": "bats tests/bats/config-validation.bats",
+    "test:full": "bats tests/bats/",
     "lint": "prettier --check .",
     "lint:fix": "prettier --write .",
     "validate:all": "pnpm run lint && pnpm run test",
+    "validate:full": "pnpm run lint && pnpm run test:full",
     "prepare": "husky",
     "server:start": "./scripts/start-server.sh",
     "server:stop": "./scripts/stop-server.sh",
@@ -52,11 +54,11 @@
     "game-server"
   ],
   "devDependencies": {
-    "bats": "^1.13.0",
-    "husky": "^9.1.7",
-    "prettier": "^3.9.6",
-    "prettier-plugin-astro": "^1.0.0",
-    "prettier-plugin-sh": "^0.19.0"
+    "bats": "1.13.0",
+    "husky": "9.1.7",
+    "prettier": "3.9.6",
+    "prettier-plugin-astro": "1.0.0",
+    "prettier-plugin-sh": "0.19.0"
   },
   "prettier": {
     "semi": true,

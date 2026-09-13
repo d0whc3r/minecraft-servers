@@ -33,6 +33,39 @@ test("dashboard shows the summary strip and all server cards", async ({
   ).toHaveCount(0);
 });
 
+test("publishes private-panel crawler policy and app identity", async ({
+  page,
+  request,
+}) => {
+  const response = await page.goto("/");
+  expect(response?.headers()["x-robots-tag"]).toContain("noindex");
+  await expect(page).toHaveTitle("Server Dashboard · Minecraft Panel");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    "content",
+    "noindex, nofollow, noarchive, nosnippet, noimageindex",
+  );
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
+    "href",
+    "/favicon.svg",
+  );
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
+    "href",
+    "/manifest.webmanifest",
+  );
+
+  const robots = await request.get("/robots.txt");
+  expect(robots.ok()).toBeTruthy();
+  expect(await robots.text()).toBe("User-agent: *\nDisallow: /\n");
+
+  const manifest = await request.get("/manifest.webmanifest");
+  expect(manifest.ok()).toBeTruthy();
+  await expect(manifest.json()).resolves.toMatchObject({
+    name: "Minecraft Servers Management Panel",
+    display: "standalone",
+    theme_color: "#0b110f",
+  });
+});
+
 test("dashboard keeps one filter state across card and table views", async ({
   page,
 }) => {
@@ -96,16 +129,19 @@ test("admin sign-in reveals the servers table", async ({ page }) => {
   );
   const rows = page.locator("table tbody tr");
   await expect(rows.first()).toBeVisible({ timeout: 15_000 });
+  await expect
+    .poll(() => rows.count(), { timeout: 15_000 })
+    .toBeGreaterThanOrEqual(20);
   const initialRows = await rows.count();
-  expect(initialRows).toBeGreaterThanOrEqual(20);
   await search.fill("server-that-does-not-exist");
   await expect(
     page.getByText("No servers match the current filters."),
   ).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(rows).toHaveCount(initialRows);
-  // The compact table delegates the full data and advanced actions to a dialog.
-  await rows.first().getByRole("button", { name: "Details" }).click();
+  // The compact table delegates full data to a dialog; rows are keyboard-accessible.
+  await rows.first().focus();
+  await page.keyboard.press("Enter");
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText("Reported version")).toBeVisible();

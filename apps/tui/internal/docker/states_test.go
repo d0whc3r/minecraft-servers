@@ -29,10 +29,11 @@ func TestServerFromContainer(t *testing.T) {
 
 // TestStatesLineFormat guards the tab-splitting assumption used by States
 // against the exact `docker ps --format` output shape (name, state, status
-// and the mc-router host label — game ports do not exist in this setup).
+// and the full Labels list the mc-router host is picked from — game ports do
+// not exist in this setup).
 func TestStatesLineFormat(t *testing.T) {
 	line := strings.Join([]string{
-		"mc-vanilla", "running", "Up 5 minutes (healthy)", "vanilla.mc.example.com",
+		"mc-vanilla", "running", "Up 5 minutes (healthy)", "mc-router.host=vanilla.mc.example.com",
 	}, "\t")
 	fields := strings.Split(line, "\t")
 	if len(fields) != 4 {
@@ -42,8 +43,26 @@ func TestStatesLineFormat(t *testing.T) {
 	if !ok || server != "vanilla" {
 		t.Errorf("server = %q (ok=%v), want vanilla", server, ok)
 	}
-	if fields[3] == "" {
-		t.Error("router label should be captured when set")
+	if got := routeFromLabels(fields[3]); got != "vanilla.mc.example.com" {
+		t.Errorf("routeFromLabels = %q, want vanilla.mc.example.com", got)
+	}
+}
+
+func TestRouteFromLabels(t *testing.T) {
+	tests := []struct {
+		name, labels, want string
+	}{
+		{"only route", "mc-router.host=a.mc.lan", "a.mc.lan"},
+		{"among others", "owner=me,mc-router.host=b.mc.lan,env=prod", "b.mc.lan"},
+		{"missing", "owner=me,env=prod", ""},
+		{"empty", "", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := routeFromLabels(tt.labels); got != tt.want {
+				t.Errorf("routeFromLabels(%q) = %q, want %q", tt.labels, got, tt.want)
+			}
+		})
 	}
 }
 
@@ -53,7 +72,7 @@ func TestStatesLineFormat(t *testing.T) {
 // dropping the field count and silently hiding the server.
 func TestParseStatesLastLineWithoutLabel(t *testing.T) {
 	out := strings.Join([]string{
-		strings.Join([]string{"mc-a", "running", "Up 9 minutes (healthy)", "a.mc.lan"}, "\t"),
+		strings.Join([]string{"mc-a", "running", "Up 9 minutes (healthy)", "mc-router.host=a.mc.lan"}, "\t"),
 		strings.Join([]string{"mc-b", "running", "Up 29 minutes (healthy)", ""}, "\t"),
 		"",
 	}, "\n")
@@ -64,6 +83,9 @@ func TestParseStatesLastLineWithoutLabel(t *testing.T) {
 	}
 	if got := states["b"]; got.State != "running" || got.Route != "" || got.Health != "healthy" {
 		t.Errorf("last line parsed as %+v, want running/healthy with empty route", got)
+	}
+	if got := states["a"]; got.Route != "a.mc.lan" {
+		t.Errorf("first line route = %q, want a.mc.lan", got.Route)
 	}
 }
 

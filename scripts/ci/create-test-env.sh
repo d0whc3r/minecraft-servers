@@ -8,6 +8,10 @@ set -euo pipefail
 
 cat << EOF > .env
 # CI Environment - Auto-generated
+# MC_ALLOW_DEFAULT_RCON_PASSWORD=1: throwaway CI environments keep the
+# placeholder password; the "not the default" check in validate-config.sh
+# exists for real deployments.
+MC_ALLOW_DEFAULT_RCON_PASSWORD=1
 EULA=${EULA:-TRUE}
 MC_ROUTER_DOMAIN=${MC_ROUTER_DOMAIN:-mc.local}
 ENABLE_RCON=${ENABLE_RCON:-true}

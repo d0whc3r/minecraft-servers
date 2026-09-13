@@ -108,6 +108,12 @@ if ! validate_server_name "$SERVER_NAME"; then
   exit 2
 fi
 
+# Serialize per-server operations: a stop racing a backup/restore would
+# interleave container stop/start with the world on disk
+if ! acquire_server_lock "$SERVER_NAME" "stop"; then
+  exit 1
+fi
+
 # Get paths
 CONTAINER_NAME=$(get_container_name "$SERVER_NAME")
 CONFIG_FILE=$(get_config_file "$SERVER_NAME")

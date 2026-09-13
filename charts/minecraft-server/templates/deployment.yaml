@@ -30,6 +30,9 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
+      # The game server never talks to the API server (the panel and router
+      # use their own ServiceAccounts): do not mount a token it cannot use
+      automountServiceAccountToken: false
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -40,7 +43,9 @@ spec:
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       volumes:
         - name: data
-          {{- if and .Values.persistence.data.enabled (or .Values.persistence.data.existingClaim) }}
+          {{- if .Values.persistence.data.existingClaim }}
+          # An explicit existingClaim wins even when enabled=false (the claim
+          # exists; enabled only governs chart-managed claims)
           persistentVolumeClaim:
             claimName: {{ .Values.persistence.data.existingClaim }}
           {{- else if .Values.persistence.data.enabled }}
@@ -50,7 +55,7 @@ spec:
           emptyDir: {}
           {{- end }}
         - name: backups
-          {{- if and .Values.persistence.backups.enabled (or .Values.persistence.backups.existingClaim) }}
+          {{- if .Values.persistence.backups.existingClaim }}
           persistentVolumeClaim:
             claimName: {{ .Values.persistence.backups.existingClaim }}
           {{- else if .Values.persistence.backups.enabled }}
@@ -60,7 +65,7 @@ spec:
           emptyDir: {}
           {{- end }}
         - name: mods
-          {{- if and .Values.persistence.mods.enabled (or .Values.persistence.mods.existingClaim) }}
+          {{- if .Values.persistence.mods.existingClaim }}
           persistentVolumeClaim:
             claimName: {{ .Values.persistence.mods.existingClaim }}
           {{- else if .Values.persistence.mods.enabled }}
@@ -143,21 +148,30 @@ spec:
               command: [mc-health]
             periodSeconds: {{ .Values.probes.startup.periodSeconds }}
             failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          {{/* Explicit .Values.resources wins. Otherwise derive memory
+              requests/limits from the JVM heap (env.MEMORY) so a standalone
+              helm install is not left unlimited: request = heap + 15%, limit
+              = heap + 35% + 256Mi — the same headroom docker-compose applies
+              via DOCKER_MEM_LIMIT. */}}
+          {{- $heap := (get (default dict .Values.env) "MEMORY") | default "2G" | toString -}}
+          {{- $resources := deepCopy (.Values.resources | default dict) -}}
+          {{- if and (eq (len $resources) 0) (regexMatch "^[0-9]+[GgMm]$" $heap) -}}
+          {{- $number := trimSuffix "G" (trimSuffix "g" (trimSuffix "M" (trimSuffix "m" $heap))) | int -}}
+          {{- $mb := $number -}}
+          {{- if regexMatch "[Gg]$" $heap -}}{{- $mb = mul $number 1024 -}}{{- end -}}
+          {{- $_ := set $resources "requests" (dict "memory" (printf "%dMi" (add $mb (div (mul $mb 15) 100)))) -}}
+          {{- $_ := set $resources "limits" (dict "memory" (printf "%dMi" (add $mb (div (mul $mb 35) 100) 256))) -}}
+          {{- end -}}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml $resources | nindent 12 }}
           stdin: true
           tty: true
         {{- if .Values.backup.enabled }}
         - name: backup
           image: "{{ .Values.backup.image.repository }}:{{ .Values.backup.image.tag }}"
           imagePullPolicy: {{ .Values.backup.image.pullPolicy }}
-          envFrom:
-            {{- if .Values.env }}
-            - configMapRef:
-                name: {{ include "minecraft-server.fullname" . }}
-            {{- end }}
-            - secretRef:
-                name: {{ include "minecraft-server.secretName" . }}
+          # Only what mc-backup needs: the RCON credentials from the Secret
+          # (never the whole server ConfigMap) plus its own wiring below
           env:
             - name: RCON_HOST
               value: 127.0.0.1
@@ -169,6 +183,19 @@ spec:
               value: {{ .Values.backup.pruneDays | quote }}
             - name: XDG_CONFIG_HOME
               value: /tmp
+            {{- if .Values.existingSecret }}
+            - name: RCON_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: RCON_PASSWORD
+            {{- else }}
+            - name: RCON_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "minecraft-server.secretName" . }}
+                  key: RCON_PASSWORD
+            {{- end }}
             {{- with .Values.backup.env }}
             {{- range $key, $value := . }}
             - name: {{ $key }}

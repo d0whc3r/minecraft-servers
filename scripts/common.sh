@@ -8,6 +8,11 @@
 # Ensure script exits on error (but allow arithmetic that evaluates to 0)
 set -uo pipefail
 
+# Location of this library and the repo it belongs to. Derived from BASH_SOURCE
+# (not $(pwd)) so every script works from any working directory.
+COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_REPO_ROOT="$(cd "${COMMON_DIR}/.." && pwd)"
+
 # ============================================================================
 # COLOR CODES
 # ============================================================================
@@ -80,7 +85,8 @@ validate_server_name() {
 # Returns: 0 if exists, 1 if not
 check_config_exists() {
   local server_name="$1"
-  local config_file="config/modpacks/${server_name}.env"
+  local config_file
+  config_file="$(repo_root)/config/modpacks/${server_name}.env"
 
   if [ ! -f "$config_file" ]; then
     error "Configuration not found: $config_file"
@@ -141,16 +147,24 @@ confirm() {
 # ============================================================================
 
 # Root directory that holds the servers/ and backups/ data trees. Defaults to
-# the repo root; override (e.g. the e2e bats suite) to keep test worlds and
-# downloads away from the directories used for real play.
+# this repo's root (from the script location, so CWD does not matter); override
+# (e.g. the e2e bats suite) to keep test worlds and downloads away from the
+# directories used for real play.
 servers_base_dir() {
   echo "${SERVERS_BASE_DIR:-$(repo_root)}"
 }
 
+# Directory holding the per-server .env configs
+config_modpacks_dir() {
+  echo "$(repo_root)/config/modpacks"
+}
+
 # List available servers (from config files)
 list_available_servers() {
-  if [ -d "config/modpacks" ]; then
-    local configs=(config/modpacks/*.env)
+  local config_dir
+  config_dir=$(config_modpacks_dir)
+  if [ -d "$config_dir" ]; then
+    local configs=("$config_dir"/*.env)
     if [ -e "${configs[0]}" ]; then
       for config in "${configs[@]}"; do
         basename "$config" .env
@@ -209,7 +223,7 @@ get_container_uptime() {
 # Returns: config file path (stdout)
 get_config_file() {
   local server_name="$1"
-  echo "config/modpacks/${server_name}.env"
+  echo "$(repo_root)/config/modpacks/${server_name}.env"
 }
 
 # Get data directory from server name
@@ -240,32 +254,45 @@ get_backup_dir() {
 # DOCKER COMPOSE HELPERS
 # ============================================================================
 
-# Repo root as the Docker daemon resolves it. On the host this is $(pwd);
-# inside the panel container the checkout is mounted at /repo - a path that
-# does not exist on the host - so the bind-mount sources handed to
-# `docker compose` must come from MCPANEL_HOST_ROOT (set by the panel
-# deployment) or the daemon rejects them with "mounts denied".
+# Repo root as the Docker daemon resolves it. On the host this is the checkout
+# the scripts live in (independent of the current working directory); inside
+# the panel container the checkout is mounted at /repo - a path that does not
+# exist on the host - so the bind-mount sources handed to `docker compose` must
+# come from MCPANEL_HOST_ROOT (set by the panel deployment) or the daemon
+# rejects them with "mounts denied".
 repo_root() {
-  echo "${MCPANEL_HOST_ROOT:-$(pwd)}"
+  echo "${MCPANEL_HOST_ROOT:-$DEFAULT_REPO_ROOT}"
 }
 
-# Read a variable from an env file (quotes stripped; empty when unset)
+# Read a variable from an env file. Trims surrounding whitespace and strips
+# one matching pair of surrounding quotes; values containing spaces or inner
+# quotes pass through untouched. Empty when unset.
 # Args: $1 - env file path, $2 - variable name
 # Returns: value (stdout)
 get_env_value() {
-  local file="$1" key="$2"
-  grep -m1 "^${key}=" "$file" 2> /dev/null | cut -d= -f2- | tr -d ' "' || true
+  local file="$1" key="$2" value
+  value=$(grep -m1 "^${key}=" "$file" 2> /dev/null | cut -d= -f2- | tr -d '\r' || true)
+  # Trim leading/trailing whitespace
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  # Strip one matching pair of surrounding quotes
+  if [[ "$value" == \"*\" && ${#value} -ge 2 ]] || [[ "$value" == \'*\' && ${#value} -ge 2 ]]; then
+    value="${value:1:${#value}-2}"
+  fi
+  echo "$value"
 }
 
 # Load the MC_ROUTER_* settings from the root .env with code defaults
 load_router_settings() {
-  MC_ROUTER_DOMAIN="${MC_ROUTER_DOMAIN:-$(get_env_value .env MC_ROUTER_DOMAIN)}"
+  local env_file
+  env_file="$(repo_root)/.env"
+  MC_ROUTER_DOMAIN="${MC_ROUTER_DOMAIN:-$(get_env_value "$env_file" MC_ROUTER_DOMAIN)}"
   MC_ROUTER_DOMAIN="${MC_ROUTER_DOMAIN:-mc.local}"
-  MC_ROUTER_PORT="${MC_ROUTER_PORT:-$(get_env_value .env MC_ROUTER_PORT)}"
+  MC_ROUTER_PORT="${MC_ROUTER_PORT:-$(get_env_value "$env_file" MC_ROUTER_PORT)}"
   MC_ROUTER_PORT="${MC_ROUTER_PORT:-25565}"
-  MC_ROUTER_API_PORT="${MC_ROUTER_API_PORT:-$(get_env_value .env MC_ROUTER_API_PORT)}"
+  MC_ROUTER_API_PORT="${MC_ROUTER_API_PORT:-$(get_env_value "$env_file" MC_ROUTER_API_PORT)}"
   MC_ROUTER_API_PORT="${MC_ROUTER_API_PORT:-8080}"
-  MC_ROUTER_DOCKER_GID="${MC_ROUTER_DOCKER_GID:-$(get_env_value .env MC_ROUTER_DOCKER_GID)}"
+  MC_ROUTER_DOCKER_GID="${MC_ROUTER_DOCKER_GID:-$(get_env_value "$env_file" MC_ROUTER_DOCKER_GID)}"
   MC_ROUTER_DOCKER_GID="${MC_ROUTER_DOCKER_GID:-999}"
   export MC_ROUTER_DOMAIN MC_ROUTER_PORT MC_ROUTER_API_PORT MC_ROUTER_DOCKER_GID
 }
@@ -296,7 +323,63 @@ ensure_router() {
 
   ensure_network
   info "Starting mc-router (players connect via <server>.${MC_ROUTER_DOMAIN})..."
-  docker compose -p "${ROUTER_PROJECT_NAME:-minecraft-router}" -f docker-compose.router.yml up -d
+  docker compose -p "${ROUTER_PROJECT_NAME:-minecraft-router}" \
+    -f "$(repo_root)/docker-compose.router.yml" up -d
+}
+
+# Managed RCON port range (loopback admin port per server)
+RCON_PORT_MIN=26565
+RCON_PORT_MAX=26664
+
+# Container memory limit derived from the JVM heap in MEMORY (e.g. "8G"):
+# heap + 35% for metaspace/off-heap/native + a small constant, so the cgroup
+# kills long after the heap is exhausted instead of OOM-killing mid-save.
+# Args: $1 - heap value like 4G / 2048M
+# Returns: limit like "11264M" (stdout); empty when the input is not parseable
+compute_container_memory() {
+  local memory="$1"
+  [[ "$memory" =~ ^([0-9]+)([GgMm])$ ]] || {
+    echo ""
+    return 0
+  }
+  local value=${BASH_REMATCH[1]} unit=${BASH_REMATCH[2]} mb
+  case "$unit" in
+    [Gg]) mb=$((value * 1024)) ;;
+    [Mm]) mb=$value ;;
+  esac
+  echo "$((mb + mb * 35 / 100 + 256))M"
+}
+
+# Export every variable docker-compose.yml interpolates for one server.
+# Args: $1 - server name
+load_server_compose_env() {
+  local server_name="$1"
+  local config_file
+  config_file=$(get_config_file "$server_name")
+
+  # Load per-server values needed for docker compose substitution
+  JAVA_VERSION=$(get_env_value "$config_file" JAVA_VERSION)
+  RCON_PORT=$(get_env_value "$config_file" RCON_PORT)
+  MC_ROUTER_DEFAULT=$(get_env_value "$config_file" MC_ROUTER_DEFAULT)
+  SERVER_NAME="$server_name"
+  export JAVA_VERSION RCON_PORT MC_ROUTER_DEFAULT SERVER_NAME
+
+  # Router settings feed the mc-router.* labels in docker-compose.yml
+  load_router_settings
+
+  # Set dynamic environment variables for docker compose substitution
+  CONTAINER_NAME="$(get_container_name "$server_name")"
+  SERVER_DATA_DIR="$(get_data_dir "$server_name")"
+  SERVER_MODS_DIR="$(get_mods_dir "$server_name")"
+  SERVER_BACKUP_DIR="$(get_backup_dir "$server_name")"
+  SERVER_CONFIG_FILE="$config_file"
+  export CONTAINER_NAME SERVER_DATA_DIR SERVER_MODS_DIR SERVER_BACKUP_DIR SERVER_CONFIG_FILE
+  # RCON_HOST_PORT lets tests shift the published loopback port so a test
+  # server never fights a running real server for the same host port
+  export RCON_HOST_PORT=$((RCON_PORT + ${RCON_PORT_OFFSET:-0}))
+  # Memory guard: heap from the server config + overhead. DOCKER_MEM_LIMIT set
+  # in the environment wins, so an operator can pin an exact value.
+  export DOCKER_MEM_LIMIT="${DOCKER_MEM_LIMIT:-$(compute_container_memory "$(get_env_value "$config_file" MEMORY)")}"
 }
 
 # Start server using docker compose
@@ -304,30 +387,11 @@ ensure_router() {
 # Returns: 0 on success, 1 on failure
 docker_compose_up() {
   local server_name="$1"
-  local config_file
-  config_file=$(get_config_file "$server_name")
 
-  # Load per-server values needed for docker compose substitution
-  export JAVA_VERSION=$(get_env_value "$config_file" JAVA_VERSION)
-  export RCON_PORT=$(get_env_value "$config_file" RCON_PORT)
-  export MC_ROUTER_DEFAULT=$(get_env_value "$config_file" MC_ROUTER_DEFAULT)
-  export SERVER_NAME="$server_name"
-
-  # Router settings feed the mc-router.* labels in docker-compose.yml
-  load_router_settings
-
-  # Set dynamic environment variables for docker compose substitution
-  # RCON_HOST_PORT lets tests shift the published loopback port so a test
-  # server never fights a running real server for the same host port
-  export CONTAINER_NAME="$(get_container_name "$server_name")"
-  export SERVER_DATA_DIR="$(get_data_dir "$server_name")"
-  export SERVER_MODS_DIR="$(get_mods_dir "$server_name")"
-  export SERVER_BACKUP_DIR="$(get_backup_dir "$server_name")"
-  export SERVER_CONFIG_FILE="$config_file"
-  export RCON_HOST_PORT=$((RCON_PORT + ${RCON_PORT_OFFSET:-0}))
+  load_server_compose_env "$server_name"
 
   debug "Starting server with docker compose -p ${CONTAINER_NAME} (RCON on 127.0.0.1:${RCON_HOST_PORT})"
-  docker compose -p "${CONTAINER_NAME}" -f docker-compose.yml up -d 2>&1
+  docker compose -p "${CONTAINER_NAME}" -f "$(repo_root)/docker-compose.yml" up -d 2>&1
 }
 
 # Stop server using docker compose
@@ -339,7 +403,7 @@ docker_compose_down() {
   project=$(get_container_name "$server_name")
 
   debug "Stopping server with docker compose -p ${project} down"
-  docker compose -p "${project}" down -v 2>&1
+  docker compose -p "${project}" -f "$(repo_root)/docker-compose.yml" down -v 2>&1
 }
 
 # Restart server using docker compose
@@ -347,26 +411,36 @@ docker_compose_down() {
 # Returns: 0 on success, 1 on failure
 docker_compose_restart() {
   local server_name="$1"
-  local config_file
-  config_file=$(get_config_file "$server_name")
 
-  # Load per-server values needed for docker compose substitution
-  export JAVA_VERSION=$(get_env_value "$config_file" JAVA_VERSION)
-  export RCON_PORT=$(get_env_value "$config_file" RCON_PORT)
-  export MC_ROUTER_DEFAULT=$(get_env_value "$config_file" MC_ROUTER_DEFAULT)
-  export SERVER_NAME="$server_name"
-  load_router_settings
-
-  # Set dynamic environment variables
-  export CONTAINER_NAME="$(get_container_name "$server_name")"
-  export SERVER_DATA_DIR="$(get_data_dir "$server_name")"
-  export SERVER_MODS_DIR="$(get_mods_dir "$server_name")"
-  export SERVER_BACKUP_DIR="$(get_backup_dir "$server_name")"
-  export SERVER_CONFIG_FILE="$config_file"
-  export RCON_HOST_PORT=$((RCON_PORT + ${RCON_PORT_OFFSET:-0}))
+  load_server_compose_env "$server_name"
 
   debug "Restarting server with docker compose -p ${CONTAINER_NAME} restart"
-  docker compose -p "${CONTAINER_NAME}" restart 2>&1
+  docker compose -p "${CONTAINER_NAME}" -f "$(repo_root)/docker-compose.yml" restart 2>&1
+}
+
+# Serialize per-server operations (start/stop/backup/restore) so two racing
+# invocations cannot interleave a stop/tar/start and archive a mid-write
+# world. Takes a whole-script advisory lock on FD 9; non-blocking: a second
+# concurrent operation on the same server fails fast instead of queueing
+# behind an unknown-length wait.
+# Args: $1 - server name, $2 - operation name for the error message
+# Returns: 0 when the lock was acquired, 1 when busy
+acquire_server_lock() {
+  local server_name="$1" operation="${2:-operation}"
+  local lock_dir="${TMPDIR:-/tmp}/minecraft-servers-locks"
+  local lock_file
+
+  mkdir -p "$lock_dir" 2> /dev/null || true
+  lock_file="${lock_dir}/${server_name}.lock"
+  if ! exec 9> "$lock_file"; then
+    error "Cannot open lock file: $lock_file"
+    return 1
+  fi
+  if ! flock -n 9; then
+    error "Another $operation for '$server_name' is already running (lock: $lock_file)"
+    return 1
+  fi
+  return 0
 }
 
 # ============================================================================
@@ -439,10 +513,10 @@ remove_file() {
 # NETWORK HELPERS
 # ============================================================================
 
-# Ensure Docker network exists
-# Args: $1 - network name (optional, defaults to minecraft-network)
+# Ensure the shared Docker network exists (the one fixed name both compose
+# files reference)
 ensure_network() {
-  local network_name="${1:-minecraft-network}"
+  local network_name="minecraft-network"
 
   if ! docker network inspect "$network_name" &> /dev/null; then
     debug "Creating Docker network: $network_name"
@@ -459,7 +533,7 @@ get_rcon_port() {
   config_file=$(get_config_file "$server_name")
 
   if [ -f "$config_file" ]; then
-    grep "^RCON_PORT=" "$config_file" | cut -d= -f2 | tr -d ' "' || echo "unknown"
+    get_env_value "$config_file" RCON_PORT || true
   else
     echo "unknown"
   fi
@@ -472,16 +546,17 @@ check_port_conflicts() {
   local port_list=()
   local server_list=()
   local has_conflict=false
-  local idx
+  local config_dir idx
 
-  for config_file in config/modpacks/*.env; do
+  config_dir=$(config_modpacks_dir)
+  for config_file in "$config_dir"/*.env; do
     [ -f "$config_file" ] || continue
 
     local server_name
     server_name=$(basename "$config_file" .env)
 
     local port
-    port=$(grep "^RCON_PORT=" "$config_file" 2> /dev/null | cut -d= -f2 | tr -d ' "')
+    port=$(get_env_value "$config_file" RCON_PORT)
 
     if [ -z "$port" ]; then
       warning "Server $server_name has no RCON_PORT defined"
@@ -512,27 +587,30 @@ check_port_conflicts() {
   return 0
 }
 
-# Find next available RCON port (managed range 26565-26664)
+# Find next available RCON port (managed range RCON_PORT_MIN-RCON_PORT_MAX)
 # Returns: available port number (stdout)
 find_available_port() {
   local used_ports=()
+  local config_dir
+  config_dir=$(config_modpacks_dir)
 
   # Collect all used ports
-  for config_file in config/modpacks/*.env; do
+  for config_file in "$config_dir"/*.env; do
     [ -f "$config_file" ] || continue
 
     local port
-    port=$(grep "^RCON_PORT=" "$config_file" 2> /dev/null | cut -d= -f2 | tr -d ' "')
+    port=$(get_env_value "$config_file" RCON_PORT)
 
     if [ -n "$port" ]; then
       used_ports+=("$port")
     fi
   done
 
-  # Find first available port in range 26565-26664
-  for port in {26565..26664}; do
-    local port_used=false
-    for used_port in "${used_ports[@]}"; do
+  # Find first available port in the managed range
+  local port port_used
+  for port in $(seq "$RCON_PORT_MIN" "$RCON_PORT_MAX"); do
+    port_used=false
+    for used_port in "${used_ports[@]+"${used_ports[@]}"}"; do
       if [ "$port" = "$used_port" ]; then
         port_used=true
         break
@@ -545,7 +623,7 @@ find_available_port() {
     fi
   done
 
-  error "No available ports in range 26565-26664"
+  error "No available ports in range ${RCON_PORT_MIN}-${RCON_PORT_MAX}"
   return 1
 }
 

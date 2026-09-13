@@ -241,7 +241,9 @@ kubectl -n "$NAMESPACE" rollout status deployment/minecraft-router --timeout=120
 }
 
 # A TCP connect is the only real proof of exposure; everything else is wishes.
-port_open() { timeout 3 bash -c "exec 3<>/dev/tcp/$1/$2" 2> /dev/null; }
+# Host/port travel as positional args (never interpolated into the code
+# string, so a crafted host or port cannot inject shell).
+port_open() { timeout 3 bash -c 'exec 3<>/dev/tcp/$1/$2' _ "$1" "$2" 2> /dev/null; }
 
 EXPOSED_AT=""
 NODE_IP="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' 2> /dev/null || true)"

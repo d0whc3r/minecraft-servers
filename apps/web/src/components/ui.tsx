@@ -166,9 +166,12 @@ export function Chip({
 // ---- Meter ---------------------------------------------------------------------
 
 export function Meter({ value, max = 100 }: { value: number; max?: number }) {
-  const pct = Math.min(100, (value / Math.max(1, max)) * 100);
+  const pct = Math.max(0, Math.min(100, (value / Math.max(1, max)) * 100));
   return (
-    <div className="h-[5px] overflow-hidden rounded-[3px] bg-raise">
+    <div
+      className="h-[5px] overflow-hidden rounded-[3px] bg-raise"
+      aria-hidden="true"
+    >
       <div
         className="h-full rounded-[3px] bg-ok transition-[width] duration-400"
         style={{ width: `${pct}%` }}
@@ -305,6 +308,22 @@ export function Field({
   );
 }
 
+/** Label/value group for read-only details; unlike Field, emits no form label. */
+export function InfoField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1 text-[0.85rem] text-dim">
+      <span className="font-semibold">{label}</span>
+      {children}
+    </div>
+  );
+}
+
 export const inputClass =
   "min-h-10 rounded-lg border border-edge bg-base/65 px-3 py-2 font-sans text-ink placeholder:text-dim/75 transition-colors hover:border-[#45594f] focus:border-ok";
 
@@ -415,27 +434,36 @@ export function useToasts() {
     [],
   );
   const list = (
-    <div
-      className="fixed right-4 bottom-4 z-60 flex max-w-[min(420px,calc(100vw-2rem))] flex-col gap-2"
-      aria-live="polite"
-    >
+    <div className="fixed right-4 bottom-4 z-60 flex max-w-[min(420px,calc(100vw-2rem))] flex-col gap-2">
       {toasts.map((t) => (
         <div
           key={t.id}
-          onClick={() => setToasts((all) => all.filter((x) => x.id !== t.id))}
           className={cn(
-            "cursor-pointer rounded-lg border border-l-4 border-edge bg-raise px-3 py-2 text-[0.88rem] shadow-[0_6px_24px_rgba(0,0,0,0.35)]",
+            "flex items-start gap-3 rounded-lg border border-l-4 border-edge bg-raise px-3 py-2 text-[0.88rem] shadow-[0_6px_24px_rgba(0,0,0,0.35)]",
             t.kind === "ok" && "border-l-ok",
             t.kind === "err" && "border-l-bad",
             t.kind === "info" && "border-l-warn",
           )}
+          role={t.kind === "err" ? "alert" : "status"}
         >
-          <strong>{t.text}</strong>
-          {t.detail && (
-            <pre className="mt-1.5 max-h-45 overflow-auto font-mono text-[0.75rem] break-words whitespace-pre-wrap text-dim">
-              {t.detail}
-            </pre>
-          )}
+          <div className="min-w-0 flex-1">
+            <strong>{t.text}</strong>
+            {t.detail && (
+              <pre className="mt-1.5 max-h-45 overflow-auto font-mono text-[0.75rem] break-words whitespace-pre-wrap text-dim">
+                {t.detail}
+              </pre>
+            )}
+          </div>
+          <button
+            type="button"
+            aria-label={`Dismiss notification: ${t.text}`}
+            className="grid size-7 flex-none cursor-pointer place-items-center rounded-md border-0 bg-transparent text-dim hover:bg-panel hover:text-ink"
+            onClick={() =>
+              setToasts((all) => all.filter((item) => item.id !== t.id))
+            }
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
         </div>
       ))}
     </div>

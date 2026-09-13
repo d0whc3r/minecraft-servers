@@ -99,7 +99,9 @@ probes:
 
 # The panel fills memory from the modpack MEMORY value: request = JVM heap,
 # limit = heap + native headroom (a limit equal to the heap OOMKills the pod
-# right when the heap fills). CPU is left unset.
+# right when the heap fills). CPU is left unset. When resources is empty the
+# chart derives those same requests/limits from env.MEMORY automatically, so
+# a standalone helm install is not left unlimited. Explicit resources win.
 resources: {}
   # requests:
   #   memory: 6Gi

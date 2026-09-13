@@ -4,7 +4,7 @@ import {
   buttonClass,
   Chip,
   CopyValue,
-  Field,
+  InfoField,
   Modal,
   MONO,
   StateBadge,
@@ -46,7 +46,8 @@ export function ServerDetailsModal({
                 title="Open the official modpack page to verify the version your client needs"
                 className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-ok/50 bg-ok/10 px-3.5 py-2 text-sm font-semibold text-ok transition-colors hover:bg-ok/25"
               >
-                Official {s.platform} page ↗
+                Official {s.platform} page <span aria-hidden="true">↗</span>
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             ) : (
               <Chip>{s.platform}</Chip>
@@ -64,7 +65,7 @@ export function ServerDetailsModal({
         </div>
 
         <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3.5">
-          <Field label="Players online">
+          <InfoField label="Players online">
             {s.players && s.players.names.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {s.players.names.map((name) => (
@@ -76,18 +77,18 @@ export function ServerDetailsModal({
                 {s.players ? `${s.players.online}/${s.players.max}` : "—"}
               </span>
             )}
-          </Field>
-          <Field label="MOTD">
+          </InfoField>
+          <InfoField label="MOTD">
             <span className={MONO}>{s.motd ?? "—"}</span>
-          </Field>
-          <Field label="Reported version">
+          </InfoField>
+          <InfoField label="Reported version">
             <span className={MONO}>{s.versionName ?? s.mcVersion}</span>
-          </Field>
+          </InfoField>
         </div>
 
-        <Field label="Connect address (host:port via mc-router)">
+        <InfoField label="Connect address (host:port via mc-router)">
           <CopyValue value={connectAddress(s.connect, routerPort)} />
-        </Field>
+        </InfoField>
 
         {actions || adminHref ? (
           <div className="flex flex-wrap gap-2">

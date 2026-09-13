@@ -7,7 +7,6 @@ set -euo pipefail
 
 # Load common functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/common.sh"
 
 # Show usage information
@@ -99,7 +98,9 @@ fi
 get_server_list() {
   if [[ "$ALL_SERVERS" == true ]]; then
     # Get all configured servers
-    for config_file in config/modpacks/*.env; do
+    local config_dir
+    config_dir=$(config_modpacks_dir)
+    for config_file in "$config_dir"/*.env; do
       if [[ -f "$config_file" ]]; then
         basename "$config_file" .env
       fi
@@ -154,7 +155,8 @@ check_router_entry() {
 # Check server process health via Docker logs
 check_server_logs() {
   local server_name="$1"
-  local container_name="mc-${server_name}"
+  local container_name
+  container_name=$(get_container_name "$server_name")
 
   # Get recent logs (last 50 lines)
   local logs
@@ -177,7 +179,8 @@ check_server_logs() {
 # Check disk space for server data
 check_disk_space() {
   local server_name="$1"
-  local server_dir="servers/$server_name"
+  local server_dir
+  server_dir="$(servers_base_dir)/servers/$server_name"
 
   if [[ ! -d "$server_dir" ]]; then
     return 1
@@ -211,7 +214,8 @@ check_server_health() {
   fi
 
   # Check if server directory exists (is deployed)
-  local server_dir="servers/$server_name"
+  local server_dir
+  server_dir="$(servers_base_dir)/servers/$server_name"
   if [[ ! -d "$server_dir" ]]; then
     health_status="not_deployed"
     details+=("server:not_deployed")
@@ -312,17 +316,18 @@ main() {
   local servers
   servers=$(get_server_list)
   local overall_status=0
-  local results=()
+  local first=true
 
   if [[ "$JSON_OUTPUT" == true ]]; then
-    echo "[" >&2
-    local first=true
+    # One JSON array on stdout: every check_server_health call prints one
+    # object, joined here with commas
+    echo "["
   fi
 
   for server in $servers; do
     if [[ "$JSON_OUTPUT" == true ]]; then
       if [[ "$first" == false ]]; then
-        echo "," >&2
+        echo ","
       fi
       first=false
     fi
@@ -333,7 +338,7 @@ main() {
   done
 
   if [[ "$JSON_OUTPUT" == true ]]; then
-    echo "]" >&2
+    echo "]"
   fi
 
   return $overall_status

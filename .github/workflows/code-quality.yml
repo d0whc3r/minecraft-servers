@@ -27,6 +27,21 @@ jobs:
       - name: Lint and render charts
         run: make helm-template
 
+  shellcheck:
+    name: Shell scripts
+    runs-on: ubuntu-latest # shellcheck is preinstalled on the runner image
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Shellcheck all management and CI scripts
+        run: shellcheck -S warning scripts/*.sh scripts/ci/*.sh scripts/k8s-jobs/*.sh
+
+      - name: Validate workflow and action definitions
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- v1.7.7
+          ./actionlint -color
+
   validate:
     name: Validate Code Quality
     runs-on: ubuntu-latest
@@ -51,3 +66,34 @@ jobs:
 
       - name: Unit tests (web panel)
         run: pnpm --filter @minecraft-servers/web test
+
+  go:
+    name: Go TUI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Go (version from apps/tui/go.mod)
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: apps/tui/go.mod
+          cache-dependency-path: apps/tui/go.sum
+
+      - name: Check formatting
+        working-directory: apps/tui
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt needed on: $unformatted"
+            gofmt -d .
+            exit 1
+          fi
+
+      - name: Vet
+        working-directory: apps/tui
+        run: go vet ./...
+
+      - name: Unit tests
+        working-directory: apps/tui
+        run: go test -race ./...

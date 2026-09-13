@@ -210,8 +210,13 @@ export default function Dashboard() {
           <span
             className={cn(
               "size-2 rounded-full",
-              error ? "bg-bad" : status ? "bg-ok" : "animate-pulse bg-idle",
+              error
+                ? "bg-bad"
+                : status
+                  ? "bg-ok"
+                  : "animate-pulse bg-idle motion-reduce:animate-none",
             )}
+            aria-hidden="true"
           />
           {error
             ? "Connection interrupted"
@@ -509,7 +514,7 @@ function ServersTableView({
                       className="flex-none text-[0.72rem] font-semibold text-ok hover:underline underline-offset-3"
                       aria-label={`Manage ${s.title} in admin`}
                     >
-                      Manage ↗
+                      Manage <span aria-hidden="true">↗</span>
                     </a>
                   )}
                 </div>
@@ -594,7 +599,8 @@ function ServersTableView({
               title={`Open the official ${s.platform} page to verify the modpack against your client`}
               className="whitespace-nowrap text-ok hover:underline underline-offset-3"
             >
-              {s.platform} ↗
+              {s.platform} <span aria-hidden="true">↗</span>
+              <span className="sr-only"> (opens in a new tab)</span>
             </a>
           ) : (
             <span className="text-dim">{s.platform}</span>
@@ -782,7 +788,8 @@ function ServerCard({
             title={`Open the official ${s.platform} page`}
             className="rounded-md bg-ok/10 px-2 py-1 font-semibold text-ok no-underline hover:bg-ok/18"
           >
-            {s.platform} ↗
+            {s.platform} <span aria-hidden="true">↗</span>
+            <span className="sr-only"> (opens in a new tab)</span>
           </a>
         ) : (
           <span className="rounded-md bg-raise px-2 py-1">{s.platform}</span>

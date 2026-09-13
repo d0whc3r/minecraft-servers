@@ -6,7 +6,9 @@
 # resolve the workspace lockfile.
 # ---------------------------------------------------------------------------
 FROM node:24-bookworm-slim AS build
-RUN npm install --global pnpm@12.3.4
+# Must match package.json "packageManager" (corepack-enforced environments
+# reject a mismatching pnpm)
+RUN npm install --global pnpm@12.4.1
 WORKDIR /mono
 
 # Workspace manifests first: the dependency layer only rebuilds when they do.

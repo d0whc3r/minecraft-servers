@@ -25,14 +25,30 @@ func States() (map[string]domain.ContainerState, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), statesTimeout)
 	defer cancel()
 
+	// {{.Labels}}, not {{.Label "key"}}: the .Label format function only
+	// exists on newer Docker CLIs and podman rejects it outright, while
+	// {{.Labels}} works everywhere (repo requirement: Docker 20.10+, and
+	// rootless podman is a documented setup). routeFromLabels picks the
+	// mc-router.host entry out of the comma-separated list.
 	out, err := exec.CommandContext(ctx, "docker", "ps", "-a",
 		"--filter", "name=mc-",
-		"--format", "{{.Names}}\t{{.State}}\t{{.Status}}\t{{.Label \"mc-router.host\"}}",
+		"--format", "{{.Names}}\t{{.State}}\t{{.Status}}\t{{.Labels}}",
 	).Output()
 	if err != nil {
 		return nil, wrapCmdErr("docker ps", err)
 	}
 	return parseStates(out), nil
+}
+
+// routeFromLabels extracts the mc-router.host value from a container's
+// comma-separated label list as printed by `docker ps --format {{.Labels}}`.
+func routeFromLabels(labels string) string {
+	for _, pair := range strings.Split(labels, ",") {
+		if value, ok := strings.CutPrefix(pair, "mc-router.host="); ok {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 // parseStates parses `docker ps --format` output: one tab-separated record of
@@ -61,7 +77,7 @@ func parseStates(out []byte) map[string]domain.ContainerState {
 			State:  fields[1],
 			Health: domain.ParseHealth(fields[2]),
 			Status: fields[2],
-			Route:  strings.TrimSpace(fields[3]),
+			Route:  routeFromLabels(fields[3]),
 		}
 	}
 	return states

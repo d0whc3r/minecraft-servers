@@ -193,6 +193,7 @@ export function DataTable<TData extends RowData>({
                 return (
                   <select
                     key={f.columnId}
+                    name={`filter-${f.columnId}`}
                     className={cn(inputClass, "w-auto")}
                     value={String(column.getFilterValue() ?? "")}
                     onChange={(e) =>
@@ -213,6 +214,8 @@ export function DataTable<TData extends RowData>({
                 <input
                   key={f.columnId}
                   type="search"
+                  name={`filter-${f.columnId}`}
+                  autoComplete="off"
                   value={String(column.getFilterValue() ?? "")}
                   onChange={(e) =>
                     column.setFilterValue(e.target.value || undefined)
@@ -363,7 +366,8 @@ export function DataTable<TData extends RowData>({
                 key={row.id}
                 id={getRowAnchor?.(row.original)}
                 className={cn(
-                  onRowClick && "cursor-pointer",
+                  onRowClick &&
+                    "cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ok",
                   isRowHighlighted?.(row.original) &&
                     "bg-ok/[0.07] outline-1 -outline-offset-1 outline-ok/35",
                 )}
@@ -371,6 +375,14 @@ export function DataTable<TData extends RowData>({
                   if (!onRowClick) return;
                   const t = e.target as HTMLElement;
                   if (t.closest("a,button,input,select,label,summary")) return;
+                  onRowClick(row.original);
+                }}
+                tabIndex={onRowClick ? 0 : undefined}
+                onKeyDown={(event) => {
+                  if (!onRowClick || event.target !== event.currentTarget)
+                    return;
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  event.preventDefault();
                   onRowClick(row.original);
                 }}
               >

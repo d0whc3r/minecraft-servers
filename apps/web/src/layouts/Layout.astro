@@ -20,9 +20,16 @@ const isAdmin = path.startsWith("/admin");
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
-    <meta name="robots" content="noindex" />
+    <meta
+      name="robots"
+      content="noindex, nofollow, noarchive, nosnippet, noimageindex"
+    />
+    <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#0b110f" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="application-name" content="Minecraft Panel" />
+    <meta name="apple-mobile-web-app-title" content="Minecraft Panel" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <title>{title}</title>
   </head>
   <body>

@@ -27,6 +27,11 @@ services:
     image: mc-panel:latest
     container_name: mc-panel
     restart: unless-stopped
+    # The panel is admin-only by job, but this still blocks accidental
+    # privilege escalation from inside the container (sshd included: it runs
+    # unprivileged on a high port and never needs setuid binaries).
+    security_opt:
+      - no-new-privileges:true
     networks:
       - minecraft-network
     ports:
@@ -60,8 +65,17 @@ services:
     volumes:
       - ../..:/repo
       - mc-panel-data:/data
-      # DOCKER_SOCKET: override in .env for rootless podman (e.g. /run/user/1000/podman/podman.sock)
-      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      # Read-only: the docker CLI only needs to CONNECT to the socket; it
+      # never reads it as a file. :ro is defense in depth alongside the
+      # documented trust model above.
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    # Opt-in hardening: run as a non-root user (e.g. your own uid, which owns
+    # the /repo checkout). Needs MC_PANEL_DOCKER_GID matching the socket group
+    # (`stat -c %g /var/run/docker.sock`), and breaks MCPANEL_SSH=1 if that
+    # user cannot write its ssh dir under /data.
+    # user: "1000:1000"
+    # group_add:
+    #   - "${MC_PANEL_DOCKER_GID:-999}"
 
 networks:
   minecraft-network:

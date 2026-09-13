@@ -22,44 +22,43 @@ if [ $# -gt 0 ] && [[ "$1" == --format=* ]]; then
   FORMAT="${1#--format=}"
 fi
 
+# Container name prefix (CONTAINER_NAME_PREFIX keeps test containers separate)
+PREFIX="${CONTAINER_NAME_PREFIX:-mc-}"
+
 # Get all mc-* containers
-CONTAINERS=$(docker ps -a --filter "name=mc-*" --format "{{.Names}}" 2> /dev/null || true)
+CONTAINERS=$(docker ps -a --filter "name=${PREFIX}*" --format "{{.Names}}" 2> /dev/null || true)
 
 if [ "$FORMAT" == "json" ]; then
-  # JSON output
-  echo "{"
-  echo '  "servers": ['
-
-  FIRST=true
+  # JSON output: jq builds every object (proper escaping) and assembles the
+  # final document
+  declare -a OBJECTS=()
   for container in $CONTAINERS; do
-    [ "$FIRST" = true ] || echo ","
-    FIRST=false
-
-    SERVER_NAME=${container#mc-}
+    SERVER_NAME=${container#"$PREFIX"}
     STATUS=$(docker inspect --format='{{.State.Status}}' "$container" 2> /dev/null || echo "unknown")
 
+    ROUTE=$(docker inspect --format '{{index .Config.Labels "mc-router.host"}}' "$container" 2> /dev/null || echo "")
     if [ "$STATUS" == "running" ]; then
-      ROUTE=$(docker inspect --format '{{index .Config.Labels "mc-router.host"}}' "$container" 2> /dev/null || echo "")
       UPTIME=$(docker inspect --format='{{.State.StartedAt}}' "$container" 2> /dev/null || echo "unknown")
       HEALTH=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}N/A{{end}}' "$container" 2> /dev/null || echo "N/A")
     else
-      ROUTE=$(docker inspect --format '{{index .Config.Labels "mc-router.host"}}' "$container" 2> /dev/null || echo "")
       UPTIME="N/A"
       HEALTH="N/A"
     fi
 
-    echo "    {"
-    echo "      \"name\": \"$SERVER_NAME\","
-    echo "      \"status\": \"$STATUS\","
-    echo "      \"route\": \"$ROUTE\","
-    echo "      \"uptime\": \"$UPTIME\","
-    echo "      \"health\": \"$HEALTH\""
-    echo -n "    }"
+    OBJECTS+=("$(jq -n \
+      --arg name "$SERVER_NAME" \
+      --arg status "$STATUS" \
+      --arg route "$ROUTE" \
+      --arg uptime "$UPTIME" \
+      --arg health "$HEALTH" \
+      '{name: $name, status: $status, route: $route, uptime: $uptime, health: $health}')")
   done
 
-  echo ""
-  echo "  ]"
-  echo "}"
+  if [ ${#OBJECTS[@]} -gt 0 ]; then
+    printf '%s\n' "${OBJECTS[@]}" | jq -s '{servers: .}'
+  else
+    echo '{"servers": []}'
+  fi
   exit 0
 fi
 
@@ -91,19 +90,20 @@ if [ -z "$CONTAINERS" ]; then
 fi
 
 for container in $CONTAINERS; do
-  SERVER_NAME=${container#mc-}
+  SERVER_NAME=${container#"$PREFIX"}
   STATUS=$(docker inspect --format='{{.State.Status}}' "$container" 2> /dev/null || echo "unknown")
 
   # Color code status
   if [ "$STATUS" == "running" ]; then
     STATUS_COLOR="${GREEN}running${NC}"
-    ((RUNNING++))
+    ((RUNNING++)) || true
 
     # The mc-router hostname players connect to (static, from labels)
     PORT=$(get_connect_address "$container")
 
     # Get memory from config
-    MEMORY=$(grep "^MEMORY=" "config/modpacks/${SERVER_NAME}.env" 2> /dev/null | cut -d= -f2 | tr -d ' "' || echo "N/A")
+    MEMORY=$(get_env_value "$(get_config_file "$SERVER_NAME")" MEMORY)
+    MEMORY="${MEMORY:-N/A}"
 
     # Calculate uptime
     UPTIME=$(get_container_uptime "$container")
@@ -118,7 +118,7 @@ for container in $CONTAINERS; do
     esac
   else
     STATUS_COLOR="${RED}stopped${NC}"
-    ((STOPPED++))
+    ((STOPPED++)) || true
     # Route hostname is static (from labels) even when stopped
     PORT=$(get_connect_address "$container")
     MEMORY="-"

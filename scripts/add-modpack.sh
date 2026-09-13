@@ -25,16 +25,10 @@ declare -A TEMPLATES=(
   ["vanilla"]="Vanilla Optimized,PAPER,26.2,2G,,Vanilla Server"
 )
 
-# Function to find next available port
-find_next_port() {
-  find_available_port
-}
-
-# RCON port range: the only per-server port. Game traffic has no per-server
-# port at all - mc-router routes every player via <server>.<MC_ROUTER_DOMAIN>
-# and RCON stays bound to 127.0.0.1 on the host
-RCON_PORT_MIN=26565
-RCON_PORT_MAX=26664
+# RCON port range and auto-assignment come from common.sh (RCON_PORT_MIN/MAX,
+# find_available_port): game traffic has no per-server port at all - mc-router
+# routes every player via <server>.<MC_ROUTER_DOMAIN> and RCON stays bound to
+# 127.0.0.1 on the host
 
 # Function to validate memory format
 validate_memory() {
@@ -59,7 +53,7 @@ create_server_config() {
   # Use template if specified, otherwise create basic config
   if [[ -n "$template" && "${TEMPLATES[$template]+exists}" ]]; then
     # Parse template
-    IFS=',' read -r display_name type version default_memory cf_url server_name <<< "${TEMPLATES[$template]}"
+    IFS=',' read -r display_name type version default_memory cf_url _ <<< "${TEMPLATES[$template]}"
 
     # Override memory if specified
     if [[ -n "$memory" ]]; then
@@ -123,15 +117,20 @@ EOF
 # Function to create directories
 create_directories() {
   local name="$1"
+  local data_dir mods_dir backup_dir
 
-  ensure_directory "servers/$name/data"
-  ensure_directory "servers/$name/mods"
-  ensure_directory "backups/$name"
+  data_dir=$(dirname "$(get_data_dir "$name")")
+  mods_dir=$(dirname "$(get_mods_dir "$name")")
+  backup_dir=$(get_backup_dir "$name")
+
+  ensure_directory "$data_dir/data"
+  ensure_directory "$mods_dir/mods"
+  ensure_directory "$backup_dir"
 
   success "Created directories:"
-  success "  - servers/$name/data"
-  success "  - servers/$name/mods"
-  success "  - backups/$name"
+  success "  - $data_dir/data"
+  success "  - $mods_dir/mods"
+  success "  - $backup_dir"
 }
 
 # Parse arguments
@@ -225,11 +224,23 @@ if [[ -n "$MEMORY" ]] && ! validate_memory "$MEMORY"; then
   exit 4
 fi
 
-# Determine RCON port (the only per-server port)
+# Determine RCON port (the only per-server port). Port scan + config write are
+# serialized behind a global lock so two concurrent add-modpack runs cannot
+# claim the same port (find_next_port only reads existing configs).
+LOCK_DIR="${TMPDIR:-/tmp}/minecraft-servers-locks"
+mkdir -p "$LOCK_DIR" 2> /dev/null || true
+if ! exec 8> "${LOCK_DIR}/.add-modpack.lock"; then
+  error "Cannot open lock file: ${LOCK_DIR}/.add-modpack.lock"
+  exit 1
+fi
+if ! flock -n 8; then
+  error "Another add-modpack run is in progress, try again in a moment"
+  exit 1
+fi
+
 if [[ -z "$RCON_PORT_ARG" ]]; then
   log_info "Auto-assigning RCON port..."
-  PORT=$(find_next_port)
-  if [[ $? -ne 0 ]]; then
+  if ! PORT=$(find_available_port); then
     exit 4
   fi
   log_info "Assigned RCON port: $PORT"
@@ -241,12 +252,16 @@ else
     exit 4
   fi
 
-  # Check if port is already used
-  if ! check_port_conflicts; then
-    error "Port $RCON_PORT_ARG is already in use"
-    exit 4
-  fi
+  # Check the requested port is not already claimed by another server
   PORT="$RCON_PORT_ARG"
+  for config_file in "$(config_modpacks_dir)"/*.env; do
+    [ -f "$config_file" ] || continue
+    existing_port=$(get_env_value "$config_file" RCON_PORT)
+    if [ "$existing_port" = "$PORT" ]; then
+      error "Port $PORT is already used by server '$(basename "$config_file" .env)'"
+      exit 4
+    fi
+  done
 fi
 
 log_info "Adding new server: $SERVER_NAME"
@@ -263,7 +278,7 @@ echo ""
 echo "Configuration Summary:"
 echo "  Name: $SERVER_NAME"
 if [[ -n "$TEMPLATE" ]]; then
-  IFS=',' read -r display_name type version default_memory cf_url server_name <<< "${TEMPLATES[$TEMPLATE]}"
+  IFS=',' read -r display_name type version default_memory _ _ <<< "${TEMPLATES[$TEMPLATE]}"
   echo "  Type: $type ($display_name)"
   echo "  Version: $version"
 else

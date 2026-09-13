@@ -7,7 +7,6 @@ set -euo pipefail
 
 # Load common functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/common.sh"
 
 # Show usage information
@@ -102,7 +101,9 @@ done
 
 # Get list of configured servers
 get_configured_servers() {
-  for config_file in config/modpacks/*.env; do
+  local config_dir
+  config_dir=$(config_modpacks_dir)
+  for config_file in "$config_dir"/*.env; do
     if [[ -f "$config_file" ]]; then
       basename "$config_file" .env
     fi
@@ -156,9 +157,11 @@ restart_server() {
 
   warning "Restarting $server_name (reason: $reason)"
 
-  # Use existing restart script
-  if [[ -x "scripts/restart-server.sh" ]]; then
-    if timeout "$TIMEOUT" "scripts/restart-server.sh" "$server_name"; then
+  # Use the restart script (repo-relative to this script's location, so the
+  # monitor works from any CWD and inside cron)
+  local restart_script="${SCRIPT_DIR}/restart-server.sh"
+  if [[ -x "$restart_script" ]]; then
+    if timeout "$TIMEOUT" "$restart_script" "$server_name"; then
       success "Successfully restarted $server_name"
       return 0
     else
@@ -223,9 +226,11 @@ check_and_restart() {
 
     if [[ "$needs_restart" == true ]]; then
       if restart_server "$server" "$reason"; then
-        ((restart_count++))
+        # ((x++)) evaluates to 0 the first time and returns 1, which would
+        # abort the script under set -e: use the guarded form
+        ((restart_count++)) || true
       else
-        ((failed_count++))
+        ((failed_count++)) || true
       fi
     fi
   done

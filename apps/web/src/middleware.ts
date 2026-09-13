@@ -36,9 +36,17 @@ function jsonResponse(body: unknown, status: number): Response {
 }
 
 function withHardeningHeaders(response: Response): Response {
+  // This is an operations console, never public content. The HTTP header also
+  // covers API responses and non-HTML routes that cannot carry a robots meta.
+  response.headers.set(
+    "x-robots-tag",
+    "noindex, nofollow, noarchive, nosnippet, noimageindex",
+  );
   response.headers.set("x-frame-options", "DENY");
   response.headers.set("x-content-type-options", "nosniff");
   response.headers.set("referrer-policy", "no-referrer");
+  response.headers.set("cross-origin-opener-policy", "same-origin");
+  response.headers.set("cross-origin-resource-policy", "same-origin");
   response.headers.set(
     "permissions-policy",
     "camera=(), microphone=(), geolocation=()",
@@ -52,7 +60,9 @@ function withHardeningHeaders(response: Response): Response {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data:",
       "connect-src 'self'",
+      "object-src 'none'",
       "frame-ancestors 'none'",
+      "form-action 'self'",
       "base-uri 'none'",
     ].join("; "),
   );

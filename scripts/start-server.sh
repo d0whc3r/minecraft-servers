@@ -31,6 +31,12 @@ if ! validate_server_name "$SERVER_NAME"; then
   exit 2
 fi
 
+# Serialize per-server operations: a start racing a backup/restore would
+# interleave container stop/start with the world on disk
+if ! acquire_server_lock "$SERVER_NAME" "start"; then
+  exit 1
+fi
+
 # Check configuration exists
 if ! check_config_exists "$SERVER_NAME"; then
   exit 3
