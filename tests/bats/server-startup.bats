@@ -47,8 +47,9 @@ setup() {
 
 teardown() {
     # Remove the dedicated test router (the real minecraft-router is a
-    # different project/container and stays untouched)
-    docker compose -p "${ROUTER_PROJECT_NAME:-minecraft-router-test}" \
+    # different project/container and stays untouched). Bounded with timeout:
+    # a wedged container runtime must not stall the suite forever.
+    timeout 120 docker compose -p "${ROUTER_PROJECT_NAME:-minecraft-router-test}" \
         -f docker-compose.router.yml down -v > /dev/null 2>&1 || true
 
     # Safety net for data of servers whose check was interrupted: only ever
@@ -67,7 +68,7 @@ remove_tree() {
     local path="$1"
     [ -e "$path" ] || return 0
     rm -rf "$path" 2> /dev/null || \
-        docker run --rm -v "${path}:/target" "${CLEANUP_IMAGE:-alpine:latest}" \
+        timeout 300 docker run --rm -v "${path}:/target" "${CLEANUP_IMAGE:-alpine:latest}" \
             rm -rf /target > /dev/null 2>&1 || true
 }
 
@@ -77,7 +78,7 @@ capture_server_logs() {
     local modpack_name="$1" container_name="$2"
     local log_dir="${TEST_LOG_DIR:-${SERVERS_BASE_DIR}/server-logs}"
     mkdir -p "$log_dir"
-    docker logs "$container_name" > "${log_dir}/${modpack_name}.log" 2>&1 || true
+    timeout 60 docker logs "$container_name" > "${log_dir}/${modpack_name}.log" 2>&1 || true
 }
 
 # Delete the test world/mods/backup data of one server. Called as soon as its
@@ -143,9 +144,10 @@ cleanup_test_server_data() {
         echo "Monitoring: Check every ${check_interval}s, max ${max_wait_time}s"
         echo "Container: $container_name"
 
-        # Start the server in background
+        # Start the server in background (own process group so a failure
+        # timeout can kill its whole tree, compose children included)
         echo "🚀 Starting server '$modpack_name'..."
-        ./scripts/start-server.sh "$modpack_name" &
+        setsid ./scripts/start-server.sh "$modpack_name" &
         local server_pid=$!
 
         # Wait for container to be created
@@ -163,7 +165,7 @@ cleanup_test_server_data() {
         if [ $wait_container -ge "$CONTAINER_CREATE_TIMEOUT" ]; then
             echo "  ❌ Container not created after ${CONTAINER_CREATE_TIMEOUT}s"
             failed_servers+=("$modpack_name:container_not_created")
-            kill $server_pid > /dev/null 2>&1 || true
+            kill -- -$server_pid > /dev/null 2>&1 || true
             cleanup_test_server_data "$modpack_name"
             continue
         fi
@@ -198,9 +200,9 @@ cleanup_test_server_data() {
                     failed_servers+=("$modpack_name:stopped_exit_$exit_code")
                 fi
 
-                kill $server_pid > /dev/null 2>&1 || true
+                kill -- -$server_pid > /dev/null 2>&1 || true
                 capture_server_logs "$modpack_name" "$container_name"
-                docker rm "$container_name" > /dev/null 2>&1 || true
+                docker rm -f "$container_name" > /dev/null 2>&1 || true
                 cleanup_test_server_data "$modpack_name"
                 break
             fi
@@ -246,9 +248,9 @@ cleanup_test_server_data() {
                 echo "  📄 Last 20 log lines:"
                 echo "$current_logs" | tail -20 | sed 's/^/     /'
                 failed_servers+=("$modpack_name:fatal_error")
-                kill $server_pid > /dev/null 2>&1 || true
+                kill -- -$server_pid > /dev/null 2>&1 || true
                 capture_server_logs "$modpack_name" "$container_name"
-                docker rm "$container_name" > /dev/null 2>&1 || true
+                docker rm -f "$container_name" > /dev/null 2>&1 || true
                 cleanup_test_server_data "$modpack_name"
                 break
             fi
@@ -265,7 +267,7 @@ cleanup_test_server_data() {
             # Clean up container, then the test data it generated
             capture_server_logs "$modpack_name" "$container_name"
             ./scripts/stop-server.sh "$modpack_name" > /dev/null 2>&1 || true
-            docker rm "$container_name" > /dev/null 2>&1 || true
+            docker rm -f "$container_name" > /dev/null 2>&1 || true
             cleanup_test_server_data "$modpack_name"
         else
             # Only add timeout if server wasn't already marked as failed
@@ -289,10 +291,10 @@ cleanup_test_server_data() {
                 fi
 
                 # Clean up container, then the test data it generated
-                kill $server_pid > /dev/null 2>&1 || true
+                kill -- -$server_pid > /dev/null 2>&1 || true
                 capture_server_logs "$modpack_name" "$container_name"
                 ./scripts/stop-server.sh "$modpack_name" > /dev/null 2>&1 || true
-                docker rm "$container_name" > /dev/null 2>&1 || true
+                docker rm -f "$container_name" > /dev/null 2>&1 || true
                 cleanup_test_server_data "$modpack_name"
             fi
         fi
