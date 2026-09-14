@@ -6,6 +6,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { K8S_RCON_PORT, RUNTIME, rconServiceDns } from "@/lib/runtime.js";
+import { listEnvFiles, parseEnvFile } from "@/lib/envFile.js";
+import {
+  detectPlatform,
+  modpackUrl,
+  parseTags,
+  prettifyName,
+  readDocMeta,
+} from "@/lib/serverMeta.js";
 
 export interface ServerDef {
   name: string;
@@ -88,152 +96,6 @@ const CATALOG_DIR = () => path.join(PROJECT_ROOT, "config/modpacks");
 
 /** Header line marking a config as panel-created (and panel-deletable). */
 export const MANAGED_MARKER = "# managed-by: mc-panel";
-
-function listEnvFiles(dir: string): string[] {
-  try {
-    return fs
-      .readdirSync(dir)
-      .filter((f) => f.endsWith(".env"))
-      .sort();
-  } catch {
-    return [];
-  }
-}
-
-function parseEnvFile(filePath: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  let raw = "";
-  try {
-    raw = fs.readFileSync(filePath, "utf8");
-  } catch {
-    return out;
-  }
-  for (const line of raw.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq <= 0) continue;
-    const key = trimmed
-      .slice(0, eq)
-      .trim()
-      .replace(/^export\s+/, "");
-    let value = trimmed.slice(eq + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"') && value.length >= 2) ||
-      (value.startsWith("'") && value.endsWith("'") && value.length >= 2)
-    ) {
-      const singleQuoted = value.startsWith("'");
-      value = value.slice(1, -1);
-      if (singleQuoted) value = value.replace(/\\'/g, "'");
-      else
-        value = value.replace(/\\([\\"nrt])|\$\$/g, (match, escape) => {
-          if (match === "$$") return "$";
-          switch (escape) {
-            case "n":
-              return "\n";
-            case "r":
-              return "\r";
-            case "t":
-              return "\t";
-            default:
-              return escape;
-          }
-        });
-    }
-    out[key] = value;
-  }
-  return out;
-}
-
-function prettifyName(name: string): string {
-  return name
-    .split("-")
-    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
-    .join(" ");
-}
-
-/** "kitchen-sink, tech, magic" → ["kitchen-sink","tech","magic"] (lowercase, deduped). */
-function parseTags(raw: string | undefined): string[] {
-  if (!raw) return [];
-  return [
-    ...new Set(
-      raw
-        // a trailing markdown hard-break "\" would otherwise become a tag
-        .replace(/\\+/g, "")
-        .split(/[,\s]+/)
-        .map((t) => t.trim().toLowerCase())
-        .filter(Boolean),
-    ),
-  ];
-}
-
-function readDocMeta(name: string): {
-  title?: string;
-  description?: string;
-  tags?: string[];
-} {
-  const docPath = path.join(PROJECT_ROOT, "docs/modpacks", `${name}.md`);
-  if (!fs.existsSync(docPath)) return {};
-  const raw = fs.readFileSync(docPath, "utf8");
-  const lines = raw.split(/\r?\n/);
-  let title: string | undefined;
-  let description: string | undefined;
-  let tags: string[] | undefined;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!title && line.startsWith("# ") && line.length > 2) {
-      title = line.slice(2).trim();
-      continue;
-    }
-    if (!tags && /^\*{0,2}tags\*{0,2}:/i.test(line)) {
-      tags = parseTags(line.replace(/^\*{0,2}tags\*{0,2}:\s*/i, ""));
-      continue;
-    }
-    if (!description && /^## Overview/i.test(line)) {
-      for (let j = i + 1; j < lines.length; j++) {
-        const d = lines[j].trim();
-        if (!d || d.startsWith("#")) continue;
-        description = d.replace(/\s+/g, " ").slice(0, 220);
-        break;
-      }
-    }
-    if (title && description && tags) break;
-  }
-  return { title, description, tags };
-}
-
-function detectPlatform(env: Record<string, string>, type: string): string {
-  if (env.MODRINTH_MODPACK) return "Modrinth";
-  if (env.AUTO_CURSEFORGE || /CURSEFORGE/i.test(type)) return "CurseForge";
-  if (/PAPER/i.test(type)) return "Paper";
-  if (/FABRIC/i.test(type)) return "Fabric";
-  if (/VANILLA/i.test(type)) return "Vanilla";
-  if (/SPIGOT/i.test(type)) return "Spigot";
-  if (/NEOFORGE/i.test(type)) return "NeoForge";
-  if (/FORGE/i.test(type)) return "Forge";
-  return type ? type.charAt(0) + type.slice(1).toLowerCase() : "Unknown";
-}
-
-/**
- * Official modpack page, from whatever source field the pack declares:
- * MODRINTH_MODPACK (slug or URL), CF_PAGE_URL, or CF_SLUG.
- * Server types without a modpack (Paper, Vanilla,…) return null.
- */
-function modpackUrl(env: Record<string, string>): string | null {
-  const asUrl = (value: string, base: string) =>
-    /^https?:\/\//.test(value) ? value : base + value;
-  if (env.MODRINTH_MODPACK)
-    return asUrl(env.MODRINTH_MODPACK, "https://modrinth.com/modpack/");
-  if (env.CF_PAGE_URL) return env.CF_PAGE_URL;
-  if (env.CF_SLUG)
-    return asUrl(env.CF_SLUG, "https://www.curseforge.com/minecraft/modpacks/");
-  if (env.AUTO_CURSEFORGE)
-    return asUrl(
-      env.AUTO_CURSEFORGE,
-      "https://www.curseforge.com/minecraft/modpacks/",
-    );
-  return null;
-}
 
 /** Every server name: repo catalog plus panel-created ones (catalog wins ties
  *  in listing order; buildRegistry resolves the file with the reverse rule). */
@@ -327,7 +189,7 @@ function buildRegistry() {
     const serverEnv = parseEnvFile(envPath);
     const env = { ...shared, ...serverEnv };
     const type = env.TYPE ?? "";
-    const doc = readDocMeta(name);
+    const doc = readDocMeta(PROJECT_ROOT, name);
     const slug = env.SERVER_NAME || name;
     servers.set(name, {
       name,

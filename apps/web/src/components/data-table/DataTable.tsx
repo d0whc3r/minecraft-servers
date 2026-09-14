@@ -1,63 +1,23 @@
 // Generic client-side table built on TanStack Table v9: sortable headers
-// (shift-click multi-sorts), a global search input, per-column filters,
-// drag-and-drop column reordering and a column visibility menu.
+// (shift-click multi-sorts), drag-and-drop column reordering and row anchors.
+// The toolbar (search, filters, column menu) lives in TableToolbar.tsx.
+import { useState } from "react";
 import {
-  columnFilteringFeature,
-  columnOrderingFeature,
-  columnVisibilityFeature,
-  createFilteredRowModel,
-  createSortedRowModel,
-  filterFn_equalsString,
-  filterFn_includesString,
   flexRender,
-  globalFilteringFeature,
-  rowSortingFeature,
-  tableFeatures,
   useTable,
-  type ColumnDef,
   type ColumnFiltersState,
   type ColumnOrderState,
   type ColumnVisibilityState,
   type RowData,
   type SortingState,
 } from "@tanstack/react-table";
-import { useState } from "react";
-import { cn, inputClass } from "@/components/ui";
-
-// V9 requires features, row models and fn registries to be declared up front;
-// string filter fn names ("includesString", "equalsString") only resolve
-// against the `filterFns` registry registered here.
-const features = tableFeatures({
-  columnFilteringFeature,
-  columnOrderingFeature,
-  columnVisibilityFeature,
-  globalFilteringFeature,
-  rowSortingFeature,
-  filteredRowModel: createFilteredRowModel(),
-  sortedRowModel: createSortedRowModel(),
-  filterFns: {
-    includesString: filterFn_includesString,
-    equalsString: filterFn_equalsString,
-  },
-  // Type-only slot replacing the v8 `ColumnMeta` declaration merge.
-  columnMeta: {} as { label?: string },
-});
-
-/** Column definition accepted by `DataTable` (carries the table's features). */
-export type DataTableColumn<TData extends RowData> = ColumnDef<
-  typeof features,
-  TData,
-  any
->;
-
-/** Toolbar filter bound to a column declared in `columns`. */
-export interface TableFilter {
-  columnId: string;
-  label: string;
-  kind: "select" | "text";
-  /** Options for kind: "select". */
-  options?: Array<{ value: string; label: string }>;
-}
+import { features, moveToTarget } from "@/components/data-table/features.js";
+import type {
+  DataTableColumn,
+  TableFilter,
+} from "@/components/data-table/features.js";
+import { TableToolbar } from "@/components/data-table/TableToolbar.js";
+import { cn } from "@/components/ui";
 
 interface DataTableProps<TData extends RowData> {
   data: TData[];
@@ -74,14 +34,6 @@ interface DataTableProps<TData extends RowData> {
   getRowAnchor?: (row: TData) => string | undefined;
   /** Visually distinguishes a row selected by the parent. */
   isRowHighlighted?: (row: TData) => boolean;
-}
-
-/** Reads the consumer-friendly label from a column def. */
-function columnLabel(column: {
-  id: string;
-  columnDef: { meta?: { label?: string } };
-}): string {
-  return column.columnDef.meta?.label ?? column.id;
 }
 
 export function DataTable<TData extends RowData>({
@@ -124,30 +76,16 @@ export function DataTable<TData extends RowData>({
     globalFilterFn: "includesString",
   });
 
-  const visibleIds = () => table.getVisibleLeafColumns().map((c) => c.id);
-
   // Splice-based reorder, as recommended by the TanStack column-ordering guide.
   const dropOn = (targetId: string) => {
     if (!draggingId || draggingId === targetId) return;
-    setColumnOrder((prev) => {
-      const next = visibleIds();
-      next.splice(
-        next.indexOf(targetId),
-        0,
-        next.splice(next.indexOf(draggingId), 1)[0],
-      );
-      return next;
-    });
-  };
-
-  const shift = (id: string, delta: -1 | 1) => {
-    const current = visibleIds();
-    const from = current.indexOf(id);
-    const to = from + delta;
-    if (from < 0 || to < 0 || to >= current.length) return;
-    const next = [...current];
-    [next[from], next[to]] = [next[to], next[from]];
-    setColumnOrder(next);
+    setColumnOrder((prev) =>
+      moveToTarget(
+        table.getVisibleLeafColumns().map((c) => c.id),
+        draggingId,
+        targetId,
+      ),
+    );
   };
 
   const rows = table.getRowModel().rows;
@@ -156,136 +94,17 @@ export function DataTable<TData extends RowData>({
 
   return (
     <div className="flex flex-col gap-3">
-      <div
-        className={cn(
-          "flex flex-wrap items-center gap-2.5",
-          externalFiltering
-            ? "justify-end"
-            : "rounded-xl border border-edge2 bg-panel/75 p-2.5",
-        )}
-      >
-        {!externalFiltering && (
-          <>
-            <div className="relative min-w-[min(240px,100%)] flex-1">
-              <svg
-                viewBox="0 0 20 20"
-                aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 fill-none stroke-dim stroke-2"
-              >
-                <circle cx="8.5" cy="8.5" r="5.5" />
-                <path d="m12.5 12.5 4 4" />
-              </svg>
-              <input
-                type="search"
-                name="table-search"
-                autoComplete="off"
-                value={globalFilter}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                placeholder={searchPlaceholder}
-                aria-label="Search table"
-                className={cn(inputClass, "w-full pl-9")}
-              />
-            </div>
-            {filters.map((f) => {
-              const column = table.getColumn(f.columnId);
-              if (!column) return null;
-              if (f.kind === "select") {
-                return (
-                  <select
-                    key={f.columnId}
-                    name={`filter-${f.columnId}`}
-                    className={cn(inputClass, "w-auto")}
-                    value={String(column.getFilterValue() ?? "")}
-                    onChange={(e) =>
-                      column.setFilterValue(e.target.value || undefined)
-                    }
-                    aria-label={`Filter by ${f.label}`}
-                  >
-                    <option value="">{f.label}: all</option>
-                    {f.options?.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                );
-              }
-              return (
-                <input
-                  key={f.columnId}
-                  type="search"
-                  name={`filter-${f.columnId}`}
-                  autoComplete="off"
-                  value={String(column.getFilterValue() ?? "")}
-                  onChange={(e) =>
-                    column.setFilterValue(e.target.value || undefined)
-                  }
-                  placeholder={`${f.label}…`}
-                  aria-label={`Filter by ${f.label}`}
-                  className={cn(inputClass, "w-44")}
-                />
-              );
-            })}
-          </>
-        )}
-        <span
-          className={cn(
-            "rounded-lg px-2.5 py-2 text-[0.78rem] font-semibold whitespace-nowrap text-dim",
-            externalFiltering ? "bg-panel" : "bg-raise",
-          )}
-          aria-live="polite"
-        >
-          {filtered === total
-            ? `${total} ${total === 1 ? "item" : "items"}`
-            : `${filtered} of ${total}`}
-        </span>
-        <details className="relative">
-          <summary
-            className={cn(
-              "inline-flex min-h-10 cursor-pointer list-none items-center rounded-lg border border-edge bg-raise px-3 text-[0.82rem] font-semibold whitespace-nowrap select-none hover:border-[#45594f] hover:bg-[#223029]",
-              "[&::-webkit-details-marker]:hidden",
-            )}
-          >
-            Columns ▾
-          </summary>
-          <div className="absolute right-0 z-20 mt-1.5 w-60 rounded-lg border border-edge bg-panel p-2 shadow-[0_10px_36px_rgba(0,0,0,0.45)]">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => (
-                <div
-                  key={column.id}
-                  className="flex items-center gap-1 rounded px-1 py-0.5 hover:bg-white/[0.03]"
-                >
-                  <label className="flex flex-1 cursor-pointer items-center gap-1.5 py-1 text-[0.85rem]">
-                    <input
-                      type="checkbox"
-                      checked={column.getIsVisible()}
-                      onChange={column.getToggleVisibilityHandler()}
-                    />
-                    {columnLabel(column)}
-                  </label>
-                  <button
-                    type="button"
-                    aria-label={`Move ${columnLabel(column)} left`}
-                    className="cursor-pointer rounded border-0 bg-transparent px-1 py-0.5 text-dim hover:bg-raise hover:text-ink"
-                    onClick={() => shift(column.id, -1)}
-                  >
-                    ←
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Move ${columnLabel(column)} right`}
-                    className="cursor-pointer rounded border-0 bg-transparent px-1 py-0.5 text-dim hover:bg-raise hover:text-ink"
-                    onClick={() => shift(column.id, 1)}
-                  >
-                    →
-                  </button>
-                </div>
-              ))}
-          </div>
-        </details>
-      </div>
+      <TableToolbar
+        table={table}
+        filters={filters}
+        searchPlaceholder={searchPlaceholder}
+        externalFiltering={externalFiltering}
+        globalFilter={globalFilter}
+        onGlobalFilterChange={setGlobalFilter}
+        onColumnOrderChange={setColumnOrder}
+        total={total}
+        filtered={filtered}
+      />
 
       <div className="overflow-x-auto rounded-xl border border-edge bg-panel shadow-[0_18px_45px_rgba(0,0,0,0.08)]">
         <table className="w-full border-collapse text-[0.9rem] [&>tbody>tr:hover]:bg-ok/[0.025] [&>tbody>tr:last-child>td]:border-b-0">
