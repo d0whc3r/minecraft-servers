@@ -4,7 +4,8 @@
 //	start   helm upgrade --install (new release, values built from the env
 //	        files) or --reuse-values --set replicaCount=1 (stopped release)
 //	stop    existing release scaled to 0 (data + route stay in place)
-//	restart kubectl rollout restart, or a start when stopped
+//	restart full re-render (helm upgrade --install) + kubectl rollout
+//	        restart, or a start when stopped
 //	backup  one-off alpine Job running scripts/k8s-jobs/backup-create.sh
 package kube
 
@@ -68,7 +69,10 @@ func stop(ctx context.Context, root, server string) (string, error) {
 	return scale(ctx, root, server, 0)
 }
 
-// restart rolls a running deployment; a stopped (or missing) one is started.
+// restart re-renders the release from the env files (new chart shipped with
+// the panel image, new env, route changes) and then rolls the deployment, so
+// the new render lands even when helm produced an identical manifest; a
+// stopped (or missing) release is just started.
 func restart(ctx context.Context, root, server string) (string, error) {
 	dep, ok, err := deployment(ctx, server)
 	if err != nil {
@@ -77,9 +81,13 @@ func restart(ctx context.Context, root, server string) (string, error) {
 	if !ok || dep.desired() == 0 {
 		return start(ctx, root, server)
 	}
-	out, err := kubectl(ctx, "rollout", "restart",
+	out, err := deploy(ctx, root, server, 1)
+	if err != nil {
+		return out, err
+	}
+	roll, err := kubectl(ctx, "rollout", "restart",
 		"deployment/"+ReleaseName(server), "--namespace", Namespace())
-	return tail(out), err
+	return tail(out + roll), err
 }
 
 // scale flips replicaCount on an existing release, reusing its rendered

@@ -21,6 +21,7 @@
     "test": "bats tests/bats/config-validation.bats",
     "test:quick": "bats tests/bats/config-validation.bats",
     "test:full": "bats tests/bats/",
+    "test:e2e": "./scripts/ci/run-e2e.sh",
     "lint": "prettier --check .",
     "lint:fix": "prettier --write .",
     "validate:all": "pnpm run lint && pnpm run test",

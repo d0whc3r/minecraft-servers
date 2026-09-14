@@ -31,7 +31,14 @@ spec:
       containers:
         - name: panel
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          {{- if eq (.Values.image.tag | default .Chart.AppVersion | toString) "latest" }}
+          # Floating tag: pull on every pod start, or an upgrade keeps running
+          # the old image (IfNotPresent reuses the node's cached layers and a
+          # re-rendered manifest alone never restarts the pod).
+          imagePullPolicy: Always
+          {{- else }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- end }}
           env:
             # Kubernetes runtime: actions map to helm/kubectl instead of the
             # docker CLI + repo scripts.

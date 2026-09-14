@@ -174,16 +174,16 @@ catalog, copy the file into `config/modpacks/` and re-run the sync script.
 3. `helm upgrade --install mc-<server> charts/minecraft-server` runs with a
    values file; the release is the unit of management from then on.
 
-| Panel action | Kubernetes operation                                              |
-| ------------ | ----------------------------------------------------------------- |
-| Start        | `helm upgrade --install mc-<name> … --set replicaCount=1`         |
-| Stop         | same release with `--set replicaCount=0` (data + route preserved) |
-| Restart      | `kubectl rollout restart deployment/mc-<name>`                    |
-| Logs         | `kubectl logs deployment/mc-<name> -c minecraft` (+ `-f` SSE)     |
-| RCON         | direct TCP to `mc-<name>.<ns>.svc.cluster.local:25575`            |
-| Backup       | one-off Job: `tar czf /backups/…` + `sha256sum` (data claim)      |
-| Restore      | Job: checksum-verify → wipe data claim → extract (stops server)   |
-| Status/stats | deployments + `kubectl top` (if metrics-server is present)        |
+| Panel action | Kubernetes operation                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------- |
+| Start        | `helm upgrade --install mc-<name> … --set replicaCount=1`                                         |
+| Stop         | same release with `--set replicaCount=0` (data + route preserved)                                 |
+| Restart      | `helm upgrade --install mc-<name> …` (re-render) + `kubectl rollout restart deployment/mc-<name>` |
+| Logs         | `kubectl logs deployment/mc-<name> -c minecraft` (+ `-f` SSE)                                     |
+| RCON         | direct TCP to `mc-<name>.<ns>.svc.cluster.local:25575`                                            |
+| Backup       | one-off Job: `tar czf /backups/…` + `sha256sum` (data claim)                                      |
+| Restore      | Job: checksum-verify → wipe data claim → extract (stops server)                                   |
+| Status/stats | deployments + `kubectl top` (if metrics-server is present)                                        |
 
 ## Storage
 
@@ -249,6 +249,108 @@ cluster-scoped unless you opt in with `rbac.watchAllNamespaces`.
 > The panel can start any modpack and run commands as the servers — treat its
 > credentials like the Docker-socket setup: keep the admin password safe, put
 > it behind TLS/Ingress auth, don't expose it to the internet.
+
+## Upgrades (new versions)
+
+Four things carry a version on a kubernetes install, and each one upgrades
+differently:
+
+| Layer                             | What ships with it                                           | How a new version lands                                                |
+| --------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| Panel image (`minecraft-panel`)   | panel code, the `charts/` it deploys, the modpack catalog    | re-run the install; the pod is restarted so `:latest` is really pulled |
+| Router chart (`minecraft-router`) | `itzg/mc-router` pinned tag + chart templates                | `helm upgrade --install` (repo) or re-run `k8s-bootstrap.sh` (OCI)     |
+| Server releases (`mc-<server>`)   | chart templates + rendered env + `itzg/minecraft-server` tag | **Restart** the server in the panel/TUI (re-render + pod roll)         |
+| Shared config                     | `.env`, `config/modpacks/*.env`                              | `k8s-sync-configs.sh`, then Restart the affected servers               |
+
+Where versions come from: the **Docker Publish** workflow pushes the panel
+image as `panel:latest` plus an immutable `panel:sha-<sha>` per build, and
+the **Charts Publish** workflow pushes each chart to GHCR under its
+`Chart.yaml` semver (plus a `latest` re-tag for raw OCI tooling; helm ignores
+it). CI refuses to publish a chart whose `version` was not bumped in the same
+push, so published tags never move — upgrading is always an explicit
+`helm upgrade`, never a silent drift.
+
+### Router + panel
+
+From a repo checkout the install **is** the upgrade — `helm upgrade
+--install` is idempotent and the scripts are safe to re-run:
+
+```bash
+git pull
+make k8s NS=minecraft # = k8s-install.sh + k8s-sync-configs.sh
+```
+
+Re-export the env you installed with (`PANEL_IMAGE_REPO`/`PANEL_IMAGE_TAG`,
+`MC_ROUTER_*`, `K8S_PANEL_HOST`…): every run re-renders all values, nothing
+is remembered from the previous one. After the upgrade the install script
+restarts the panel deployment on purpose: the image tag floats (`latest`),
+so a plain re-render produces an identical manifest and helm would happily
+keep the old pod forever. The chart pulls `latest` with
+`imagePullPolicy: Always`, so the forced rollout is what actually ships the
+new panel (and with it the new `minecraft-server` chart and catalog) to the
+cluster. Pin a specific build instead by setting `PANEL_IMAGE_TAG=sha-<sha>`
+— then the image change rolls the pod by itself and no restart is needed.
+
+Without a repo clone, re-run the bootstrap: it resolves the newest published
+chart by default.
+
+```bash
+FORCE_SHARED_ENV=1 bash k8s-bootstrap.sh minecraft
+```
+
+Control the jump with `MC_ROUTER_CHART_VERSION` / `PANEL_CHART_VERSION`
+(see [Quick start (no repo clone)](#quick-start-no-repo-clone)).
+
+### Servers (`mc-<server>` releases)
+
+The `minecraft-server` chart ships **inside the panel image**, so upgrading
+the panel is what brings a new chart version to the servers. It applies per
+release when you press **Restart** (or `restart` in the TUI): the release is
+fully re-rendered against the current chart, catalog and shared `.env`, and
+then the pod rolls even when the render is unchanged. That same action is
+how a server picks up `.env` / modpack edits after `k8s-sync-configs.sh` —
+a plain rollout would keep the old render.
+
+Bulk-apply the chart to every running release without clicking through the
+panel (requires a repo checkout for the chart; `--reuse-values` keeps each
+release's rendered values, which only the panel can rebuild from the env
+files — Stop + Start in the panel is the thorough per-server alternative):
+
+```bash
+helm -n minecraft list -q | grep '^mc-' | while read -r release; do
+  helm -n minecraft upgrade "$release" charts/minecraft-server --reuse-values
+  kubectl -n minecraft rollout restart deployment/"$release"
+done
+```
+
+The itzg image tag per server comes from the modpack's `JAVA_VERSION`
+(`java8`…`java25`; `latest` when unset). Floating `latest` is pulled on
+every pod start; pinned `java*` tags follow `IfNotPresent`, so moving to a
+new MC version means changing `JAVA_VERSION` in the modpack env and
+restarting the server.
+
+### Rollback
+
+helm keeps revision history (10 revisions for router/panel, 5 for servers):
+
+```bash
+helm -n minecraft history minecraft-panel
+helm -n minecraft rollback minecraft-panel 1 # previous revision
+helm -n minecraft rollback mc-dawncraft 2
+```
+
+A server rollback reverts the release (chart templates + values), not the
+world: world data lives on the PVC and is only touched by the backup/restore
+flow.
+
+### Verify an upgrade
+
+```bash
+helm -n minecraft list # CHART + APP VERSION per release
+helm -n minecraft history minecraft-panel
+kubectl -n minecraft get deploy -o wide # IMAGE column per deployment
+kubectl -n minecraft rollout status deploy/minecraft-panel
+```
 
 ## Uninstall
 
@@ -418,9 +520,10 @@ Nothing is duplicated: the sshd has no passwords and no root login, and the
 TUI inside the container runs with `MCPANEL_RUNTIME=kubernetes` — the same
 switch the panel uses — so both UIs act on the same things:
 
-- the same Helm releases (`mc-<server>`): start/stop/restart map to
-  `helm upgrade --reuse-values --set replicaCount=…` and
-  `kubectl rollout restart`, exactly the panel's action table; start-all /
+- the same Helm releases (`mc-<server>`): start/stop scale the release
+  (`helm upgrade --reuse-values --set replicaCount=…`), restart re-renders
+  it (`helm upgrade --install`) and then rolls the pod — exactly the panel's
+  action table; start-all /
   stop-all scale every existing release, and never-deployed packs must be
   started once from the panel (or with a single start) so a slip of the
   keyboard can't create twenty 8Gi releases at once;

@@ -7,7 +7,7 @@ description: >-
   release per server with the release name mc-<server>; the web panel does this
   automatically when MCPANEL_RUNTIME=kubernetes.
 type: application
-version: 0.2.0
+version: 0.2.1
 appVersion: "latest"
 home: https://github.com/d0whc3r/minecraft-servers
 icon: https://raw.githubusercontent.com/itzg/docker-minecraft-server/master/docs/assets/logo.png

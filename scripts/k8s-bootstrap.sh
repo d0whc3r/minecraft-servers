@@ -246,11 +246,26 @@ yaml_escape() {
 } > "$PANEL_VALUES"
 
 info "Installing ${YELLOW}web panel${NC} chart ${CHART_OCI_PREFIX}/web-panel${PANEL_CHART_VERSION:+ ($PANEL_CHART_VERSION)}..."
+# Re-running this script is the upgrade path: remember whether the panel
+# already exists so the fresh image is pulled afterwards (see below).
+PANEL_DEPLOYED=0
+if kubectl get deployment minecraft-panel -n "$NAMESPACE" > /dev/null 2>&1; then
+  PANEL_DEPLOYED=1
+fi
 PANEL_ARGS=(--namespace "$NAMESPACE" --values "$PANEL_VALUES")
 if [ -n "$PANEL_CHART_VERSION" ]; then
   PANEL_ARGS+=(--version "$PANEL_CHART_VERSION")
 fi
 helm upgrade --install minecraft-panel "$CHART_OCI_PREFIX/web-panel" "${PANEL_ARGS[@]}"
+if [ "$PANEL_DEPLOYED" = "1" ]; then
+  # An upgrade that only swaps the image behind the floating :latest tag
+  # re-renders an identical manifest: helm would not restart the pod by
+  # itself. The chart pulls :latest with pullPolicy=Always, so forcing the
+  # rollout is what actually ships the new panel (code + baked charts +
+  # modpack catalog) to this cluster.
+  info "Restarting the panel pod to pull the current image..."
+  kubectl -n "$NAMESPACE" rollout restart deployment/minecraft-panel
+fi
 success "web panel installed"
 
 # ---------------------------------------------------------------------------

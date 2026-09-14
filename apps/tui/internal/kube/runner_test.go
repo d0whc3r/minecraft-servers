@@ -172,14 +172,18 @@ func TestStopUndeployedIsNoop(t *testing.T) {
 	}
 }
 
-func TestRestartRunningRollsDeployment(t *testing.T) {
+func TestRestartRunningRerendersThenRollsDeployment(t *testing.T) {
 	log := fakeCluster(t, deploymentsListJSON)
 
 	if _, err := Run(context.Background(), catalogRoot(t), domain.ActionRestart, "vanilla"); err != nil {
 		t.Fatal(err)
 	}
-	if calls := readLog(t, log); !strings.Contains(calls, "kubectl rollout restart deployment/mc-vanilla") {
-		t.Errorf("restart of a running deployment must roll it, log:\n%s", calls)
+	calls := readLog(t, log)
+	if !strings.Contains(calls, "helm upgrade --install mc-vanilla") {
+		t.Errorf("restart of a running deployment must re-render the release first (new chart + env), log:\n%s", calls)
+	}
+	if !strings.Contains(calls, "kubectl rollout restart deployment/mc-vanilla") {
+		t.Errorf("restart of a running deployment must also roll it (identical renders must still restart), log:\n%s", calls)
 	}
 }
 

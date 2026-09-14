@@ -671,12 +671,20 @@ export async function runAction(
           `Release ${release} deployed (replicaCount=1)\n${out}`,
         );
       }
+      // Re-render first — new chart shipped with the panel image, new env
+      // from the catalog and the shared .env, new route — then force the pod
+      // to roll: when helm renders an identical manifest (nothing changed),
+      // only the rollout guarantees the running container actually restarts.
+      const out = await helmUpgrade(def, 1);
       await exec(
         "kubectl",
         ["rollout", "restart", `deployment/${release}`, "--namespace", ns()],
         { timeout: KUBECTL_TIMEOUT_MS },
       );
-      return finish(true, `Rolling restart triggered for ${release}`);
+      return finish(
+        true,
+        `Release ${release} re-rendered and rolling restart triggered\n${out}`,
+      );
     }
     if (action === "backup") {
       const stamp = new Date()

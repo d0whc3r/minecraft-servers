@@ -33,14 +33,17 @@ runs:
 
         # --no-parallelize-across-files: each job runs a single test file, so
         # parallelism comes from --jobs within the file (flock-based) and the
-        # GNU parallel binary is not needed
-        timeout ${{ fromJSON(inputs.timeout) }}m pnpm exec bats --jobs ${{ inputs.parallel-jobs }} --no-parallelize-across-files --timing ${{ inputs.test-pattern }}
+        # GNU parallel binary is not needed. run-e2e.sh wraps bats so that a
+        # timeout/cancel stops the tree and sweeps test containers/data
+        timeout ${{ fromJSON(inputs.timeout) }}m ./scripts/ci/run-e2e.sh --jobs ${{ inputs.parallel-jobs }} --no-parallelize-across-files --timing ${{ inputs.test-pattern }}
 
     - name: Cleanup test containers
       if: always()
       shell: bash
       run: |
-        docker ps -a --filter "name=mc-" --format "{{.Names}}" | xargs -r docker rm -f || true
+        # Anchored to the test prefix: a bare "mc-" substring would also
+        # match real production containers
+        docker ps -a --filter "name=^mc-test-" --format "{{.Names}}" | xargs -r docker rm -f || true
         # The server-startup suite tears its router down itself when the last
         # test finishes; this catches runs that crashed before that could happen
         docker compose -p minecraft-router-test -f docker-compose.router.yml down -v || true

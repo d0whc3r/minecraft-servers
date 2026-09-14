@@ -29,8 +29,11 @@
 # its own directory, so parallel tests never fight over these resources.
 # Each server's test data is deleted as soon as its check finishes; the
 # shared test router is torn down by whichever test finishes last (tracked
-# through a runner registry file), and teardown removes whatever a crash
-# may have left behind.
+# through a runner registry file, updated under flock so concurrent
+# teardowns cannot lose or duplicate the sweep), and teardown removes
+# whatever a crash may have left behind. A suite killed hard (SIGKILL)
+# cannot run any cleanup: scripts/ci/run-e2e.sh wraps this suite and sweeps
+# the leftovers before the next run (and on INT/TERM).
 
 # Isolation knobs (keep in sync with the defaults in scripts/common.sh)
 TEST_CONTAINER_PREFIX="mc-test-"
@@ -43,6 +46,13 @@ RUNNERS_REGISTRY="${TEST_DATA_BASE_DIR}/.active-runners"
 # ./scripts/*.sh, compose files) expects the project root as cwd. This file
 # lives two directories below it (tests/bats/).
 cd "$(cd "${BATS_TEST_DIRNAME:-$(dirname "${BATS_TEST_FILENAME:-.}")}/../.." && pwd)" || exit 1
+
+# Make TERM clean up: without an explicit handler, a killed bats process
+# dies without running its EXIT trap, so teardown() (container removal,
+# runner registry, router sweep) is silently lost. Turning TERM into an
+# exit routes it through bats' teardown path. INT is left alone: bats
+# installs its own handler and overriding it would break suite interruption.
+trap 'exit 143' TERM
 
 # ---------------------------------------------------------------------------
 # Test selection (top-level: runs when bats loads this file, before any test)
@@ -95,47 +105,85 @@ setup() {
 }
 
 teardown() {
+    # Bats invokes teardown as `teardown >>"$BATS_OUT"`: if the suite-wide
+    # cleanup already removed BATS_RUN_TMPDIR (coordinator died on a signal
+    # first), that redirection fails silently and teardown never runs.
+    # Recreate the directory so a dying run still cleans its resources.
+    [ -n "${BATS_OUT:-}" ] && mkdir -p "${BATS_OUT%/*}" 2> /dev/null || true
     # Safety net for a container the test body could not remove (crash, or a
     # bats abort before its own cleanup ran): only ever touches test containers
     if [ -n "${TEST_SERVER_UNDER_TEST:-}" ]; then
         timeout 60 docker rm -f "${TEST_CONTAINER_PREFIX}${TEST_SERVER_UNDER_TEST}" > /dev/null 2>&1 || true
     fi
 
+    # If the test body was interrupted (bats does not trap TERM), kill the
+    # detached server tree the body started; its container is gone already
+    if [ -n "${TEST_SERVER_PID:-}" ]; then
+        kill -TERM -- -"$TEST_SERVER_PID" > /dev/null 2>&1 || true
+    fi
+
     # Drop this process from the runner registry; only the last running test
     # removes the dedicated test router (the real minecraft-router is a
     # different project/container and stays untouched) and sweeps leftover
-    # data of servers whose check was interrupted. Bounded with timeout: a
-    # wedged container runtime must not stall the suite forever.
-    local remaining=0
-    if [ -f "$RUNNERS_REGISTRY" ]; then
-        grep -v "^$$\$" "$RUNNERS_REGISTRY" > "${RUNNERS_REGISTRY}.next" 2> /dev/null || true
-        mv "${RUNNERS_REGISTRY}.next" "$RUNNERS_REGISTRY"
-        remaining=$(wc -l < "$RUNNERS_REGISTRY")
+    # data of servers whose check was interrupted. The whole drop-count-
+    # sweep sequence is serialized with flock: concurrent teardowns would
+    # otherwise all see remaining>0 and nobody would sweep (or two would).
+    # Entries whose pid is gone — from a run killed with SIGKILL — are
+    # pruned, so a later teardown still reaches the sweep and the next run
+    # starts clean. Bounded with timeout: a wedged container runtime must
+    # not stall the suite forever.
+    if command -v flock > /dev/null 2>&1 && [ -d "${SERVERS_BASE_DIR:-/nonexistent}" ]; then
+        (
+            flock -w 300 9 2> /dev/null || exit 0
+            registry_update_and_sweep
+        ) 9>>"${RUNNERS_REGISTRY}.lock"
+    else
+        registry_update_and_sweep
     fi
+}
 
-    if [ "$remaining" -eq 0 ]; then
-        timeout 120 docker compose -p "${ROUTER_PROJECT_NAME:-minecraft-router-test}" \
-            -f docker-compose.router.yml down -v > /dev/null 2>&1 || true
+# Registry update + last-runner sweep; callers serialize it (teardown holds
+# RUNNERS_REGISTRY.lock). See teardown for the why.
+registry_update_and_sweep() {
+    local tmp_next="${RUNNERS_REGISTRY}.next" pid remaining=0
+    : > "$tmp_next" 2> /dev/null || return 0
+    if [ -f "$RUNNERS_REGISTRY" ]; then
+        while IFS= read -r pid; do
+            [ -n "$pid" ] || continue
+            [ "$pid" = "$$" ] && continue
+            if kill -0 "$pid" 2> /dev/null || [ -d "/proc/$pid" ]; then
+                echo "$pid" >> "$tmp_next"
+                remaining=$((remaining + 1))
+            fi
+        done < "$RUNNERS_REGISTRY"
+    fi
+    mv "$tmp_next" "$RUNNERS_REGISTRY" 2> /dev/null || true
 
-        # Only ever touches the dedicated test tree, never the real
-        # servers/ and backups/ trees
-        if [ -d "${SERVERS_BASE_DIR:-/nonexistent}" ]; then
-            remove_tree "${SERVERS_BASE_DIR}/servers"
-            remove_tree "${SERVERS_BASE_DIR}/backups"
-        fi
+    if [ "$remaining" -gt 0 ]; then
+        return 0
+    fi
+    timeout 120 docker compose -p "${ROUTER_PROJECT_NAME:-minecraft-router-test}" \
+        -f docker-compose.router.yml down -v > /dev/null 2>&1 || true
+
+    # Only ever touches the dedicated test tree, never the real
+    # servers/ and backups/ trees
+    if [ -d "${SERVERS_BASE_DIR:-/nonexistent}" ]; then
+        remove_tree "${SERVERS_BASE_DIR}/servers"
+        remove_tree "${SERVERS_BASE_DIR}/backups"
     fi
 }
 
 # Delete a directory tree that may be owned by the container user. Under
 # rootless podman, container root maps to an unprivileged host subuid, so a
-# plain host rm -rf fails with permission errors; fall back to removing it
-# from inside a container in the same user namespace.
+# plain host rm -rf fails with permission errors; fall back to removing the
+# CONTENTS from inside a container in the same user namespace — the mount
+# point itself (/target) is always "Resource busy" and cannot be removed.
 remove_tree() {
     local path="$1"
     [ -e "$path" ] || return 0
     rm -rf "$path" 2> /dev/null || \
         timeout 300 docker run --rm -v "${path}:/target" "${CLEANUP_IMAGE:-alpine:latest}" \
-            rm -rf /target > /dev/null 2>&1 || true
+            find /target -mindepth 1 -delete > /dev/null 2>&1 || true
 }
 
 # Save the full container log before the container is removed, so failures
@@ -199,10 +247,13 @@ test_server_startup() {
     echo "---"
 
     # Start the server in background (own process group so a failure
-    # timeout can kill its whole tree, compose children included)
+    # timeout can kill its whole tree, compose children included).
+    # TEST_SERVER_PID lets teardown kill the tree too if this body is
+    # interrupted before reaching its own cleanup paths
     echo "🚀 Starting server '$modpack_name'..."
     setsid ./scripts/start-server.sh "$modpack_name" &
     local server_pid=$!
+    TEST_SERVER_PID="$server_pid"
 
     # Wait for container to be created
     echo "⏳ Waiting for container creation..."

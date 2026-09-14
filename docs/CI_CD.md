@@ -38,14 +38,15 @@ The workflow YAML files stay thin: the actual logic lives in versioned shell
 scripts under `scripts/ci/` (validated by the BATS suite like any other
 script).
 
-| Script                     | Purpose                                                        |
-| -------------------------- | -------------------------------------------------------------- |
-| `load-config.sh`           | Parse `.github/workflows/config` into `$GITHUB_OUTPUT`         |
-| `generate-test-matrix.sh`  | Build the E2E job matrix (chunks of modpacks + Java versions)  |
-| `pull-minecraft-images.sh` | Pre-pull the `itzg/minecraft-server` tags a chunk needs        |
-| `generate-summary.sh`      | Write the run summary to `$GITHUB_STEP_SUMMARY`                |
-| `create-test-env.sh`       | Create the `.env` docker compose consumes during tests         |
-| `filter-modpacks.sh`       | Select the modpacks one E2E runner will test (`TEST_MODPACKS`) |
+| Script                     | Purpose                                                                                                                                                                                                                                 |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `load-config.sh`           | Parse `.github/workflows/config` into `$GITHUB_OUTPUT`                                                                                                                                                                                  |
+| `generate-test-matrix.sh`  | Build the E2E job matrix (chunks of modpacks + Java versions)                                                                                                                                                                           |
+| `pull-minecraft-images.sh` | Pre-pull the `itzg/minecraft-server` tags a chunk needs                                                                                                                                                                                 |
+| `generate-summary.sh`      | Write the run summary to `$GITHUB_STEP_SUMMARY`                                                                                                                                                                                         |
+| `create-test-env.sh`       | Create the `.env` docker compose consumes during tests                                                                                                                                                                                  |
+| `filter-modpacks.sh`       | Select the modpacks one E2E runner will test (`TEST_MODPACKS`)                                                                                                                                                                          |
+| `run-e2e.sh`               | Wrap `bats` with guaranteed cleanup: sweeps test containers, the test router and `.tmp/e2e-data` on INT/TERM/exit and before each run; `--cleanup` only sweeps. CI (`run-bats-tests` action) and `pnpm run test:e2e` both go through it |
 
 ## GitHub Actions Workflows
 
@@ -158,9 +159,13 @@ workflow's `env` block **and** in `scripts/ci/create-test-env.sh`.
    one dynamically generated test per modpack (template in
    `server-startup.bats`); run a single server with
    `bats tests/bats/server-startup.bats --filter <server>` or several at once
-   with `bats --jobs N --no-parallelize-across-files
+   with `pnpm run test:e2e -- --jobs N --no-parallelize-across-files
 tests/bats/server-startup.bats` (the flag skips bats' across-files mode,
-   which needs GNU parallel; within-file jobs only need `flock`)
+   which needs GNU parallel; within-file jobs only need `flock`). Prefer the
+   `run-e2e.sh` wrapper over raw `bats` for interactive runs: raw bats
+   ignores Ctrl+C in parallel mode and a hard kill leaves test containers
+   and data behind, while the wrapper stops the tree and sweeps on INT/TERM
+   (`run-e2e.sh --cleanup` reclaims leftovers of an already-killed run)
 8. **US1-TC008:** Compose files render router-only wiring (fast)
 9. **US1-TC009:** `router.sh` argument validation (fast, no Docker)
 10. **US1-TC010:** `common.sh` cross-script API completeness (fast, no Docker)

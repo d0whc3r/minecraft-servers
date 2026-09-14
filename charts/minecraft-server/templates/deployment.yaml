@@ -80,7 +80,13 @@ spec:
       containers:
         - name: minecraft
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          {{- if eq (.Values.image.tag | default .Chart.AppVersion | toString) "latest" }}
+          # Floating tag: pull on every pod start, or a server restart keeps
+          # running whatever image the node happened to cache first.
+          imagePullPolicy: Always
+          {{- else }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- end }}
           envFrom:
             {{- if .Values.env }}
             - configMapRef:
@@ -169,7 +175,11 @@ spec:
         {{- if .Values.backup.enabled }}
         - name: backup
           image: "{{ .Values.backup.image.repository }}:{{ .Values.backup.image.tag }}"
+          {{- if eq (.Values.backup.image.tag | toString) "latest" }}
+          imagePullPolicy: Always
+          {{- else }}
           imagePullPolicy: {{ .Values.backup.image.pullPolicy }}
+          {{- end }}
           # Only what mc-backup needs: the RCON credentials from the Secret
           # (never the whole server ConfigMap) plus its own wiring below
           env:
