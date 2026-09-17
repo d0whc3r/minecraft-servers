@@ -5,8 +5,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { listContainers, isServerStopped } from "@/lib/docker.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  listContainers,
+  isServerStopped,
+  getStats,
+  getRecentLogs,
+  getDockerVersion,
+} from "@/lib/docker.js";
 
 const now = Math.floor(Date.now() / 1000);
 
@@ -33,12 +39,32 @@ function stubDocker(behavior: "fixture" | "fail") {
   const script =
     behavior === "fixture"
       ? `#!/bin/sh
-name=$(printf '%s\\n' "$*" | sed -n 's/.*name=\\^\\/\\([^$]*\\)\\$.*/\\1/p')
-if [ -n "$name" ]; then
-  grep -F "\\"$name\\"" "$MCPANEL_DOCKER_FIXTURE" || true
-else
-  cat "$MCPANEL_DOCKER_FIXTURE"
-fi
+case "$1" in
+  ps)
+    name=$(printf '%s\\n' "$*" | sed -n 's/.*name=\\^\\/\\([^$]*\\)\\$.*/\\1/p')
+    if [ -n "$name" ]; then
+      grep -F "\\"$name\\"" "$MCPANEL_DOCKER_FIXTURE" || true
+    else
+      cat "$MCPANEL_DOCKER_FIXTURE"
+    fi
+    ;;
+  stats)
+    if [ -f "$MCPANEL_DOCKER_STATS_FIXTURE" ]; then
+      cat "$MCPANEL_DOCKER_STATS_FIXTURE"
+    else
+      exit 1
+    fi
+    ;;
+  logs)
+    printf 'log line 1\\nlog line 2\\n'
+    ;;
+  version)
+    echo "27.1.1"
+    ;;
+  *)
+    exit 1
+    ;;
+esac
 `
       : "#!/bin/sh\nexit 1\n";
   const file = path.join(stubDir, "docker");
@@ -102,6 +128,20 @@ describe("listContainers (docker + podman output)", () => {
     const map = await listContainers();
     expect(map.size).toBe(0);
   });
+
+  it("skips unparseable ps lines instead of failing the whole listing", async () => {
+    fs.writeFileSync(
+      path.join(workDir, "ps.json"),
+      [
+        '{"Names":"mc-good","State":"running","Status":"Up 1 minute","Image":"itzg","CreatedAt":"c"}',
+        "garbage {{{ not json",
+        "",
+      ].join("\n"),
+    );
+    const map = await listContainers();
+    expect([...map.keys()]).toEqual(["mc-good"]);
+    expect(map.get("mc-good")!.uptimeSec).toBe(60);
+  });
 });
 
 describe("isServerStopped (docker + podman output)", () => {
@@ -126,5 +166,77 @@ describe("isServerStopped (docker + podman output)", () => {
     await expect(isServerStopped("x")).rejects.toThrow(
       "Unexpected Docker container state response",
     );
+  });
+});
+
+describe("getStats", () => {
+  // getStats caches for 4s at module level; each test gets its own minute on
+  // the fake clock so no cached map leaks between tests.
+  let statsClock = 0;
+  const writeStatsFixture = (lines: string[]) =>
+    fs.writeFileSync(path.join(workDir, "stats.txt"), lines.join("\n"));
+
+  beforeEach(() => {
+    statsClock += 1;
+    vi.useFakeTimers({ now: Date.UTC(2026, 0, 1, 0, statsClock) });
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("parses stats columns and keeps only mc- containers", async () => {
+    writeStatsFixture([
+      "mc-web\t10.5%\t100MiB / 2GiB\t5.0%",
+      "unrelated-nginx\t90.0%\t1GiB / 4GiB\t25.0%",
+      "mc-broken", // no cpu column: unusable row
+      "",
+    ]);
+    process.env.MCPANEL_DOCKER_STATS_FIXTURE = path.join(workDir, "stats.txt");
+
+    const stats = await getStats();
+    expect(stats.get("mc-web")).toEqual({
+      cpuPerc: 10.5,
+      memUsed: "100MiB",
+      memLimit: "2GiB",
+      memPerc: 5,
+    });
+    // Usage of non-minecraft containers must never leak into the panel.
+    expect(stats.has("unrelated-nginx")).toBe(false);
+    expect(stats.has("mc-broken")).toBe(false);
+  });
+
+  it("serves the cached map within the TTL instead of shelling out again", async () => {
+    writeStatsFixture(["mc-x\t1%\t1MiB / 2MiB\t50%"]);
+    process.env.MCPANEL_DOCKER_STATS_FIXTURE = path.join(workDir, "stats.txt");
+
+    const first = await getStats();
+    const second = await getStats();
+    expect(second).toBe(first);
+  });
+
+  it("returns an empty map when docker stats is unavailable", async () => {
+    // No stats fixture: the stub's stats branch exits 1.
+    const stats = await getStats();
+    expect(stats.size).toBe(0);
+  });
+});
+
+describe("getRecentLogs / getDockerVersion", () => {
+  it("returns the raw logs output", async () => {
+    await expect(getRecentLogs("mc-vanilla", 50)).resolves.toBe(
+      "log line 1\nlog line 2\n",
+    );
+  });
+
+  it("degrades to empty logs when docker logs fails", async () => {
+    stubDocker("fail");
+    await expect(getRecentLogs("mc-vanilla", 50)).resolves.toBe("");
+  });
+
+  it("trims the engine version", async () => {
+    await expect(getDockerVersion()).resolves.toBe("27.1.1");
+  });
+
+  it("reports no version when the engine is unreachable", async () => {
+    stubDocker("fail");
+    await expect(getDockerVersion()).resolves.toBeNull();
   });
 });

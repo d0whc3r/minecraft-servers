@@ -12,10 +12,10 @@
   },
   "author": "d0whc3r",
   "license": "ISC",
-  "packageManager": "pnpm@12.4.1",
+  "packageManager": "pnpm@12.4.2",
   "engines": {
     "node": ">=24.0.0",
-    "pnpm": ">=10.0.0"
+    "pnpm": ">=11.0.0"
   },
   "scripts": {
     "test": "bats tests/bats/config-validation.bats",
@@ -57,8 +57,8 @@
   "devDependencies": {
     "bats": "1.13.0",
     "husky": "9.1.7",
-    "prettier": "3.9.6",
-    "prettier-plugin-astro": "1.0.0",
+    "prettier": "3.9.7",
+    "prettier-plugin-astro": "1.0.1",
     "prettier-plugin-sh": "0.19.0"
   },
   "prettier": {

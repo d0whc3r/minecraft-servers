@@ -3,3 +3,4 @@
 test-results/
 playwright-report/
 test-e2e-data/
+coverage/

@@ -18,7 +18,7 @@ export function useLogStream(server: string): {
     es.addEventListener("log", (ev) => {
       if (cancelled) return;
       const line = JSON.parse((ev as MessageEvent).data) as string;
-      setLines((prev) => [...prev.slice(-MAX_LINES), line]);
+      setLines((prev) => [...prev, line].slice(-MAX_LINES));
       setStatus("live");
     });
     es.addEventListener("end", () => {
