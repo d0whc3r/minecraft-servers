@@ -10,7 +10,7 @@ image:
   repository: itzg/mc-router
   # Pinned: "latest" tracks master, so a cluster rebuild can silently change
   # behavior. Bump alongside Chart.yaml appVersion on upgrades.
-  tag: "1.46.5"
+  tag: "1.47.1"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
