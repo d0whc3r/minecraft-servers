@@ -26,7 +26,7 @@
     "@astrojs/node": "11.1.6",
     "@astrojs/react": "6.0.6",
     "@tanstack/react-table": "9.2.4",
-    "astro": "7.3.3",
+    "astro": "7.3.5",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
