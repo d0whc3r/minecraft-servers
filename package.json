@@ -12,7 +12,7 @@
   },
   "author": "d0whc3r",
   "license": "ISC",
-  "packageManager": "pnpm@12.4.2",
+  "packageManager": "pnpm@12.16.1",
   "engines": {
     "node": ">=24.0.0",
     "pnpm": ">=11.0.0"
@@ -57,9 +57,9 @@
   "devDependencies": {
     "bats": "1.13.0",
     "husky": "9.1.7",
-    "prettier": "3.9.7",
-    "prettier-plugin-astro": "1.0.1",
-    "prettier-plugin-sh": "0.19.0"
+    "prettier": "3.9.10",
+    "prettier-plugin-astro": "1.1.2",
+    "prettier-plugin-sh": "0.20.2"
   },
   "prettier": {
     "semi": true,
