@@ -60,6 +60,7 @@ false`, backup sidecar receives only RCON credentials (chart 0.2.0)
 
 ### Added
 
+- `docs/ADDING_SERVER_ENV.md` documents the step-by-step procedure to add a new server environment, with the `add-server-env` skill and agent for AI-assisted runs
 - Initial release of Minecraft Multi-Server System
 - Support for 14+ pre-configured modpacks
 - Automated backup system with integrity verification

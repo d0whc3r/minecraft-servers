@@ -26,6 +26,11 @@ logs/
 .vscode/
 .idea/
 
+# OpenCode: track the shared agents, ignore local overrides
+!.opencode/
+.opencode/*
+!.opencode/agents/
+
 # Temporary files
 *.tmp
 *.swp

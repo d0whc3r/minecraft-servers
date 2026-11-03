@@ -5,12 +5,13 @@ and quick start, see the [main README](../README.md).
 
 ## Getting Started
 
-| Document                                          | Description                                  |
-| ------------------------------------------------- | -------------------------------------------- |
-| [Quick Start](QUICKSTART.md)                      | First server in ~5 minutes, daily operations |
-| [Modpack Catalog](MODPACKS.md)                    | The 34 pre-configured servers: versions, RAM |
-| [Adding Modpacks](ADDING_MODPACKS.md)             | Templates and manual creation of new servers |
-| [Environment Variables](ENVIRONMENT_VARIABLES.md) | Complete per-server configuration reference  |
+| Document                                            | Description                                  |
+| --------------------------------------------------- | -------------------------------------------- |
+| [Quick Start](QUICKSTART.md)                        | First server in ~5 minutes, daily operations |
+| [Modpack Catalog](MODPACKS.md)                      | The 34 pre-configured servers: versions, RAM |
+| [Adding Modpacks](ADDING_MODPACKS.md)               | Templates and manual creation of new servers |
+| [Adding a Server Environment](ADDING_SERVER_ENV.md) | Step-by-step procedure to add a new server   |
+| [Environment Variables](ENVIRONMENT_VARIABLES.md)   | Complete per-server configuration reference  |
 
 ## Interfaces
 

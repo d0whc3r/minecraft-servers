@@ -317,6 +317,7 @@ rm -rf servers/<name> backups/<name>
 
 ## Related Documentation
 
+- [Adding a Server Environment](ADDING_SERVER_ENV.md): step-by-step procedure for AI agents
 - [Quick Start](QUICKSTART.md) — getting started
 - [Environment Variables](ENVIRONMENT_VARIABLES.md) — full configuration reference
 - [Backup & Restore](BACKUP_RESTORE.md) — protecting your new server
