@@ -75,7 +75,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Go (version from apps/tui/go.mod)
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: apps/tui/go.mod
           cache-dependency-path: apps/tui/go.sum
