@@ -3,8 +3,9 @@
 **Modrinth**: https://modrinth.com/modpack/cobbleverse  
 **Type**: Fabric-based Pokemon adventure modpack with Cobblemon  
 **Tags**: pokemon, adventure, progression  
-**Minecraft Version**: 1.21.1 (auto-detected)  
-**Memory**: 6GB recommended
+**Minecraft Version**: 1.21.1  
+**Modpack Version**: COBBLEVERSE 1.8.0, which bundles Cobblemon 1.8.4  
+**Memory**: 8GB
 
 ## Overview
 
@@ -27,7 +28,8 @@ docker logs -f mc-cobbleverse
 | Setting         | Value                            |
 | --------------- | -------------------------------- |
 | **Route**       | `cobbleverse.<MC_ROUTER_DOMAIN>` |
-| **Memory**      | 6GB                              |
+| **Modpack**     | COBBLEVERSE 1.8.0                |
+| **Memory**      | 8GB                              |
 | **Type**        | Modrinth (Fabric)                |
 | **Max Players** | 20                               |
 | **Difficulty**  | Normal                           |
@@ -67,10 +69,15 @@ Configuration file: `config/modpacks/cobbleverse.env`
 # Modpack settings
 TYPE=MODRINTH
 MODRINTH_MODPACK=cobbleverse
-VERSION=LATEST
+MODRINTH_VERSION=DxzQzMLR # COBBLEVERSE 1.8.0
+VERSION=1.21.1
+
+# Server-side file filters (see "Modpack Quirks" below)
+MODRINTH_FORCE_INCLUDE_FILES=athena,fusion
+MODRINTH_EXCLUDE_FILES=c2me-fabric
 
 # Performance
-MEMORY=6G
+MEMORY=8G
 USE_AIKAR_FLAGS=true
 
 # Gameplay
@@ -78,6 +85,13 @@ MAX_PLAYERS=20
 DIFFICULTY=normal
 ALLOW_FLIGHT=true # For flying Pokemon
 ```
+
+### Modpack Quirks
+
+COBBLEVERSE 1.8.0 needs two server-side adjustments. Keep them until the pack fixes the metadata.
+
+- `athena` and `fusion` are marked client-only, but CobbleFurnies and Rechiseled need them on the server. `MODRINTH_FORCE_INCLUDE_FILES` keeps them.
+- `c2me` 0.4.0-alpha.0.30 declares Java 25 for its `natives-math` module. The pack targets Java 21, so `MODRINTH_EXCLUDE_FILES` drops it. The server runs without it.
 
 ### Customization
 
@@ -142,7 +156,7 @@ docker logs -f mc-cobbleverse
 Already enabled in configuration:
 
 - ✅ Aikar's JVM flags for better GC
-- ✅ 6GB memory allocation
+- ✅ 8GB memory allocation
 - ✅ Optimized view distance (10 chunks)
 - ✅ Simulation distance (8 chunks)
 
@@ -215,22 +229,36 @@ Useful commands for server operators:
 
 ## Modpack Updates
 
-To update the modpack to the latest version:
+The server pins `MODRINTH_VERSION` in `config/modpacks/cobbleverse.env`. The Modrinth installer replaces only the files it lists in its manifest. It keeps `world/`, `server.properties`, `ops.json`, `whitelist.json`, and `usercache.json`.
+
+1. Announce the maintenance window. All players must update their client to the same version.
+2. Confirm the server is empty and stop it. Use `stop-server.sh`, not `restart-server.sh`: a Compose restart keeps the old environment.
+3. Take a cold backup of `servers/cobbleverse/data`. Keep it until players confirm their Pokemon and items are intact.
+4. Set the new `MODRINTH_VERSION` and set `MODRINTH_FORCE_SYNCHRONIZE=true`.
+5. Start the server with `./scripts/start-server.sh cobbleverse`. The first start downloads the pack.
+6. Wait for `Done (…)! For help, type "help"`.
+7. Check `.install-modrinth.env`, the mod list, and the datapack list. Join the server and load a chunk with player builds.
+8. Set `MODRINTH_FORCE_SYNCHRONIZE=false`.
 
 ```bash
-# Stop server
 ./scripts/stop-server.sh cobbleverse
-
-# Update happens automatically on next start
-# Or force update:
-# Edit config/modpacks/cobbleverse.env
-MODRINTH_FORCE_SYNCHRONIZE=true
-
-# Start server
+# take the backup here
 ./scripts/start-server.sh cobbleverse
-
-# Remove force flag after update
+docker logs -f mc-cobbleverse
 ```
+
+### Rollback
+
+Restore the full `servers/cobbleverse/data` directory from the backup, then set `MODRINTH_VERSION` back to the old version ID. A partial restore is not enough: the installer reads the manifest and upgrades again.
+
+### Version 1.8.0
+
+- 1.8.0 bundles Cobblemon 1.8.4 and Fabric Loader 0.19.5 on Minecraft 1.21.1.
+- The pack removes Better Pokedex Scanner and Fight or Flight, plus several model resource packs. Pokemon or items from those addons may be missing.
+- Cobblemon advancements reset once. This is expected.
+- Datapacks move to v32, Loot v12, and RCT v21. The installer removes the old zips.
+- Old TMCraft TMs convert when you place them in a crafting table.
+- After the client update, open Resource Packs, hold `T` for three seconds, and click Done.
 
 ## Resources
 

@@ -391,7 +391,9 @@ docker_compose_up() {
   load_server_compose_env "$server_name"
 
   debug "Starting server with docker compose -p ${CONTAINER_NAME} (RCON on 127.0.0.1:${RCON_HOST_PORT})"
-  docker compose -p "${CONTAINER_NAME}" -f "$(repo_root)/docker-compose.yml" up -d 2>&1
+  # 9>&- keeps the server lock (FD 9) out of conmon: an inherited descriptor
+  # would hold the lock while the server runs and block the next operation.
+  docker compose -p "${CONTAINER_NAME}" -f "$(repo_root)/docker-compose.yml" up -d 2>&1 9>&-
 }
 
 # Stop server using docker compose
@@ -400,10 +402,89 @@ docker_compose_up() {
 docker_compose_down() {
   local server_name="$1"
   local project
-  project=$(get_container_name "$server_name")
+
+  load_server_compose_env "$server_name"
+  project="$CONTAINER_NAME"
 
   debug "Stopping server with docker compose -p ${project} down"
   docker compose -p "${project}" -f "$(repo_root)/docker-compose.yml" down -v 2>&1
+}
+
+# Container image a server uses. Prefer the image of the existing container so
+# a config edit cannot make a backup or restore pull a different tag.
+# Args: $1 - server name
+get_server_image() {
+  local server_name="$1" image config_file java_version
+  image=$(docker inspect --format '{{.Config.Image}}' "$(get_container_name "$server_name")" 2> /dev/null || true)
+  if [[ -n "$image" ]]; then
+    echo "$image"
+    return 0
+  fi
+  config_file=$(get_config_file "$server_name")
+  java_version=$(get_env_value "$config_file" JAVA_VERSION)
+  echo "itzg/minecraft-server:${java_version:-latest}"
+}
+
+# Archive a server data directory to a gzipped tar file. tar runs inside a
+# throwaway container as root: the server files belong to the container user
+# and some are mode 600, so the host user cannot read them. The stream goes to
+# the host shell, which keeps the archive owned by whoever runs the script.
+# Entries keep the "data/..." layout that restore expects.
+# Args: $1 - server name, $2 - output archive path
+archive_server_data() {
+  local server_name="$1" output="$2"
+  local data_dir image
+  data_dir=$(get_data_dir "$server_name")
+  image=$(get_server_image "$server_name")
+  docker run --rm --user 0 --entrypoint tar \
+    -v "$(dirname "$data_dir"):/work:ro" \
+    "$image" czf - -C /work data > "$output" 9>&-
+}
+
+# Replace a server data directory with the contents of a backup archive. tar
+# and chown run inside a throwaway container as root, so container-owned files
+# are replaced and the restored files go back to UID 1000. The archive is
+# unpacked beside the live directory first: the swap only happens after a
+# clean extraction.
+# Args: $1 - server name, $2 - backup archive path
+extract_server_data() {
+  local server_name="$1" archive="$2"
+  local work_dir image
+  work_dir=$(dirname "$(get_data_dir "$server_name")")
+  image=$(get_server_image "$server_name")
+  docker run --rm -i --user 0 --entrypoint sh \
+    -v "$work_dir:/work" \
+    "$image" -c '
+      set -eu
+      tmp="/work/.restore-$$"
+      old="/work/.data-old-$$"
+      rm -rf "$tmp" "$old"
+      mkdir -p "$tmp"
+      if ! tar xzf - -C "$tmp"; then
+        rm -rf "$tmp"
+        echo "failed to extract archive" >&2
+        exit 1
+      fi
+      if [ ! -d "$tmp/data" ]; then
+        rm -rf "$tmp"
+        echo "archive has no data/ directory" >&2
+        exit 1
+      fi
+      if [ -e /work/data ]; then
+        mv /work/data "$old"
+      fi
+      if ! mv "$tmp/data" /work/data; then
+        if [ -e "$old" ]; then
+          mv "$old" /work/data
+        fi
+        rm -rf "$tmp"
+        echo "failed to move restored data into place" >&2
+        exit 1
+      fi
+      rmdir "$tmp"
+      rm -rf "$old"
+      chown -R 1000:1000 /work/data
+    ' < "$archive" 9>&-
 }
 
 # Restart server using docker compose
@@ -415,7 +496,7 @@ docker_compose_restart() {
   load_server_compose_env "$server_name"
 
   debug "Restarting server with docker compose -p ${CONTAINER_NAME} restart"
-  docker compose -p "${CONTAINER_NAME}" -f "$(repo_root)/docker-compose.yml" restart 2>&1
+  docker compose -p "${CONTAINER_NAME}" -f "$(repo_root)/docker-compose.yml" restart 2>&1 9>&-
 }
 
 # Serialize per-server operations (start/stop/backup/restore) so two racing

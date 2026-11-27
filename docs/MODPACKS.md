@@ -25,7 +25,7 @@ Paper servers work without it.
 | `better-mc-bmc5`                | Better MC [NEOFORGE] BMC5                                                  | 1.21.1     | 8G     | CurseForge |
 | `blockfront`                    | [BlockFront](modpacks/blockfront.md)                                       | 1.21.1     | 4G     | Modrinth   |
 | `cobblemon`                     | Cobblemon Official [Fabric]                                                | 1.21.1     | 6G     | Modrinth   |
-| `cobbleverse`                   | Cobbleverse                                                                | 1.21.1     | 6G     | Modrinth   |
+| `cobbleverse`                   | [Cobbleverse](modpacks/cobbleverse.md)                                     | 1.21.1     | 8G     | Modrinth   |
 | `cursed-walking`                | Cursed Walking                                                             | 1.20.1     | 8G     | CurseForge |
 | `dawncraft`                     | DawnCraft: Echoes of Legends                                               | 1.18.2     | 8G     | CurseForge |
 | `deceasedcraft`                 | [DeceasedCraft](modpacks/deceasedcraft.md)                                 | 1.20.1     | 10G    | CurseForge |

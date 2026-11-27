@@ -241,12 +241,15 @@ CF_PAGE_URL=https://www.curseforge.com/minecraft/modpacks/all-the-mods-10
 
 **CRITICAL: Always set `VERSION` to match the modpack's Minecraft version. See Required Variables section above.**
 
-| Variable           | Description                                                  | Required |
-| ------------------ | ------------------------------------------------------------ | -------- |
-| `MODRINTH_MODPACK` | Modpack project slug, ID, or URL                             | Yes      |
-| `VERSION`          | **Minecraft version (MUST match modpack)**                   | **Yes**  |
-| `MODRINTH_VERSION` | Specific modpack version/release (leave unset for latest)    | No       |
-| `MODRINTH_LOADER`  | Mod loader (fabric, forge, quilt) - auto-detected if not set | No       |
+| Variable                       | Description                                                             | Required |
+| ------------------------------ | ----------------------------------------------------------------------- | -------- |
+| `MODRINTH_MODPACK`             | Modpack project slug, ID, or URL                                        | Yes      |
+| `VERSION`                      | **Minecraft version (MUST match modpack)**                              | **Yes**  |
+| `MODRINTH_VERSION`             | Specific modpack version/release (leave unset for latest)               | No       |
+| `MODRINTH_LOADER`              | Mod loader (fabric, forge, quilt) - auto-detected if not set            | No       |
+| `MODRINTH_FORCE_INCLUDE_FILES` | Comma-separated file names to keep when the pack marks them client-only | No       |
+| `MODRINTH_EXCLUDE_FILES`       | Comma-separated file names to drop from the server                      | No       |
+| `MODRINTH_FORCE_SYNCHRONIZE`   | Re-apply the file filters on every start                                | No       |
 
 Example for modpack:
 

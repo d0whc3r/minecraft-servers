@@ -130,7 +130,7 @@ Available servers (full catalog in [Modpacks](MODPACKS.md)):
 | `skyfactory4`            | 1.12.2  | 6G     | Skyblock, needs Java 8 image           |
 | `stoneblock4`            | 1.21.1  | 8G     | Skyblock-in-a-cave (2025 top pick)     |
 | `rlcraft`                | 1.12.2  | 6G     | Hardcore survival                      |
-| `cobbleverse`            | 1.21.1  | 6G     | Pokémon-style adventure                |
+| `cobbleverse`            | 1.21.1  | 8G     | Pokémon-style adventure                |
 | `cobblemon`              | 1.21.1  | 6G     | Official Cobblemon pack                |
 | `slimes-adventure`       | 1.21.1  | 4G     | Exploration                            |
 | `solocraft-modpack`      | 1.20.1  | 3G     | Solo-leveling-style survival           |

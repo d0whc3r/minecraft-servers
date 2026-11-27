@@ -26,6 +26,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `add-modpack.sh --rcon-port` rejected free ports by consulting the global
   conflict checker; it now checks only the requested port, and port
   auto-assignment is serialized against concurrent runs
+- `stop-server.sh` failed on a live server: `docker_compose_down` did not load
+  the per-server env file, so Compose aborted with
+  `required variable SERVER_CONFIG_FILE is missing a value`
+- `backup.sh` and `restore.sh` failed when the data directory belongs to the
+  container user (mode 600 files): tar and chown now run inside a throwaway
+  container, and restore swaps the directory only after a clean extraction
+- Server operation locks leaked into `conmon`: `start-server.sh`,
+  `restart-server.sh`, `backup.sh` and `restore.sh` passed the flock
+  descriptor (FD 9) to the container supervisor, which held it for the
+  lifetime of the server and blocked the next backup, restore, or start.
+  Container-spawning commands now close FD 9
 
 ### Security
 

@@ -43,6 +43,12 @@ The `common.sh` file provides a reusable foundation for all scripts, including:
 - `docker_compose_down(server)` - Stop server using docker compose
 - `docker_compose_restart(server)` - Restart server using docker compose
 
+### Archive Helpers
+
+- `get_server_image(server)` - Container image the server uses (from the live container, else the config)
+- `archive_server_data(server, output)` - Write a gzipped tar of the data directory; tar runs as root inside a throwaway container
+- `extract_server_data(server, archive)` - Replace the data directory from an archive; extracts beside it, swaps after success, and resets ownership to UID 1000
+
 ### Router Helpers
 
 - `load_router_settings()` - Load `MC_ROUTER_*` settings from `.env` with defaults

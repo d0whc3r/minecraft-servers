@@ -77,12 +77,14 @@ fi
 # Wait for server to stop gracefully
 sleep 5
 
-# Create backup archive
+# Create backup archive. tar runs inside a container because the server files
+# belong to the container user and some are mode 600.
 info "Creating backup archive..."
-if ! tar czf "$BACKUP_PATH" -C "$(dirname "$SERVER_DATA_DIR")" data/ 2> /dev/null; then
+if ! archive_server_data "$SERVER_NAME" "$BACKUP_PATH"; then
+  rm -f "$BACKUP_PATH"
   # Restart server on failure
   warning "Backup failed, restarting server..."
-  docker start "$CONTAINER_NAME" > /dev/null 2>&1
+  docker start "$CONTAINER_NAME" > /dev/null 2>&1 9>&-
   error "Failed to create backup archive"
   exit 1
 fi
@@ -94,7 +96,7 @@ echo "$CHECKSUM  $BACKUP_FILENAME" > "$CHECKSUM_PATH"
 
 # Restart server
 info "Restarting server..."
-if ! docker start "$CONTAINER_NAME" > /dev/null 2>&1; then
+if ! docker start "$CONTAINER_NAME" > /dev/null 2>&1 9>&-; then
   error "Failed to restart server after backup"
   error "Server may need manual restart: docker start $CONTAINER_NAME"
   exit 1

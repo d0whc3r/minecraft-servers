@@ -129,34 +129,23 @@ SERVER_DATA_DIR=$(get_data_dir "$SERVER_NAME")
 # Create data directory if it doesn't exist
 ensure_directory "$SERVER_DATA_DIR"
 
-# Clear existing data (with confirmation already given)
-info "Clearing existing world data..."
-if ! rm -rf "${SERVER_DATA_DIR:?}"/* 2> /dev/null; then
-  warning "Failed to clear some files (may not exist yet)"
-fi
-
-# Extract backup
+# Replace the data directory with the archive contents. tar runs inside a
+# container as root, because the live files belong to the container user.
 info "Extracting backup archive..."
-if ! tar xzf "$BACKUP_PATH" -C "$(dirname "$SERVER_DATA_DIR")" 2> /dev/null; then
+if ! extract_server_data "$SERVER_NAME" "$BACKUP_PATH"; then
   error "Failed to extract backup archive"
   # Try to restart server if it was running
   if [[ "$SERVER_WAS_RUNNING" == true ]]; then
     warning "Attempting to restart server after failed restore..."
-    docker start "$CONTAINER_NAME" > /dev/null 2>&1 || true
+    docker start "$CONTAINER_NAME" > /dev/null 2>&1 9>&- || true
   fi
   exit 1
-fi
-
-# Set correct ownership (Minecraft user in itzg image is UID 1000)
-info "Setting file permissions..."
-if ! chown -R 1000:1000 "$SERVER_DATA_DIR" 2> /dev/null; then
-  warning "Failed to set ownership (may not be running as root)"
 fi
 
 # Restart server if it was running before
 if [[ "$SERVER_WAS_RUNNING" == true ]]; then
   info "Restarting server..."
-  if ! docker start "$CONTAINER_NAME" > /dev/null 2>&1; then
+  if ! docker start "$CONTAINER_NAME" > /dev/null 2>&1 9>&-; then
     error "Failed to restart server after restore"
     error "Server may need manual restart: docker start $CONTAINER_NAME"
     exit 1
