@@ -5,7 +5,7 @@
 # Build context is the REPO ROOT (see apps/web/docker-compose.yml) so pnpm can
 # resolve the workspace lockfile.
 # ---------------------------------------------------------------------------
-FROM node:24-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 # Must match package.json "packageManager" (corepack-enforced environments
 # reject a mismatching pnpm)
 RUN npm install --global pnpm@12.4.1
@@ -42,7 +42,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /mc-tui .
 # Plus an sshd (started by the entrypoint when MCPANEL_SSH=1) so operators can
 # ssh in and manage the cluster with the bundled mc-tui.
 # ---------------------------------------------------------------------------
-FROM node:24-bookworm-slim
+FROM node:26-bookworm-slim
 ARG KUBECTL_VERSION=v1.32.5
 ARG HELM_VERSION=v3.17.3
 ARG TARGETARCH
