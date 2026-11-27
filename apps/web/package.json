@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@astrojs/node": "11.1.14",
-    "@astrojs/react": "7.1.2",
+    "@astrojs/react": "7.1.9",
     "@tanstack/react-table": "9.3.1",
     "astro": "7.4.13",
     "react": "19.3.1",
