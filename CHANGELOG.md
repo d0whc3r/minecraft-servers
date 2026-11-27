@@ -40,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Web panel dependencies: `astro` 7.4.4 → 7.4.13 and `@astrojs/node`
+  11.1.9 → 11.1.14, plus workspace overrides that pin `sharp` to 0.35.5 and
+  `source-map-js` to 1.2.2. `pnpm audit` now reports no known vulnerabilities
 - Per-server operation locks (`flock`): backup, restore, start, stop and
   restart serialize per server so a backup can no longer archive a mid-write
   world or race a restore

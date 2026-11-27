@@ -23,10 +23,10 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@astrojs/node": "11.1.9",
+    "@astrojs/node": "11.1.14",
     "@astrojs/react": "7.1.2",
     "@tanstack/react-table": "9.3.1",
-    "astro": "7.4.4",
+    "astro": "7.4.13",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
